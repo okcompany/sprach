@@ -1,7 +1,7 @@
 
 "use client";
 
-import { Button } from '@/components/ui/button';
+import { Button, buttonVariants } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
@@ -114,7 +114,7 @@ export function SettingsPage() {
               </AlertDialogHeader>
               <AlertDialogFooter>
                 <AlertDialogCancel>Отмена</AlertDialogCancel>
-                <AlertDialogAction onClick={handleResetProgress} className={Button({variant: "destructive"}).className}>Да, сбросить</AlertDialogAction>
+                <AlertDialogAction onClick={handleResetProgress} className={buttonVariants({ variant: "destructive" })}>Да, сбросить</AlertDialogAction>
               </AlertDialogFooter>
             </AlertDialogContent>
           </AlertDialog>
