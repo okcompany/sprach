@@ -62,25 +62,25 @@ export interface GrammarWeaknessContext {
   level: LanguageLevel;
   topicId: string;
   topicName: string;
-  moduleId?: ModuleType; // Optional: in which module was this specific error instance noted
+  moduleId?: ModuleType; 
 }
 
 export interface GrammarWeaknessDetail {
-  tag: string; // The grammar error tag itself, e.g., "akkusativ_prepositions"
+  tag: string; 
   count: number;
-  lastEncounteredDate: string; // ISO date string
-  exampleContexts: GrammarWeaknessContext[]; // Store contexts of where this error occurred
+  lastEncounteredDate: string; 
+  exampleContexts: GrammarWeaknessContext[]; 
 }
 
 export interface UserData {
   currentLevel: LanguageLevel;
-  currentTopicId?: string; // ID of the current topic
+  currentTopicId?: string; 
   profile: UserProfile;
   progress: Partial<Record<LanguageLevel, LevelProgress>>;
   vocabularyBank: VocabularyWord[];
   settings: UserSettings;
-  customTopics: TopicProgress[]; // For user-defined topics
-  grammarWeaknesses?: Record<string, GrammarWeaknessDetail>; // Keyed by grammar error tag
+  customTopics: TopicProgress[]; 
+  grammarWeaknesses?: Record<string, GrammarWeaknessDetail>; 
 }
 
 // --- AI Generated Content Types (matches flows) ---
@@ -91,12 +91,7 @@ export interface AILessonVocabularyItem {
   exampleSentence?: string;
 }
 
-export interface AILessonListeningExercise {
-  script: string;
-  questions: string[];
-}
-
-// Grammar Exercise Types
+// --- Grammar Exercise Types ---
 export interface AIFillInTheBlanksQuestion {
   promptText: string;
   correctAnswers: string[];
@@ -139,31 +134,129 @@ export type AIGrammarExercise =
   | AIMultipleChoiceExercise 
   | AISentenceConstructionExercise;
 
+// --- Standard Listening ---
+export interface AILessonListeningExercise {
+  script: string;
+  questions: string[]; // Open-ended questions
+}
+
+// --- Interactive Vocabulary Exercise Types ---
+export interface AIMatchingPair {
+  german: string;
+  russian: string;
+}
+export interface AIMatchingExercise {
+  type: "matching";
+  instructions: string;
+  pairs: AIMatchingPair[];
+  germanDistractors?: string[];
+  russianDistractors?: string[];
+}
+
+export interface AIAudioQuizItem {
+  germanPhraseToSpeak: string;
+  options: string[]; // Russian translations
+  correctAnswer: string; // One of the options
+  explanation?: string;
+}
+export interface AIAudioQuizExercise {
+  type: "audioQuiz";
+  instructions: string;
+  items: AIAudioQuizItem[];
+}
+
+export type AIVocabularyInteractiveExercise = 
+  | AIMatchingExercise 
+  | AIAudioQuizExercise;
+
+// --- Common Interactive Exercise Types for Listening/Reading ---
+export interface AIComprehensionMQ_Question { // Renamed to avoid conflict with AIMultipleChoiceQuestion
+  questionText: string;
+  options: string[];
+  correctAnswer: string;
+  explanation?: string;
+}
+export interface AIComprehensionMultipleChoiceExercise {
+  type: "comprehensionMultipleChoice";
+  instructions: string;
+  questions: AIComprehensionMQ_Question[];
+}
+
+export interface AITrueFalseStatement {
+  statement: string;
+  isTrue: boolean;
+  explanation?: string;
+}
+export interface AITrueFalseExercise {
+  type: "trueFalse";
+  instructions: string;
+  statements: AITrueFalseStatement[];
+}
+
+export interface AISequencingExercise {
+  type: "sequencing";
+  instructions: string;
+  shuffledItems: string[];
+  correctOrder: string[];
+}
+
+// --- Interactive Listening Exercise Types ---
+export type AIListeningInteractiveExercise =
+  | AIComprehensionMultipleChoiceExercise
+  | AITrueFalseExercise
+  | AISequencingExercise;
+
+// --- Interactive Reading Exercise Types ---
+export type AIReadingInteractiveExercise =
+  | AIComprehensionMultipleChoiceExercise
+  | AITrueFalseExercise
+  | AISequencingExercise;
+
+// --- Interactive Writing Exercise Types ---
+export interface AIStructuredWritingExercise {
+  type: "structuredWriting";
+  instructions: string;
+  promptDetails: string;
+  templateOutline?: string[];
+  requiredVocabulary?: string[];
+  aiGeneratedStoryToDescribe?: string;
+}
+
+export type AIWritingInteractiveExercise = AIStructuredWritingExercise;
+
+
+// --- Main Lesson Content Structure ---
 export interface AILessonContent {
   lessonTitle: string;
   vocabulary: AILessonVocabularyItem[];
   grammarExplanation: string;
   grammarExercises?: AIGrammarExercise[];
-  listeningExercise: AILessonListeningExercise;
+  listeningExercise: AILessonListeningExercise; // Contains script and open questions
   readingPassage: string;
-  readingQuestions: string[];
-  writingPrompt: string;
+  readingQuestions: string[]; // Open questions for reading passage
+  writingPrompt: string; // General open writing prompt
+
+  // New optional interactive exercises
+  interactiveVocabularyExercises?: AIVocabularyInteractiveExercise[];
+  interactiveListeningExercises?: AIListeningInteractiveExercise[]; // Based on listeningExercise.script
+  interactiveReadingExercises?: AIReadingInteractiveExercise[];   // Based on readingPassage
+  interactiveWritingExercises?: AIWritingInteractiveExercise[]; // Can augment or replace writingPrompt
 }
 
 export interface AIEvaluationResult {
   evaluation: string;
   isCorrect: boolean;
   suggestedCorrection?: string;
-  grammarErrorTags?: string[]; // Specific grammar points the user made errors on
+  grammarErrorTags?: string[]; 
 }
 
 export interface AIRecommendedLesson {
   topic: string;
-  modules: string[]; // Module types
+  modules: string[]; 
   reasoning: string;
 }
 
-// Default Topics (example, should be expanded)
+// Default Topics
 export const DEFAULT_TOPICS: Record<LanguageLevel, { id: string; name: string }[]> = {
   A0: [
     { id: "a0_greetings_farewells", name: "Основные приветствия и прощания" },
