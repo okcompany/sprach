@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useEffect } from 'react';
+import { useEffect, use } from 'react'; // Import use
 import { MainLayout } from '@/components/main-layout';
 import { ModulePage } from '@/components/pages/module-page';
 import type { LanguageLevel, ModuleType } from '@/types/german-learning';
@@ -11,26 +11,29 @@ import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 
 interface SpecificModuleRouteProps {
-  params: {
+  params: Promise<{ // params prop is a Promise
     levelId: string;
     topicId: string;
     moduleId: string;
-  };
+  }>;
 }
 
-export default function SpecificModuleRoute({ params }: SpecificModuleRouteProps) {
+export default function SpecificModuleRoute({ params: paramsPromise }: SpecificModuleRouteProps) {
+  const params = use(paramsPromise); // Resolve the promise
+
   const router = useRouter();
   const { toast } = useToast();
   const { userData, isLoading, isLevelAccessible } = useUserData();
 
-  const levelIdParam = params.levelId.toUpperCase();
-  const moduleIdParam = params.moduleId as ModuleType; // Initial cast for checks
+  // Now `params` is the resolved object
+  const levelIdFromParams = params.levelId.toUpperCase();
+  const moduleIdFromParams = params.moduleId as ModuleType;
   const { topicId } = params;
 
   useEffect(() => {
     if (isLoading) return;
 
-    if (!ALL_LEVELS.includes(levelIdParam as LanguageLevel)) {
+    if (!ALL_LEVELS.includes(levelIdFromParams as LanguageLevel)) {
       toast({
         title: "Неверный уровень",
         description: `Уровень "${params.levelId}" не существует.`,
@@ -41,9 +44,9 @@ export default function SpecificModuleRoute({ params }: SpecificModuleRouteProps
       return;
     }
     
-    const validLevelId = levelIdParam as LanguageLevel;
+    const validLevelId = levelIdFromParams as LanguageLevel;
 
-    if (!ALL_MODULE_TYPES.includes(moduleIdParam)) {
+    if (!ALL_MODULE_TYPES.includes(moduleIdFromParams)) {
         toast({
             title: "Неверный модуль",
             description: `Тип модуля "${params.moduleId}" не существует.`,
@@ -63,7 +66,7 @@ export default function SpecificModuleRoute({ params }: SpecificModuleRouteProps
       });
       router.push('/levels');
     }
-  }, [isLoading, userData, levelIdParam, params.levelId, moduleIdParam, params.moduleId, topicId, isLevelAccessible, router, toast]);
+  }, [isLoading, userData, levelIdFromParams, moduleIdFromParams, topicId, params.levelId, params.moduleId, isLevelAccessible, router, toast]);
 
   if (isLoading || !userData) {
     return (
@@ -75,11 +78,9 @@ export default function SpecificModuleRoute({ params }: SpecificModuleRouteProps
     );
   }
   
-  // Ensure all params are valid and level is accessible before rendering ModulePage
-  // These checks serve as a display guard while useEffect handles redirection
-  if (!ALL_LEVELS.includes(levelIdParam as LanguageLevel) || 
-      !ALL_MODULE_TYPES.includes(moduleIdParam as ModuleType) || // Added check for moduleIdParam
-      (userData && !isLevelAccessible(levelIdParam as LanguageLevel))) {
+  if (!ALL_LEVELS.includes(levelIdFromParams as LanguageLevel) || 
+      !ALL_MODULE_TYPES.includes(moduleIdFromParams as ModuleType) ||
+      (userData && !isLevelAccessible(levelIdFromParams as LanguageLevel))) {
      return (
       <MainLayout>
         <div className="container mx-auto py-8 text-center">
@@ -89,10 +90,8 @@ export default function SpecificModuleRoute({ params }: SpecificModuleRouteProps
     );
   }
 
-  // At this point, levelIdParam and moduleIdParam have passed structural validation.
-  // isLevelAccessible has also been checked by the effect for redirection.
-  const finalLevelId = levelIdParam as LanguageLevel;
-  const finalModuleId = moduleIdParam as ModuleType; // This cast is now safer.
+  const finalLevelId = levelIdFromParams as LanguageLevel;
+  const finalModuleId = moduleIdFromParams as ModuleType;
 
   return (
     <MainLayout>

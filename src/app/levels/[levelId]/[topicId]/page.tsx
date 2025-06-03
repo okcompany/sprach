@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useEffect } from 'react';
+import { useEffect, use } from 'react'; // Import use
 import { MainLayout } from '@/components/main-layout';
 import { TopicModulesPage } from '@/components/pages/topic-modules-page';
 import type { LanguageLevel } from '@/types/german-learning';
@@ -11,24 +11,27 @@ import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 
 interface TopicModulesRouteProps {
-  params: {
+  params: Promise<{ // params prop is a Promise
     levelId: string;
     topicId: string;
-  };
+  }>;
 }
 
-export default function TopicModulesRoute({ params }: TopicModulesRouteProps) {
+export default function TopicModulesRoute({ params: paramsPromise }: TopicModulesRouteProps) {
+  const params = use(paramsPromise); // Resolve the promise
+
   const router = useRouter();
   const { toast } = useToast();
   const { userData, isLoading, isLevelAccessible } = useUserData();
   
-  const levelIdParam = params.levelId.toUpperCase();
-  const { topicId } = params;
+  // Now `params` is the resolved object: { levelId: string, topicId: string }
+  const levelIdFromParams = params.levelId.toUpperCase();
+  const { topicId } = params; // topicId from resolved params
 
   useEffect(() => {
     if (isLoading) return;
 
-    if (!ALL_LEVELS.includes(levelIdParam as LanguageLevel)) {
+    if (!ALL_LEVELS.includes(levelIdFromParams as LanguageLevel)) {
       toast({
         title: "Неверный уровень",
         description: `Уровень "${params.levelId}" не существует.`,
@@ -39,7 +42,7 @@ export default function TopicModulesRoute({ params }: TopicModulesRouteProps) {
       return;
     }
 
-    const validLevelId = levelIdParam as LanguageLevel;
+    const validLevelId = levelIdFromParams as LanguageLevel;
 
     if (userData && !isLevelAccessible(validLevelId)) {
       toast({
@@ -50,7 +53,7 @@ export default function TopicModulesRoute({ params }: TopicModulesRouteProps) {
       });
       router.push('/levels');
     }
-  }, [isLoading, userData, levelIdParam, params.levelId, isLevelAccessible, router, toast]);
+  }, [isLoading, userData, levelIdFromParams, params.levelId, isLevelAccessible, router, toast]);
 
   if (isLoading || !userData) {
     return (
@@ -62,7 +65,7 @@ export default function TopicModulesRoute({ params }: TopicModulesRouteProps) {
     );
   }
 
-  if (!ALL_LEVELS.includes(levelIdParam as LanguageLevel) || (userData && !isLevelAccessible(levelIdParam as LanguageLevel))) {
+  if (!ALL_LEVELS.includes(levelIdFromParams as LanguageLevel) || (userData && !isLevelAccessible(levelIdFromParams as LanguageLevel))) {
      return (
       <MainLayout>
         <div className="container mx-auto py-8 text-center">
@@ -72,7 +75,7 @@ export default function TopicModulesRoute({ params }: TopicModulesRouteProps) {
     );
   }
 
-  const finalLevelId = levelIdParam as LanguageLevel;
+  const finalLevelId = levelIdFromParams as LanguageLevel;
 
   return (
     <MainLayout>
