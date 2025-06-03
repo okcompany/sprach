@@ -165,10 +165,6 @@ export interface AIAudioQuizExercise {
   items: AIAudioQuizItem[];
 }
 
-export type AIVocabularyInteractiveExercise = 
-  | AIMatchingExercise 
-  | AIAudioQuizExercise;
-
 // --- Common Interactive Exercise Types for Listening/Reading ---
 export interface AIComprehensionMQ_Question { // Renamed to avoid conflict with AIMultipleChoiceQuestion
   questionText: string;
@@ -200,46 +196,33 @@ export interface AISequencingExercise {
   correctOrder: string[];
 }
 
-// --- Interactive Listening Exercise Types ---
-export type AIListeningInteractiveExercise =
-  | AIComprehensionMultipleChoiceExercise
-  | AITrueFalseExercise
-  | AISequencingExercise;
-
-// --- Interactive Reading Exercise Types ---
-export type AIReadingInteractiveExercise =
-  | AIComprehensionMultipleChoiceExercise
-  | AITrueFalseExercise
-  | AISequencingExercise;
-
-// --- Interactive Writing Exercise Types ---
-export interface AIStructuredWritingExercise {
-  type: "structuredWriting";
-  instructions: string;
-  promptDetails: string;
-  templateOutline?: string[];
-  requiredVocabulary?: string[];
-  aiGeneratedStoryToDescribe?: string;
-}
-
-export type AIWritingInteractiveExercise = AIStructuredWritingExercise;
-
-
 // --- Main Lesson Content Structure ---
 export interface AILessonContent {
   lessonTitle: string;
   vocabulary: AILessonVocabularyItem[];
   grammarExplanation: string;
-  grammarExercise?: AIGrammarExercise; // Changed from array to single optional object
+  grammarExercise?: AIGrammarExercise;
   listeningExercise: AILessonListeningExercise; 
   readingPassage: string;
   readingQuestions: string[]; 
   writingPrompt: string; 
 
-  interactiveVocabularyExercise?: AIVocabularyInteractiveExercise; // Changed from array
-  interactiveListeningExercise?: AIListeningInteractiveExercise; // Changed from array
-  interactiveReadingExercise?: AIReadingInteractiveExercise;   // Changed from array
-  interactiveWritingExercise?: AIWritingInteractiveExercise; // Changed from array
+  // Interactive Vocabulary (Split)
+  interactiveMatchingExercise?: AIMatchingExercise;
+  interactiveAudioQuizExercise?: AIAudioQuizExercise;
+
+  // Interactive Listening (Split)
+  interactiveListeningMCQ?: AIComprehensionMultipleChoiceExercise;
+  interactiveListeningTrueFalse?: AITrueFalseExercise;
+  interactiveListeningSequencing?: AISequencingExercise;
+  
+  // Interactive Reading (Split)
+  interactiveReadingMCQ?: AIComprehensionMultipleChoiceExercise;
+  interactiveReadingTrueFalse?: AITrueFalseExercise;
+  interactiveReadingSequencing?: AISequencingExercise;
+
+  // Interactive Writing is temporarily removed
+  // interactiveWritingExercise?: AIStructuredWritingExercise; 
 }
 
 export interface AIEvaluationResult {
@@ -434,3 +417,4 @@ export const DEFAULT_TOPICS: Record<LanguageLevel, DefaultTopicDefinition[]> = {
     { id: "c2_cultural_historical_references", name: "Культурные и исторические ссылки" }
   ],
 };
+

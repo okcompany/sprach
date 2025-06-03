@@ -19,16 +19,9 @@ import type {
   AILessonVocabularyItem, 
   AIMatchingExercise,
   AIAudioQuizExercise,
-  AIAudioQuizItem,
-  AIListeningInteractiveExercise,
-  AIReadingInteractiveExercise,
   AIComprehensionMultipleChoiceExercise,
-  AIComprehensionMQ_Question,
   AITrueFalseExercise,
-  AITrueFalseStatement,
   AISequencingExercise, 
-  AIWritingInteractiveExercise,
-  AIStructuredWritingExercise,
   DefaultTopicDefinition,
 } from '@/types/german-learning';
 import { MODULE_NAMES_RU, DEFAULT_TOPICS, ALL_MODULE_TYPES, ALL_LEVELS } from '@/types/german-learning';
@@ -121,7 +114,11 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
   const [audioQuizItemFeedback, setAudioQuizItemFeedback] = useState<{ message: string; isCorrect: boolean; correctAnswer?: string, explanation?: string } | null>(null);
 
   // State for Interactive Listening/Reading/Writing Exercises
-  const [activeInteractiveExercise, setActiveInteractiveExercise] = useState<AIListeningInteractiveExercise | AIReadingInteractiveExercise | AIWritingInteractiveExercise | null>(null);
+  const [activeMCQExercise, setActiveMCQExercise] = useState<AIComprehensionMultipleChoiceExercise | null>(null);
+  const [activeTrueFalseExercise, setActiveTrueFalseExercise] = useState<AITrueFalseExercise | null>(null);
+  const [activeSequencingExercise, setActiveSequencingExercise] = useState<AISequencingExercise | null>(null);
+  // const [activeStructuredWritingExercise, setActiveStructuredWritingExercise] = useState<AIStructuredWritingExercise | null>(null); // Temporarily removed
+
   const [currentInteractiveQuestionIndex, setCurrentInteractiveQuestionIndex] = useState(0); // Also used for TrueFalse
   const [interactiveExerciseFeedback, setInteractiveExerciseFeedback] = useState<{ message: string; isCorrect: boolean; correctAnswerText?: string, explanation?: string, correctSequence?: string[] } | null>(null);
   
@@ -158,7 +155,11 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
     setSelectedAudioQuizOption(null);
     setAudioQuizItemFeedback(null);
 
-    setActiveInteractiveExercise(null);
+    setActiveMCQExercise(null);
+    setActiveTrueFalseExercise(null);
+    setActiveSequencingExercise(null);
+    // setActiveStructuredWritingExercise(null); // Temporarily removed
+
     setCurrentInteractiveQuestionIndex(0);
     setInteractiveExerciseFeedback(null);
     setSelectedMCQOption(null);
@@ -168,7 +169,8 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
   }, [ 
     setActiveMatchingExercise, setGermanMatchItems, setRussianMatchItems, setSelectedGermanItemId, setIsMatchingChecked,
     setActiveAudioQuizExercise, setCurrentAudioQuizItemIndex, setSelectedAudioQuizOption, setAudioQuizItemFeedback,
-    setActiveInteractiveExercise, setCurrentInteractiveQuestionIndex, setInteractiveExerciseFeedback, setSelectedMCQOption,
+    setActiveMCQExercise, setActiveTrueFalseExercise, setActiveSequencingExercise, /* setActiveStructuredWritingExercise, */
+    setCurrentInteractiveQuestionIndex, setInteractiveExerciseFeedback, setSelectedMCQOption,
     setSelectedTrueFalseAnswer, setUserSequence, setAvailableSequenceItems
   ]);
 
@@ -199,8 +201,8 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
     if (loadedLessonContent) {
       setNoContentForModule(false); 
       if (moduleId === 'vocabulary') {
-        const matchingExercise = loadedLessonContent.interactiveVocabularyExercises?.find(ex => ex.type === 'matching') as AIMatchingExercise | undefined;
-        const audioQuiz = loadedLessonContent.interactiveVocabularyExercises?.find(ex => ex.type === 'audioQuiz') as AIAudioQuizExercise | undefined;
+        const matchingExercise = loadedLessonContent.interactiveMatchingExercise;
+        const audioQuiz = loadedLessonContent.interactiveAudioQuizExercise;
 
         if (matchingExercise) {
           vocabularySourceUsed = 'ai_interactive';
@@ -255,17 +257,16 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
           }
       }
       if (moduleId === 'listening' || moduleId === 'reading') {
-        const interactiveExercises = moduleId === 'listening' ? loadedLessonContent.interactiveListeningExercises : loadedLessonContent.interactiveReadingExercises;
-        const mcqExercise = interactiveExercises?.find(ex => ex.type === 'comprehensionMultipleChoice') as AIComprehensionMultipleChoiceExercise | undefined;
-        const trueFalseExercise = interactiveExercises?.find(ex => ex.type === 'trueFalse') as AITrueFalseExercise | undefined;
-        const sequencingExercise = interactiveExercises?.find(ex => ex.type === 'sequencing') as AISequencingExercise | undefined;
+        const mcqExercise = moduleId === 'listening' ? loadedLessonContent.interactiveListeningMCQ : loadedLessonContent.interactiveReadingMCQ;
+        const trueFalseExercise = moduleId === 'listening' ? loadedLessonContent.interactiveListeningTrueFalse : loadedLessonContent.interactiveReadingTrueFalse;
+        const sequencingExercise = moduleId === 'listening' ? loadedLessonContent.interactiveListeningSequencing : loadedLessonContent.interactiveReadingSequencing;
 
         if (mcqExercise) {
-            setActiveInteractiveExercise(mcqExercise); setTotalTasks(mcqExercise.questions.length);
+            setActiveMCQExercise(mcqExercise); setTotalTasks(mcqExercise.questions.length);
         } else if (trueFalseExercise) {
-            setActiveInteractiveExercise(trueFalseExercise); setTotalTasks(trueFalseExercise.statements.length);
+            setActiveTrueFalseExercise(trueFalseExercise); setTotalTasks(trueFalseExercise.statements.length);
         } else if (sequencingExercise) {
-            setActiveInteractiveExercise(sequencingExercise); setAvailableSequenceItems(shuffleArray([...sequencingExercise.shuffledItems])); setUserSequence([]); setTotalTasks(1);
+            setActiveSequencingExercise(sequencingExercise); setAvailableSequenceItems(shuffleArray([...sequencingExercise.shuffledItems])); setUserSequence([]); setTotalTasks(1);
         } else { 
             const questionsList = moduleId === 'listening' ? loadedLessonContent.listeningExercise?.questions : loadedLessonContent.readingQuestions;
             const baseText = moduleId === 'listening' ? loadedLessonContent.listeningExercise?.script : loadedLessonContent.readingPassage;
@@ -278,10 +279,11 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
             }
         }
       } else if (moduleId === 'writing') {
-        const structuredWritingExercise = loadedLessonContent.interactiveWritingExercises?.find(ex => ex.type === 'structuredWriting') as AIStructuredWritingExercise | undefined;
-        if (structuredWritingExercise) {
-            setActiveInteractiveExercise(structuredWritingExercise); setCurrentTask(structuredWritingExercise.promptDetails); setTotalTasks(1);
-        } else if (loadedLessonContent.writingPrompt) {
+        // const structuredWritingExercise = loadedLessonContent.interactiveWritingExercise; // Temporarily removed
+        // if (structuredWritingExercise) {
+        //     setActiveStructuredWritingExercise(structuredWritingExercise); setCurrentTask(structuredWritingExercise.promptDetails); setTotalTasks(1);
+        // } else 
+        if (loadedLessonContent.writingPrompt) {
             setCurrentTask(loadedLessonContent.writingPrompt); setTotalTasks(1);
         } else {
              setNoContentForModule(true);
@@ -540,9 +542,9 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
   };
 
   const handleSubmitMCQAnswer = () => {
-    if (!activeInteractiveExercise || activeInteractiveExercise.type !== 'comprehensionMultipleChoice' || !selectedMCQOption || interactiveExerciseFeedback) return;
+    if (!activeMCQExercise || !selectedMCQOption || interactiveExerciseFeedback) return;
     setIsLoadingTask(true);
-    const currentQuestion = (activeInteractiveExercise as AIComprehensionMultipleChoiceExercise).questions[currentInteractiveQuestionIndex];
+    const currentQuestion = activeMCQExercise.questions[currentInteractiveQuestionIndex];
     const isCorrect = selectedMCQOption === currentQuestion.correctAnswer;
     let scoreIncrement = 0;
 
@@ -563,9 +565,9 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
   };
 
   const handleSubmitTrueFalseAnswer = () => {
-    if (!activeInteractiveExercise || activeInteractiveExercise.type !== 'trueFalse' || selectedTrueFalseAnswer === null || interactiveExerciseFeedback) return;
+    if (!activeTrueFalseExercise || selectedTrueFalseAnswer === null || interactiveExerciseFeedback) return;
     setIsLoadingTask(true);
-    const currentStatement = (activeInteractiveExercise as AITrueFalseExercise).statements[currentInteractiveQuestionIndex];
+    const currentStatement = activeTrueFalseExercise.statements[currentInteractiveQuestionIndex];
     const isCorrect = selectedTrueFalseAnswer === currentStatement.isTrue;
     let scoreIncrement = 0;
 
@@ -599,16 +601,16 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
   
   const handleResetSequence = () => {
     if (interactiveExerciseFeedback) return; 
-    if (activeInteractiveExercise && activeInteractiveExercise.type === 'sequencing') {
+    if (activeSequencingExercise) {
       setUserSequence([]);
-      setAvailableSequenceItems(shuffleArray([...(activeInteractiveExercise as AISequencingExercise).shuffledItems]));
+      setAvailableSequenceItems(shuffleArray([...activeSequencingExercise.shuffledItems]));
     }
   };
 
   const handleCheckSequence = () => {
-    if (!activeInteractiveExercise || activeInteractiveExercise.type !== 'sequencing' || interactiveExerciseFeedback) return;
+    if (!activeSequencingExercise || interactiveExerciseFeedback) return;
     setIsLoadingTask(true);
-    const correctOrder = (activeInteractiveExercise as AISequencingExercise).correctOrder;
+    const correctOrder = activeSequencingExercise.correctOrder;
     const isCorrect = userSequence.length === correctOrder.length && userSequence.every((item, index) => item === correctOrder[index]);
     
     let scoreIncrement = 0;
@@ -655,8 +657,8 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
 
   // --- Standard (Non-Interactive) Task Submission ---
   const handleSubmit = async () => { 
-    if (!currentTask && ! (activeInteractiveExercise && activeInteractiveExercise.type === 'structuredWriting') ) return;
-    if (isModuleFinished || activeMatchingExercise || activeAudioQuizExercise || (activeInteractiveExercise && activeInteractiveExercise.type !== 'structuredWriting') || noContentForModule) return;
+    if (!currentTask /* && !(activeStructuredWritingExercise) */ ) return; // activeStructuredWritingExercise temporarily removed
+    if (isModuleFinished || activeMatchingExercise || activeAudioQuizExercise || activeMCQExercise || activeTrueFalseExercise || activeSequencingExercise || noContentForModule) return;
 
     setIsLoadingTask(true); setFeedback(null);
     let questionContext = ''; let expectedAnswerForAI = ''; let grammarRulesForAI: string | undefined = undefined;
@@ -688,22 +690,22 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
         } 
     }
     else if (moduleId === 'writing') { 
-        if (activeInteractiveExercise && activeInteractiveExercise.type === 'structuredWriting') {
-            const exercise = activeInteractiveExercise as AIStructuredWritingExercise;
-            let detailedContext = `Task Type: Structured Writing. Instructions: ${exercise.instructions}. Prompt: ${exercise.promptDetails}.`;
-            if (exercise.aiGeneratedStoryToDescribe) {
-                detailedContext += ` Story to describe: "${exercise.aiGeneratedStoryToDescribe}".`;
-            }
-            if (exercise.templateOutline && exercise.templateOutline.length > 0) {
-                detailedContext += ` Template/Outline: ${exercise.templateOutline.join(', ')}.`;
-            }
-            if (exercise.requiredVocabulary && exercise.requiredVocabulary.length > 0) {
-                detailedContext += ` Required vocabulary: ${exercise.requiredVocabulary.join(', ')}.`;
-            }
-            questionContext = detailedContext;
-        } else {
+        // if (activeStructuredWritingExercise) { // Temporarily removed
+        //     const exercise = activeStructuredWritingExercise;
+        //     let detailedContext = `Task Type: Structured Writing. Instructions: ${exercise.instructions}. Prompt: ${exercise.promptDetails}.`;
+        //     if (exercise.aiGeneratedStoryToDescribe) {
+        //         detailedContext += ` Story to describe: "${exercise.aiGeneratedStoryToDescribe}".`;
+        //     }
+        //     if (exercise.templateOutline && exercise.templateOutline.length > 0) {
+        //         detailedContext += ` Template/Outline: ${exercise.templateOutline.join(', ')}.`;
+        //     }
+        //     if (exercise.requiredVocabulary && exercise.requiredVocabulary.length > 0) {
+        //         detailedContext += ` Required vocabulary: ${exercise.requiredVocabulary.join(', ')}.`;
+        //     }
+        //     questionContext = detailedContext;
+        // } else {
             questionContext = `Пользователя попросили написать текст на тему: "${currentTask}".`;
-        }
+        // }
     }
     
     const evaluation = await evaluateUserResponse(levelId, topicId, moduleId, userResponse, questionContext, expectedAnswerForAI, grammarRulesForAI);
@@ -893,13 +895,14 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
       );
     }
     // --- Listening/Reading: Interactive Exercises ---
-    if ((moduleId === 'listening' || moduleId === 'reading') && activeInteractiveExercise) {
+    const currentInteractiveExercise = activeMCQExercise || activeTrueFalseExercise || activeSequencingExercise;
+    if ((moduleId === 'listening' || moduleId === 'reading') && currentInteractiveExercise) {
         const baseText = moduleId === 'listening' ? lessonContent?.listeningExercise?.script : lessonContent?.readingPassage;
         return (
             <div>
-                <h3 className="text-xl font-semibold mb-2">{activeInteractiveExercise.instructions}</h3>
+                <h3 className="text-xl font-semibold mb-2">{currentInteractiveExercise.instructions}</h3>
                  <p className="text-center text-muted-foreground mb-4">
-                    {activeInteractiveExercise.type === 'sequencing' ? `Упорядочите ${ (activeInteractiveExercise as AISequencingExercise).shuffledItems.length} элементов.` : `Задание ${currentInteractiveQuestionIndex + 1} из ${totalTasks}`}
+                    {currentInteractiveExercise.type === 'sequencing' ? `Упорядочите ${ (currentInteractiveExercise as AISequencingExercise).shuffledItems.length} элементов.` : `Задание ${currentInteractiveQuestionIndex + 1} из ${totalTasks}`}
                  </p>
                 
                 {baseText && (
@@ -921,8 +924,8 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
                 )}
 
                 {/* MCQ Rendering */}
-                {activeInteractiveExercise.type === 'comprehensionMultipleChoice' && (() => {
-                    const currentQuestion = (activeInteractiveExercise as AIComprehensionMultipleChoiceExercise).questions[currentInteractiveQuestionIndex];
+                {activeMCQExercise && activeMCQExercise.type === 'comprehensionMultipleChoice' && (() => {
+                    const currentQuestion = activeMCQExercise.questions[currentInteractiveQuestionIndex];
                     if (!currentQuestion) return <p>Ошибка: вопрос не найден.</p>;
                     return (
                         <div className="space-y-3 mb-6">
@@ -943,8 +946,8 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
                 })()}
 
                 {/* True/False Rendering */}
-                {activeInteractiveExercise.type === 'trueFalse' && (() => {
-                    const currentStatement = (activeInteractiveExercise as AITrueFalseExercise).statements[currentInteractiveQuestionIndex];
+                {activeTrueFalseExercise && activeTrueFalseExercise.type === 'trueFalse' && (() => {
+                    const currentStatement = activeTrueFalseExercise.statements[currentInteractiveQuestionIndex];
                     if (!currentStatement) return <p>Ошибка: утверждение не найдено.</p>;
                     return (
                         <div className="space-y-3 mb-6">
@@ -972,7 +975,7 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
                 })()}
                 
                 {/* Sequencing Rendering */}
-                {activeInteractiveExercise.type === 'sequencing' && (() => {
+                {activeSequencingExercise && activeSequencingExercise.type === 'sequencing' && (() => {
                     return (
                         <div className="space-y-6 mb-6">
                             <div>
@@ -1097,41 +1100,41 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
         ); 
       }
       case 'writing': {
-        if (activeInteractiveExercise && activeInteractiveExercise.type === 'structuredWriting') {
-            const exercise = activeInteractiveExercise as AIStructuredWritingExercise;
-            return (
-                <div>
-                    <h3 className="text-xl font-semibold mb-1">{exercise.instructions || "Письменное задание"}</h3>
-                    <p className="text-muted-foreground mb-4">{exercise.promptDetails}</p>
+        // if (activeStructuredWritingExercise) { // Temporarily removed
+        //     const exercise = activeStructuredWritingExercise;
+        //     return (
+        //         <div>
+        //             <h3 className="text-xl font-semibold mb-1">{exercise.instructions || "Письменное задание"}</h3>
+        //             <p className="text-muted-foreground mb-4">{exercise.promptDetails}</p>
 
-                    {exercise.aiGeneratedStoryToDescribe && (
-                        <Card className="mb-4 bg-muted/40">
-                            <CardHeader><CardTitle className="text-base font-medium">Опишите следующую историю:</CardTitle></CardHeader>
-                            <CardContent className="text-sm prose dark:prose-invert max-w-none">
-                                <p>{exercise.aiGeneratedStoryToDescribe}</p>
-                            </CardContent>
-                        </Card>
-                    )}
-                    {exercise.templateOutline && exercise.templateOutline.length > 0 && (
-                        <div className="mb-4 p-3 border rounded-md bg-card-foreground/5">
-                            <p className="text-sm font-medium mb-1 text-primary">План / Шаблон:</p>
-                            <ul className="list-disc list-inside text-sm text-muted-foreground space-y-0.5">
-                                {exercise.templateOutline.map((item, idx) => <li key={`outline-${idx}`}>{item}</li>)}
-                            </ul>
-                        </div>
-                    )}
-                    {exercise.requiredVocabulary && exercise.requiredVocabulary.length > 0 && (
-                         <div className="mb-4">
-                            <p className="text-sm font-medium mb-1.5 text-primary">Используйте эти слова/фразы:</p>
-                            <div className="flex flex-wrap gap-2">
-                                {exercise.requiredVocabulary.map((vocab, idx) => <Badge key={`vocab-${idx}`} variant="secondary">{vocab}</Badge>)}
-                            </div>
-                        </div>
-                    )}
-                     <p className="text-muted-foreground mb-1 mt-3">Ваш текст:</p>
-                </div>
-            );
-        }
+        //             {exercise.aiGeneratedStoryToDescribe && (
+        //                 <Card className="mb-4 bg-muted/40">
+        //                     <CardHeader><CardTitle className="text-base font-medium">Опишите следующую историю:</CardTitle></CardHeader>
+        //                     <CardContent className="text-sm prose dark:prose-invert max-w-none">
+        //                         <p>{exercise.aiGeneratedStoryToDescribe}</p>
+        //                     </CardContent>
+        //                 </Card>
+        //             )}
+        //             {exercise.templateOutline && exercise.templateOutline.length > 0 && (
+        //                 <div className="mb-4 p-3 border rounded-md bg-card-foreground/5">
+        //                     <p className="text-sm font-medium mb-1 text-primary">План / Шаблон:</p>
+        //                     <ul className="list-disc list-inside text-sm text-muted-foreground space-y-0.5">
+        //                         {exercise.templateOutline.map((item, idx) => <li key={`outline-${idx}`}>{item}</li>)}
+        //                     </ul>
+        //                 </div>
+        //             )}
+        //             {exercise.requiredVocabulary && exercise.requiredVocabulary.length > 0 && (
+        //                  <div className="mb-4">
+        //                     <p className="text-sm font-medium mb-1.5 text-primary">Используйте эти слова/фразы:</p>
+        //                     <div className="flex flex-wrap gap-2">
+        //                         {exercise.requiredVocabulary.map((vocab, idx) => <Badge key={`vocab-${idx}`} variant="secondary">{vocab}</Badge>)}
+        //                     </div>
+        //                 </div>
+        //             )}
+        //              <p className="text-muted-foreground mb-1 mt-3">Ваш текст:</p>
+        //         </div>
+        //     );
+        // }
         // Fallback to general writing prompt
         if (!currentTask) return <p className="text-center p-4 text-muted-foreground">Загрузка письменного задания...</p>;
         return (
@@ -1150,7 +1153,8 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
   const progressPercent = totalTasks > 0 ? (tasksCompleted / totalTasks) * 100 : 0;
   let placeholderText = "Ваш ответ...";
   if (moduleId === 'wordTest') placeholderText = "Введите перевод на русский...";
-  if (activeMatchingExercise || activeAudioQuizExercise || (activeInteractiveExercise && activeInteractiveExercise.type !== 'structuredWriting') || noContentForModule || !contentManuallyRequested) placeholderText = ""; 
+  const activeInteractiveExercise = activeMatchingExercise || activeAudioQuizExercise || activeMCQExercise || activeTrueFalseExercise || activeSequencingExercise /* || activeStructuredWritingExercise */; // activeStructuredWritingExercise temp removed
+  if (activeInteractiveExercise || noContentForModule || !contentManuallyRequested) placeholderText = ""; 
 
   if (isLoadingTask && topicName === "Загрузка...") { 
       return (
@@ -1183,10 +1187,10 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
       <Card className="shadow-xl">
         <CardHeader>
           <CardTitle className="font-headline text-2xl flex items-center">
-            {activeInteractiveExercise?.type === 'sequencing' && <ListOrdered className="mr-2 h-6 w-6 text-primary"/>}
-            {activeInteractiveExercise?.type === 'comprehensionMultipleChoice' && <BookCheck className="mr-2 h-6 w-6 text-primary"/>}
-            {activeInteractiveExercise?.type === 'trueFalse' && <ThumbsUp className="mr-2 h-6 w-6 text-primary"/>}
-            {activeInteractiveExercise?.type === 'structuredWriting' && <Info className="mr-2 h-6 w-6 text-primary"/>}
+            {activeSequencingExercise && <ListOrdered className="mr-2 h-6 w-6 text-primary"/>}
+            {activeMCQExercise && <BookCheck className="mr-2 h-6 w-6 text-primary"/>}
+            {activeTrueFalseExercise && <ThumbsUp className="mr-2 h-6 w-6 text-primary"/>}
+            {/* {activeStructuredWritingExercise && <Info className="mr-2 h-6 w-6 text-primary"/>} */}
             {activeAudioQuizExercise && <Speaker className="mr-2 h-6 w-6 text-primary"/>}
             {activeMatchingExercise && <Shuffle className="mr-2 h-6 w-6 text-primary"/>}
             {!contentManuallyRequested && !isLoadingTask && <DownloadCloud className="mr-2 h-6 w-6 text-primary/70" />}
@@ -1198,9 +1202,9 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
             <CardDescription>Уровень {levelId}. 
             {activeMatchingExercise ? " Упражнение на сопоставление." : 
              activeAudioQuizExercise ? `Аудио-квиз: Задание ${currentAudioQuizItemIndex + 1} из ${totalTasks}.` :
-             activeInteractiveExercise && activeInteractiveExercise.type !== 'sequencing' && activeInteractiveExercise.type !== 'structuredWriting' ? `Интерактивное упражнение: Задание ${currentInteractiveQuestionIndex + 1} из ${totalTasks}.` :
-             activeInteractiveExercise && activeInteractiveExercise.type === 'sequencing' ? `Интерактивное упражнение: Упорядочите элементы.` :
-             activeInteractiveExercise && activeInteractiveExercise.type === 'structuredWriting' ? `Структурированное письменное задание.` :
+             (activeMCQExercise || activeTrueFalseExercise) ? `Интерактивное упражнение: Задание ${currentInteractiveQuestionIndex + 1} из ${totalTasks}.` :
+             activeSequencingExercise ? `Интерактивное упражнение: Упорядочите элементы.` :
+            //  activeStructuredWritingExercise ? `Структурированное письменное задание.` :
               (currentVocabulary.length > 0 || (lessonContent?.vocabulary && lessonContent.vocabulary.length > 0) || (lessonContent?.listeningExercise && lessonContent.listeningExercise.questions.length > 0) || lessonContent?.readingQuestions.length > 0 || lessonContent?.grammarExplanation || lessonContent?.writingPrompt) ? `Задание ${tasksCompleted + 1} из ${totalTasks}.` : "Загрузка задания..."}
             </CardDescription>
           ) : noContentForModule && !isLoadingTask && contentManuallyRequested ? (
@@ -1244,7 +1248,7 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
               {finalModuleScore !== null && finalModuleScore < 70 && (
                 <p className="text-sm text-muted-foreground mb-4">Нужно немного подтянуть! Попробуйте еще раз.</p>
               )}
-               {interactiveExerciseFeedback?.correctSequence && !interactiveExerciseFeedback.isCorrect && activeInteractiveExercise?.type === 'sequencing' && (
+               {interactiveExerciseFeedback?.correctSequence && !interactiveExerciseFeedback.isCorrect && activeSequencingExercise && (
                 <div className="mt-4 p-3 border border-blue-300 bg-blue-50 rounded-md text-left">
                     <p className="text-sm font-medium text-blue-700">Правильная последовательность была:</p>
                     <ol className="list-decimal list-inside text-xs text-blue-600">
@@ -1273,7 +1277,7 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
               </div>
             </div>
           )}
-          {feedback && !isModuleFinished && !activeMatchingExercise && !activeAudioQuizExercise && !(activeInteractiveExercise && activeInteractiveExercise.type !== 'structuredWriting') && contentManuallyRequested && ( 
+          {feedback && !isModuleFinished && !activeInteractiveExercise && contentManuallyRequested && ( 
             <Card className={`mb-4 ${feedback.isCorrect ? 'border-green-500' : 'border-red-500'}`}> 
              <CardContent className="p-4">
                 <p className={`font-semibold ${feedback.isCorrect ? 'text-green-700 dark:text-green-400' : 'text-red-700 dark:text-red-400'}`}>
@@ -1315,30 +1319,30 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
               )
             )}
             {/* Interactive Listening/Reading Buttons */}
-            {activeInteractiveExercise && (moduleId === 'listening' || moduleId === 'reading') && (
+            { (activeMCQExercise || activeTrueFalseExercise || activeSequencingExercise) && (moduleId === 'listening' || moduleId === 'reading') && (
                 !interactiveExerciseFeedback ? (
-                    activeInteractiveExercise.type === 'comprehensionMultipleChoice' ? (
+                    activeMCQExercise ? (
                         <Button onClick={handleSubmitMCQAnswer} className="w-full" size="lg" disabled={!selectedMCQOption || isLoadingTask}>
                              {isLoadingTask ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                              {isLoadingTask ? "Проверка..." : "Проверить ответ"}
                         </Button>
-                    ) : activeInteractiveExercise.type === 'trueFalse' ? (
+                    ) : activeTrueFalseExercise ? (
                         <Button onClick={handleSubmitTrueFalseAnswer} className="w-full" size="lg" disabled={selectedTrueFalseAnswer === null || isLoadingTask}>
                             {isLoadingTask ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                             {isLoadingTask ? "Проверка..." : "Проверить ответ"}
                         </Button>
-                    ) : activeInteractiveExercise.type === 'sequencing' ? (
-                        <Button onClick={handleCheckSequence} className="w-full" size="lg" disabled={userSequence.length !== (activeInteractiveExercise as AISequencingExercise).shuffledItems.length || isLoadingTask}>
+                    ) : activeSequencingExercise ? (
+                        <Button onClick={handleCheckSequence} className="w-full" size="lg" disabled={userSequence.length !== (activeSequencingExercise as AISequencingExercise).shuffledItems.length || isLoadingTask}>
                             {isLoadingTask ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                             {isLoadingTask ? "Проверка..." : "Проверить последовательность"}
                         </Button>
                     ) : null 
                 ) : ( 
-                     activeInteractiveExercise.type !== 'sequencing' && <Button onClick={handleNextInteractiveItem} className="w-full" size="lg">Следующее задание</Button>
+                     !activeSequencingExercise && <Button onClick={handleNextInteractiveItem} className="w-full" size="lg">Следующее задание</Button>
                 )
             )}
             {/* Standard Task or Structured Writing Button */}
-            {!activeMatchingExercise && !activeAudioQuizExercise && !(activeInteractiveExercise && activeInteractiveExercise.type !== 'structuredWriting') && (
+            {!activeInteractiveExercise && (
               <Button 
                 onClick={handleSubmit} 
                 disabled={isLoadingTask || !userResponse.trim() || tasksCompleted >= totalTasks || (!currentTask && moduleId !== 'writing' && (moduleId === 'listening' || (moduleId === 'reading' && lessonContent?.readingQuestions && lessonContent.readingQuestions.length > 0)))}
@@ -1357,6 +1361,7 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
     
 
     
+
 
 
 
