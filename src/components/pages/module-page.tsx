@@ -46,16 +46,18 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
   } = useUserData();
   
   const [lessonContent, setLessonContent] = useState<AILessonContent | null>(null);
-  const [currentTask, setCurrentTask] = useState<string | null>(null); // Stores the German word for vocab/test, or text for others
+  const [currentTask, setCurrentTask] = useState<string | null>(null);
   const [userResponse, setUserResponse] = useState('');
   const [feedback, setFeedback] = useState<AIEvaluationResult | null>(null);
   const [isLoadingTask, setIsLoadingTask] = useState(false);
   const [moduleScore, setModuleScore] = useState(0);
   const [tasksCompleted, setTasksCompleted] = useState(0);
   const [totalTasks, setTotalTasks] = useState(5); 
-  const [currentVocabulary, setCurrentVocabulary] = useState<VocabularyWord[]>([]); // For vocabulary module, words from user's bank
+  const [currentVocabulary, setCurrentVocabulary] = useState<VocabularyWord[]>([]);
   const [isModuleFinished, setIsModuleFinished] = useState(false);
   const [finalModuleScore, setFinalModuleScore] = useState<number | null>(null);
+
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0); // For listening module
 
   const [topicContinuationLink, setTopicContinuationLink] = useState<string | null>(null);
   const [topicContinuationText, setTopicContinuationText] = useState<string>('');
@@ -70,6 +72,7 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
     setLessonContent(null); 
     setCurrentTask(null);
     setFeedback(null);
+    setCurrentQuestionIndex(0);
 
     const content = await getTopicLessonContent(levelId, topicName);
     setLessonContent(content);
@@ -90,7 +93,6 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
               });
               wordsToUse = getWordsForTopic(topicId); 
           } else if (wordsToUse.length > 0 && content.vocabulary.length > 0) {
-            // Ensure words from AI content are also in the bank if not already
             content.vocabulary.forEach((vocabItem: AILessonVocabularyItem) => {
                 const existingWord = wordsToUse.find(w => w.german.toLowerCase() === vocabItem.german.toLowerCase());
                 if(!existingWord) {
@@ -103,11 +105,10 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
                   });
                 }
             });
-            wordsToUse = getWordsForTopic(topicId); // Re-fetch to include potentially new words
+            wordsToUse = getWordsForTopic(topicId);
           }
 
           setCurrentVocabulary(wordsToUse);
-          // Set total tasks based on available words, either from bank or newly generated AI content
           const availableWordsCount = wordsToUse.length > 0 ? wordsToUse.length : content.vocabulary.length;
           setTotalTasks(availableWordsCount > 0 ? availableWordsCount : 1);
 
@@ -121,8 +122,13 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
           setCurrentTask(content.grammarExplanation); 
           setTotalTasks(1); 
       } else if (moduleId === 'listening') {
-          setCurrentTask(content.listeningExercise);
-          setTotalTasks(1);
+          if (content.listeningExercise && content.listeningExercise.questions && content.listeningExercise.questions.length > 0) {
+            setTotalTasks(content.listeningExercise.questions.length);
+            setCurrentTask(content.listeningExercise.questions[0]);
+          } else {
+            setCurrentTask("Нет вопросов для аудирования.");
+            setTotalTasks(1); // Fallback
+          }
       } else if (moduleId === 'reading') {
           setCurrentTask(content.readingPassage);
           setTotalTasks(1);
@@ -159,7 +165,7 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
         
         const allTopicObjectsForLevel: {id: string, name: string}[] = [
           ...currentLevelDefaultTopics.map(t => ({ id: t.id, name: t.name })),
-          ...currentLevelCustomTopics.map(t => ({ id: t.id, name: t.name }))
+          ...customTopicObjectsForLevel.map(t => ({ id: t.id, name: t.name }))
         ];
 
         const currentTopicIndexInAll = allTopicObjectsForLevel.findIndex(t => t.id === topicId);
@@ -203,6 +209,7 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
     setTasksCompleted(0);
     setModuleScore(0);
     setUserResponse('');
+    setCurrentQuestionIndex(0);
     setTopicContinuationLink(null); 
     setTopicContinuationText('');
     fetchLesson(); 
@@ -217,13 +224,17 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
     let expectedAnswer = ''; 
 
     if (moduleId === 'vocabulary' || moduleId === 'wordTest') {
-        const wordData = currentVocabulary.find(v => v.german === currentTask);
+        const wordData = currentVocabulary.find(v => v.german === currentTask) || lessonContent.vocabulary.find(v => v.german === currentTask);
         questionContext = `Переведите слово: "${currentTask}"${wordData?.exampleSentence ? ` (Пример: ${wordData.exampleSentence})` : ''}`;
         expectedAnswer = wordData?.russian || '';
     } else if (moduleId === 'grammar') {
         questionContext = `Задание по грамматике (на основе объяснения): ${lessonContent.grammarExplanation}. Задание: ${lessonContent.writingPrompt || "Напишите предложение, используя это правило."}`;
     } else if (moduleId === 'listening') {
-        questionContext = `Прослушайте и ответьте на вопросы (текст для прослушивания: ${lessonContent.listeningExercise}). Вопрос: (Сформулируйте основной смысл услышанного).`;
+        if (lessonContent.listeningExercise && lessonContent.listeningExercise.questions && lessonContent.listeningExercise.questions[currentQuestionIndex]) {
+            questionContext = `Скрипт: "${lessonContent.listeningExercise.script}". Вопрос: "${lessonContent.listeningExercise.questions[currentQuestionIndex]}"`;
+        } else {
+            questionContext = "Ошибка: нет данных для упражнения по аудированию.";
+        }
     } else if (moduleId === 'reading') {
         questionContext = `Прочитайте текст и ответьте на вопросы (текст: ${lessonContent.readingPassage}). Вопрос: (Какова главная идея этого текста?).`;
     } else if (moduleId === 'writing') {
@@ -273,26 +284,37 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
       if ((moduleId === 'vocabulary' || moduleId === 'wordTest')) {
           if (currentVocabulary.length > newTasksCompleted) {
             setCurrentTask(currentVocabulary[newTasksCompleted].german);
-          } else if (lessonContent.vocabulary.length > newTasksCompleted) { // Fallback if currentVocabulary (from bank) runs out but AI content has more
+          } else if (lessonContent.vocabulary.length > newTasksCompleted) {
              setCurrentTask(lessonContent.vocabulary[newTasksCompleted].german);
           } else {
-             // This case might indicate an issue if totalTasks was based on a larger number
              setIsModuleFinished(true); 
-             setFinalModuleScore(Math.round(moduleScore)); // Use current moduleScore as final
+             setFinalModuleScore(Math.round(moduleScore));
              updateModuleProgress(levelId, topicId, moduleId, Math.round(moduleScore));
              toast({title: "Неожиданное завершение модуля", description: "Кажется, задания закончились раньше."});
           }
+      } else if (moduleId === 'listening') {
+        if (lessonContent.listeningExercise && lessonContent.listeningExercise.questions && lessonContent.listeningExercise.questions.length > newTasksCompleted) {
+            setCurrentQuestionIndex(newTasksCompleted);
+            setCurrentTask(lessonContent.listeningExercise.questions[newTasksCompleted]);
+        } else {
+            setIsModuleFinished(true); 
+            setFinalModuleScore(Math.round(moduleScore));
+            updateModuleProgress(levelId, topicId, moduleId, Math.round(moduleScore));
+            toast({title: "Неожиданное завершение модуля (аудирование)", description: "Кажется, вопросы закончились раньше."});
+        }
       }
     }
   };
 
   const renderModuleContent = () => {
     if (isLoadingTask && !lessonContent) return <div className="text-center p-4"><Progress value={50} className="w-1/2 mx-auto" /> <p className="mt-2">Загрузка урока...</p></div>;
-    if (!lessonContent || !currentTask) return <p className="text-center p-4 text-muted-foreground">Не удалось загрузить содержание модуля. Попробуйте обновить страницу или вернуться назад.</p>;
+    if (!lessonContent) return <p className="text-center p-4 text-muted-foreground">Не удалось загрузить содержание модуля. Попробуйте обновить страницу или вернуться назад.</p>;
+
 
     switch (moduleId) {
       case 'vocabulary':
       case 'wordTest':
+        if (!currentTask) return <p className="text-center p-4 text-muted-foreground">Загрузка слова...</p>;
         const currentWordData = currentVocabulary.find(v => v.german === currentTask) || 
                                 lessonContent.vocabulary.find(v => v.german === currentTask);
         return (
@@ -309,6 +331,7 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
           </div>
         );
       case 'grammar':
+        if (!currentTask) return <p className="text-center p-4 text-muted-foreground">Загрузка грамматики...</p>;
         return (
           <div>
             <h3 className="text-xl font-semibold mb-2">Грамматическое правило:</h3>
@@ -317,27 +340,37 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
           </div>
         );
       case 'listening':
+        if (!lessonContent.listeningExercise || !lessonContent.listeningExercise.script) return <p className="text-center p-4 text-muted-foreground">Загрузка аудирования...</p>;
+        const currentQuestion = lessonContent.listeningExercise.questions?.[currentQuestionIndex];
         return (
           <div>
             <h3 className="text-xl font-semibold mb-2">Аудирование:</h3>
-            <p className="mb-2">Прослушайте текст:</p>
-            <Button onClick={() => speak(lessonContent.listeningExercise, 'de-DE')} className="mb-4">
-              <Speaker className="mr-2 h-4 w-4" /> Прослушать
+            <p className="mb-1">Прослушайте текст:</p>
+            <div className="prose dark:prose-invert max-w-none mb-2 p-3 border rounded-md bg-card-foreground/5 text-sm">
+              {lessonContent.listeningExercise.script}
+            </div>
+            <Button onClick={() => speak(lessonContent.listeningExercise.script, 'de-DE')} className="mb-4">
+              <Speaker className="mr-2 h-4 w-4" /> Прослушать текст
             </Button>
-            <p className="text-lg mb-2">Ответьте на вопрос по прослушанному (вопрос должен быть частью listeningExercise или генерироваться ИИ):</p>
-            <p className="italic text-muted-foreground">"Сформулируйте основной смысл услышанного." (Пример задания)</p>
+            {currentQuestion && (
+                 <p className="text-lg mb-2">Вопрос {currentQuestionIndex + 1}: {currentQuestion}</p>
+            )}
+            {!currentQuestion && tasksCompleted < totalTasks && <p className="text-muted-foreground">Загрузка вопроса...</p>}
+            {!currentQuestion && tasksCompleted >= totalTasks && <p className="text-muted-foreground">Все вопросы прослушаны.</p>}
           </div>
         );
       case 'reading':
+        if (!currentTask) return <p className="text-center p-4 text-muted-foreground">Загрузка текста для чтения...</p>;
         return (
           <div>
             <h3 className="text-xl font-semibold mb-2">Чтение:</h3>
             <div className="prose dark:prose-invert max-w-none mb-4 p-4 border rounded-md bg-card-foreground/5" dangerouslySetInnerHTML={{ __html: lessonContent.readingPassage.replace(/\n/g, '<br />') }} />
-            <p className="text-lg mb-2">Ответьте на вопрос по тексту (вопрос должен быть частью readingPassage или генерироваться ИИ):</p>
-            <p className="italic text-muted-foreground">"Какова главная идея этого текста?" (Пример задания)</p>
+            <p className="text-lg mb-2">Ответьте на вопрос по тексту:</p>
+            <p className="italic text-muted-foreground">"Какова главная идея этого текста?" (Пример задания, реальные вопросы должны генерироваться AI)</p>
           </div>
         );
       case 'writing':
+        if (!currentTask) return <p className="text-center p-4 text-muted-foreground">Загрузка задания для письма...</p>;
         return (
           <div>
             <h3 className="text-xl font-semibold mb-2">Письмо:</h3>
@@ -378,7 +411,7 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
                 value={userResponse}
                 onChange={(e) => setUserResponse(e.target.value)}
                 className="mb-4 min-h-[100px]"
-                disabled={isLoadingTask || tasksCompleted >= totalTasks}
+                disabled={isLoadingTask || tasksCompleted >= totalTasks || (!currentTask && moduleId !== 'listening')}
               />
             </>
           ) : (
@@ -396,7 +429,7 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
                             {topicContinuationText} <ArrowRight className="ml-2 h-5 w-5" />
                           </Link>
                         </Button>
-                      ) : ( // Fallback if topicContinuationLink/Text isn't ready (e.g. still processing)
+                      ) : ( 
                          <Button size="lg" onClick={() => router.push(`/levels/${levelId.toLowerCase()}/${topicId}`)}>
                             К модулям темы <ArrowRight className="ml-2 h-5 w-5" />
                          </Button>
@@ -450,7 +483,7 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
           <CardFooter>
             <Button 
               onClick={handleSubmit} 
-              disabled={isLoadingTask || !userResponse.trim() || tasksCompleted >= totalTasks} 
+              disabled={isLoadingTask || !userResponse.trim() || tasksCompleted >= totalTasks || (!currentTask && moduleId !== 'listening')}
               className="w-full"
               size="lg"
             >
@@ -463,3 +496,5 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
   );
 }
     
+
+      
