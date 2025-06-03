@@ -15,8 +15,8 @@ import {z} from 'genkit';
 
 const RecommendAiLessonInputSchema = z.object({
   userLevel: z.enum(['A0', 'A1', 'A2', 'B1', 'B2', 'C1', 'C2']).describe('The current German language level of the user.'),
-  userProgress: z.record(z.string(), z.number()).describe('A record of the user\'s progress in each topic, with topic names as keys and progress percentages as values.'),
-  weakAreas: z.array(z.string()).describe('An array of the user\'s weaker areas in German learning, such as vocabulary, grammar, listening, reading, or writing.'),
+  userProgress: z.record(z.string(), z.number()).describe('A record of the user\'s progress in each topic, with topic names as keys and progress percentages as values. Example format: "A1 - Хобби и увлечения: 75%"'),
+  weakAreas: z.array(z.string()).describe('An array of the user\'s weaker areas in German learning. Example format: "Низкий результат (40%) по модулю \'Грамматика\' в теме \'Работа и профессии\' (уровень A1)." или "Модуль \'Аудирование\' в теме \'Путешествия и транспорт\' (уровень A1) не начат."'),
   preferredTopics: z.array(z.string()).optional().describe('An optional array of topics the user prefers to learn about.'),
 });
 export type RecommendAiLessonInput = z.infer<typeof RecommendAiLessonInputSchema>;
@@ -39,21 +39,47 @@ const prompt = ai.definePrompt({
   prompt: `You are an AI-powered German language learning assistant. Your task is to recommend a personalized lesson for the user based on their current level, progress, weaker areas, and preferences.
 
   User Level: {{{userLevel}}}
-  User Progress: {{#each userProgress}}{{{@key}}}: {{{this}}}% {{/each}}
-  Weaker Areas: {{#each weakAreas}}{{{this}}} {{/each}}
+  User Progress:
+  {{#if userProgress}}
+    {{#each userProgress}}
+      - {{{@key}}}: {{{this}}}%
+    {{/each}}
+  {{else}}
+    No progress data available.
+  {{/if}}
+
+  Weaker Areas:
+  {{#if weakAreas}}
+    {{#each weakAreas}}
+      - {{{this}}}
+    {{/each}}
+  {{else}}
+    No specific weak areas identified.
+  {{/if}}
+
   Preferred Topics: {{#if preferredTopics}}{{#each preferredTopics}}{{{this}}}{{#unless @last}}, {{/unless}}{{/each}}{{else}}None specified{{/if}}
 
   Based on this information, recommend a topic and a set of learning modules (vocabulary, grammar, listening, reading, writing) that would be most beneficial for the user.
   If the user has specified preferred topics, try to recommend a lesson from one of those topics if it's appropriate for their level and progress. If none of the preferred topics are suitable, choose another relevant topic.
-  Explain your reasoning for the recommendation.
 
+  **Special attention to Grammar:**
+  Если список "Weaker Areas" содержит записи вроде "Низкий результат по модулю 'Грамматика' в теме X" или "Модуль 'Грамматика' в теме X не начат", это указывает на потенциальную необходимость закрепить грамматику. Рассмотрите следующие варианты рекомендаций:
+    а) Повторно порекомендовать тему X, сделав акцент на модуле 'grammar'. Убедитесь, что тема X действительно соответствует текущему уровню пользователя ({{{userLevel}}}) или является недавней.
+    б) Если пользователь уже много времени провел над темой X, или если наблюдается общая слабость в грамматике, вы можете предложить НОВУЮ тему, которая известна тем, что хорошо закрепляет грамматические правила, актуальные для уровня {{{userLevel}}}.
+    в) Четко укажите в поле "reasoning", если ваша рекомендация направлена на улучшение грамматики на основе этих слабых мест. Объясните, почему именно эта тема или модуль помогут.
+    г) Если вы рекомендуете тему для улучшения грамматики, убедитесь, что 'grammar' включен в массив "modules" вашего ответа.
+
+  Prioritize addressing weak areas. If multiple weak areas exist, use your judgment to pick the most impactful one to address. If vocabulary is also weak in the same or another topic, you can combine this into your recommendation, possibly suggesting a topic that covers both needs or suggesting multiple modules.
+  If preferred topics align with a grammar reinforcement opportunity, prioritize that.
+
+  Explain your reasoning for the recommendation.
   Respond in Russian.
 
   Example output:
   {
     "topic": "Die Familie",
     "modules": ["vocabulary", "grammar", "listening"],
-    "reasoning": "Исходя из вашего прогресса, вам следует сосредоточиться на лексике и грамматике в контексте семьи. Модуль аудирования поможет закрепить новые слова. Эта тема также была среди ваших предпочтений."
+    "reasoning": "Исходя из вашего прогресса, вам следует сосредоточиться на лексике и грамматике в контексте семьи. Модуль аудирования поможет закрепить новые слова. Эта тема также была среди ваших предпочтений. В области 'Грамматика' по теме 'Старая Тема' у вас были трудности, поэтому тема 'Die Familie' также поможет закрепить соответствующие правила."
   }
   `,
 });
@@ -103,3 +129,4 @@ const recommendAiLessonFlow = ai.defineFlow(
     throw new Error('[recommendAiLessonFlow] Failed after multiple retries, and loop exited unexpectedly.');
   }
 );
+
