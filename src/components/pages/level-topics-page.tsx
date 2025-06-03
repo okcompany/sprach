@@ -30,7 +30,7 @@ export function LevelTopicsPage({ levelId }: LevelTopicsPageProps) {
   }
   
   const levelProgressData = userData.progress[levelId];
-  const isCurrentLevelCompleted = levelProgressData?.completed || false;
+  const isCurrentLevelCompleted = userData.progress[levelId]?.completed || false; // Use the flag from user data
   const defaultTopicsForLevel = DEFAULT_TOPICS[levelId] || [];
   
   const topicsWithProgress = defaultTopicsForLevel.map(defaultTopic => {
@@ -39,7 +39,8 @@ export function LevelTopicsPage({ levelId }: LevelTopicsPageProps) {
       ...defaultTopic,
       ...progress,
       modules: progress?.modules || {},
-      completed: progress?.completed || isTopicCompleted(levelId, defaultTopic.id),
+      completed: progress?.completed || isTopicCompleted(levelId, defaultTopic.id), // isTopicCompleted will derive completion
+      custom: false, // Explicitly mark default topics
     };
   });
 
@@ -48,7 +49,7 @@ export function LevelTopicsPage({ levelId }: LevelTopicsPageProps) {
     .map(customTopic => {
         const progress = levelProgressData?.topics[customTopic.id];
         return {
-            ...customTopic,
+            ...customTopic, // customTopic already has id, name, custom:true
             modules: progress?.modules || {},
             completed: progress?.completed || isTopicCompleted(levelId, customTopic.id),
         }
@@ -63,13 +64,13 @@ export function LevelTopicsPage({ levelId }: LevelTopicsPageProps) {
     }
   };
 
-  const calculateTopicProgress = (topic: TopicProgress | (typeof defaultTopicsForLevel[0] & Partial<TopicProgress>)) => {
+  const calculateTopicProgress = (topic: TopicProgress | (typeof defaultTopicsForLevel[0] & Partial<TopicProgress> & { custom: boolean })) => {
     if (!topic.modules) return 0;
     const completedModules = Object.values(topic.modules).filter(m => m?.score !== null && m.score >=70).length;
     return (completedModules / ALL_MODULE_TYPES.length) * 100;
   };
 
-  const getButtonTextForTopic = (topic: TopicProgress | (typeof defaultTopicsForLevel[0] & Partial<TopicProgress>), progressPercent: number) => {
+  const getButtonTextForTopic = (topic: TopicProgress | (typeof defaultTopicsForLevel[0] & Partial<TopicProgress> & { custom: boolean }), progressPercent: number) => {
     if (topic.completed) {
       return "Повторить тему";
     } else if (progressPercent > 0) {
@@ -143,7 +144,7 @@ export function LevelTopicsPage({ levelId }: LevelTopicsPageProps) {
                   <CardTitle className="font-headline text-xl">{topic.name}</CardTitle>
                   {topic.completed && <CheckCircle className="h-5 w-5 text-green-500" />}
                 </div>
-                 {topic.custom && <CardDescription className="text-xs text-primary">Пользовательская тема</CardDescription>}
+                 {topic.custom && <CardDescription className="text-xs text-primary mt-1">Пользовательская тема</CardDescription>}
               </CardHeader>
               <CardContent className="flex-grow">
                  <div className="mb-3">
@@ -167,4 +168,5 @@ export function LevelTopicsPage({ levelId }: LevelTopicsPageProps) {
       </div>
     </div>
   );
-}
+
+    
