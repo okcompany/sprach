@@ -1,3 +1,4 @@
+
 // This is an AI-powered system for recommending personalized German lessons.
 'use server';
 
@@ -55,6 +56,9 @@ const prompt = ai.definePrompt({
   `,
 });
 
+const MAX_RETRIES = 3;
+const RETRY_DELAY_MS = 2000; // 2 seconds
+
 const recommendAiLessonFlow = ai.defineFlow(
   {
     name: 'recommendAiLessonFlow',
@@ -62,7 +66,33 @@ const recommendAiLessonFlow = ai.defineFlow(
     outputSchema: RecommendAiLessonOutputSchema,
   },
   async input => {
-    const {output} = await prompt(input);
-    return output!;
+    let retries = 0;
+    while (retries < MAX_RETRIES) {
+      try {
+        const {output} = await prompt(input);
+        if (!output) {
+          throw new Error('AI model returned an empty output.');
+        }
+        return output;
+      } catch (error: any) {
+        retries++;
+        if (retries >= MAX_RETRIES) {
+          console.error(`Failed to get AI recommendation after ${MAX_RETRIES} retries.`, error);
+          throw error; // Re-throw the error if all retries fail
+        }
+        // Check if the error message or status code indicates a 503 or similar transient issue
+        // This is a basic check; more sophisticated error inspection might be needed
+        if (error.message && (error.message.includes('503') || error.message.toLowerCase().includes('service unavailable') || error.message.toLowerCase().includes('model is overloaded'))) {
+          console.warn(`AI recommendation attempt ${retries} failed with transient error. Retrying in ${RETRY_DELAY_MS / 1000}s...`, error.message);
+          await new Promise(resolve => setTimeout(resolve, RETRY_DELAY_MS));
+        } else {
+          // If it's not a recognized transient error, re-throw immediately
+          throw error;
+        }
+      }
+    }
+    // This part should ideally not be reached if logic is correct, but as a fallback:
+    throw new Error('Failed to get AI recommendation after multiple retries, and loop exited unexpectedly.');
   }
 );
+
