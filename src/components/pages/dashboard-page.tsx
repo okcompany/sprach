@@ -8,7 +8,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter }
 import { useUserData } from '@/context/user-data-context';
 import type { AIRecommendedLesson, LanguageLevel, ModuleType, TopicProgress } from '@/types/german-learning';
 import { MODULE_NAMES_RU, DEFAULT_TOPICS } from '@/types/german-learning';
-import { Sparkles, BookOpen, ArrowRight, AlertTriangle, CheckCircle, PartyPopper, Brain } from 'lucide-react';
+import { Sparkles, BookOpen, ArrowRight, AlertTriangle, CheckCircle, PartyPopper, Brain, Mic, Pencil, Headphones, BookOpenText } from 'lucide-react';
 
 interface ActionableAIReco {
   topicId?: string; // Optional: only present if a direct match is found
@@ -29,6 +29,15 @@ interface NextStepDetails {
   buttonText: string;
   cardBorderClass?: string;
 }
+
+const moduleIcons: Record<ModuleType, React.ElementType> = {
+  vocabulary: BookOpen,
+  grammar: Pencil,
+  listening: Headphones,
+  reading: BookOpenText,
+  writing: Brain,
+  wordTest: Mic,
+};
 
 
 export function DashboardPage() {
@@ -228,9 +237,19 @@ export function DashboardPage() {
           </CardHeader>
           <CardContent>
             <h3 className="text-xl font-semibold mb-2">{actionableAIReco.topicName}</h3>
-            <p className="text-muted-foreground mb-3">
-              Рекомендуемые модули: {actionableAIReco.modules.map(m => MODULE_NAMES_RU[m] || m).join(', ')}
-            </p>
+            <div className="text-muted-foreground mb-3 flex flex-wrap items-center gap-x-4 gap-y-2">
+              <span className="font-medium">Рекомендуемые модули:</span>
+              {actionableAIReco.modules.map(m => {
+                const Icon = moduleIcons[m as ModuleType] || Sparkles; // Fallback icon
+                const moduleName = MODULE_NAMES_RU[m as ModuleType] || m;
+                return (
+                  <span key={m} className="inline-flex items-center gap-1.5 text-sm">
+                    <Icon className="h-4 w-4" />
+                    {moduleName}
+                  </span>
+                );
+              })}
+            </div>
             <Button 
               asChild
               onClick={() => {
