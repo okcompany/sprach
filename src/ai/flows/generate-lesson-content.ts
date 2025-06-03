@@ -37,7 +37,7 @@ const AIMatchingPairSchema = z.object({
 });
 
 const AIMatchingExerciseSchema = z.object({
-  type: z.literal("matching").describe("Тип упражнения: сопоставление."),
+  type: z.enum(["matching"]).describe("Тип упражнения: сопоставление."),
   instructions: z.string().describe("Инструкции для упражнения, например, 'Сопоставьте немецкие слова с их русскими переводами.'"),
   pairs: z.array(AIMatchingPairSchema).min(3).max(8).describe("Массив из 3-8 пар слов для сопоставления."),
   germanDistractors: z.array(z.string()).optional().describe("Опциональный массив немецких слов-дистракторов (1-3) для усложнения."),
@@ -52,7 +52,7 @@ const AIAudioQuizItemSchema = z.object({
 });
 
 const AIAudioQuizExerciseSchema = z.object({
-  type: z.literal("audioQuiz").describe("Тип упражнения: аудио-квиз."),
+  type: z.enum(["audioQuiz"]).describe("Тип упражнения: аудио-квиз."),
   instructions: z.string().describe("Инструкции для упражнения, например, 'Прослушайте фразу и выберите правильный перевод.'"),
   items: z.array(AIAudioQuizItemSchema).min(2).max(5).describe("Массив из 2-5 аудио-заданий."),
 });
@@ -71,7 +71,7 @@ const FillInTheBlanksQuestionSchema = z.object({
 });
 
 const FillInTheBlanksExerciseSchema = z.object({
-  type: z.literal("fillInTheBlanks"),
+  type: z.enum(["fillInTheBlanks"]),
   instructions: z.string().describe("General instructions for this set of fill-in-the-blanks questions, e.g., 'Fill in the correct form of the verb/adjective.'"),
   questions: z.array(FillInTheBlanksQuestionSchema).min(1).max(3).describe("An array of 1 to 3 fill-in-the-blanks questions."),
 });
@@ -84,7 +84,7 @@ const MultipleChoiceQuestionSchema = z.object({
 });
 
 const MultipleChoiceExerciseSchema = z.object({
-  type: z.literal("multipleChoice"),
+  type: z.enum(["multipleChoice"]),
   instructions: z.string().describe("General instructions for this set of multiple-choice questions, e.g., 'Choose the correct option to complete the sentence.'"),
   questions: z.array(MultipleChoiceQuestionSchema).min(1).max(3).describe("An array of 1 to 3 multiple-choice questions."),
 });
@@ -96,7 +96,7 @@ const SentenceConstructionTaskSchema = z.object({
 });
 
 const SentenceConstructionExerciseSchema = z.object({
-  type: z.literal("sentenceConstruction"),
+  type: z.enum(["sentenceConstruction"]),
   instructions: z.string().describe("General instructions for this set of sentence construction tasks, e.g., 'Form correct sentences using the given words.'"),
   tasks: z.array(SentenceConstructionTaskSchema).min(1).max(3).describe("An array of 1 to 3 sentence construction tasks."),
 });
@@ -122,7 +122,7 @@ const AIComprehensionMultipleChoiceQuestionSchema = z.object({
 });
 
 const AIComprehensionMultipleChoiceExerciseSchema = z.object({
-  type: z.literal("comprehensionMultipleChoice").describe("Тип: множественный выбор на понимание."),
+  type: z.enum(["comprehensionMultipleChoice"]).describe("Тип: множественный выбор на понимание."),
   instructions: z.string().describe("Инструкции, например, 'Прочитайте/прослушайте и выберите правильный ответ.'"),
   questions: z.array(AIComprehensionMultipleChoiceQuestionSchema).min(1).max(3).describe("Массив из 1-3 вопросов."),
 });
@@ -134,13 +134,13 @@ const AITrueFalseStatementSchema = z.object({
 });
 
 const AITrueFalseExerciseSchema = z.object({
-  type: z.literal("trueFalse").describe("Тип: верно/неверно."),
+  type: z.enum(["trueFalse"]).describe("Тип: верно/неверно."),
   instructions: z.string().describe("Инструкции, например, 'Определите, верны ли следующие утверждения.'"),
   statements: z.array(AITrueFalseStatementSchema).min(2).max(5).describe("Массив из 2-5 утверждений."),
 });
 
 const AISequencingExerciseSchema = z.object({
-  type: z.literal("sequencing").describe("Тип: упорядочивание событий/пунктов."),
+  type: z.enum(["sequencing"]).describe("Тип: упорядочивание событий/пунктов."),
   instructions: z.string().describe("Инструкции, например, 'Расположите события в правильном порядке согласно тексту/аудио.'"),
   // Items are provided by AI in a shuffled manner, user has to reorder.
   shuffledItems: z.array(z.string()).min(3).max(6).describe("Элементы (события, шаги, пункты из текста/аудио) в случайном порядке, которые пользователь должен упорядочить."),
@@ -162,7 +162,7 @@ const AIReadingInteractiveExerciseSchema = z.discriminatedUnion("type", [
 
 // --- Zod Schemas for Interactive Writing Exercises ---
 const AIStructuredWritingExerciseSchema = z.object({
-  type: z.literal("structuredWriting").describe("Тип: структурированное письменное задание."),
+  type: z.enum(["structuredWriting"]).describe("Тип: структурированное письменное задание."),
   instructions: z.string().describe("Общие инструкции для задания."),
   promptDetails: z.string().describe("Детали задания, например, 'Напишите email другу, приглашая его на день рождения. Укажите когда и где.' или 'Опишите эту историю, используя следующие слова: ...'"),
   templateOutline: z.array(z.string()).optional().describe("Опциональный шаблон/структура, которую пользователь должен заполнить или которой следовать (например, ['Anrede:', 'Einleitung:', 'Hauptteil:', 'Schluss:', 'Gruß:'])."),
@@ -226,7 +226,7 @@ const lessonPrompt = ai.definePrompt({
   Additionally, you MAY provide OPTIONAL structured and interactive exercises as described below. Aim for 1-2 interactive exercises per relevant module if appropriate for the topic and level. These exercises should complement the core components.
 
   1. OPTIONAL "grammarExercises":
-     If you can create relevant exercises for the "grammarExplanation", provide an array of 1 to 3 diverse structured grammar exercises. Each exercise object in the array must have a "type" field.
+     If you can create relevant exercises for the "grammarExplanation", provide an array of 1 to 3 diverse structured grammar exercises. Each exercise object in the array must have a "type" field ("fillInTheBlanks", "multipleChoice", or "sentenceConstruction").
      - If "type" is "fillInTheBlanks":
        Provide "instructions" (e.g., "Fill in the correct form of the verb/adjective.") and a "questions" array (1-3 questions). Each question object needs: "promptText", "correctAnswers" (array of strings), "explanation" (optional).
        Example: { "type": "fillInTheBlanks", "instructions": "Fill in the correct verb form.", "questions": [{ "promptText": "Er ______ (lesen) ein Buch.", "correctAnswers": ["liest"], "explanation": "Third person singular present tense."}] }
@@ -237,7 +237,7 @@ const lessonPrompt = ai.definePrompt({
        Provide "instructions" (e.g., "Form correct sentences.") and a "tasks" array (1-3 tasks). Each task object needs: "words" (array of strings to arrange), "possibleCorrectSentences" (array of strings), "explanation" (optional).
        Example: { "type": "sentenceConstruction", "instructions": "Form a sentence in Perfekt.", "tasks": [{ "words": ["ich", "gestern", "Kino", "ins", "gegangen", "bin", "."], "possibleCorrectSentences": ["Ich bin gestern ins Kino gegangen."], "explanation": "Perfekt tense structure with 'sein'." }] }
 
-  2. OPTIONAL "interactiveVocabularyExercises": An array of 1-2 exercises.
+  2. OPTIONAL "interactiveVocabularyExercises": An array of 1-2 exercises. Each exercise object in the array must have a "type" field ("matching" or "audioQuiz").
      - If "type" is "matching":
        Provide "instructions", "pairs" (array of {german, russian}, 3-8 pairs), "germanDistractors" (optional, 1-3 strings), "russianDistractors" (optional, 1-3 strings).
        Example: { "type": "matching", "instructions": "Сопоставьте слова.", "pairs": [{"german": "Apfel", "russian": "яблоко"}, ...], "germanDistractors": ["Birne"] }
@@ -245,7 +245,7 @@ const lessonPrompt = ai.definePrompt({
        Provide "instructions", "items" (array of 2-5 items). Each item: "germanPhraseToSpeak", "options" (3-4 Russian translations), "correctAnswer" (string), "explanation" (optional).
        Example: { "type": "audioQuiz", "instructions": "Прослушайте и выберите перевод.", "items": [{"germanPhraseToSpeak": "Wie geht es Ihnen?", "options": ["Как дела?", "Сколько это стоит?", "Где туалет?"], "correctAnswer": "Как дела?"}] }
 
-  3. OPTIONAL "interactiveListeningExercises": An array of 1-2 exercises. These exercises should be based on the main "listeningExercise.script".
+  3. OPTIONAL "interactiveListeningExercises": An array of 1-2 exercises. These exercises should be based on the main "listeningExercise.script". Each exercise object in the array must have a "type" field ("comprehensionMultipleChoice", "trueFalse", or "sequencing").
      - If "type" is "comprehensionMultipleChoice": (Based on "listeningExercise.script")
        Provide "instructions", "questions" (array of 1-3). Each question: "questionText", "options" (2-4 strings), "correctAnswer" (string), "explanation" (optional).
      - If "type" is "trueFalse": (Based on "listeningExercise.script")
@@ -253,7 +253,7 @@ const lessonPrompt = ai.definePrompt({
      - If "type" is "sequencing": (Based on "listeningExercise.script")
        Provide "instructions", "shuffledItems" (array of 3-6 strings from the script, out of order), "correctOrder" (array of same strings in correct order).
 
-  4. OPTIONAL "interactiveReadingExercises": An array of 1-2 exercises. These exercises should be based on the main "readingPassage".
+  4. OPTIONAL "interactiveReadingExercises": An array of 1-2 exercises. These exercises should be based on the main "readingPassage". Each exercise object in the array must have a "type" field ("comprehensionMultipleChoice", "trueFalse", or "sequencing").
      - If "type" is "comprehensionMultipleChoice": (Based on "readingPassage")
        Provide "instructions", "questions" (array of 1-3). Each question: "questionText", "options" (2-4 strings), "correctAnswer" (string), "explanation" (optional).
      - If "type" is "trueFalse": (Based on "readingPassage")
@@ -261,7 +261,7 @@ const lessonPrompt = ai.definePrompt({
      - If "type" is "sequencing": (Based on "readingPassage")
        Provide "instructions", "shuffledItems" (array of 3-6 strings/sentences from the passage, out of order), "correctOrder" (array of same strings in correct order).
 
-  5. OPTIONAL "interactiveWritingExercises": An array of 1 exercise. This can complement or replace the general "writingPrompt".
+  5. OPTIONAL "interactiveWritingExercises": An array of 1 exercise. This can complement or replace the general "writingPrompt". The exercise object must have a "type" field ("structuredWriting").
      - If "type" is "structuredWriting":
        Provide "instructions", "promptDetails" (e.g., task description like "Write an email..."), "templateOutline" (optional, array of strings like "Anrede:", "Gruß:"), "requiredVocabulary" (optional, array of strings), "aiGeneratedStoryToDescribe" (optional, if the task is to describe a provided story).
        Example: { "type": "structuredWriting", "instructions": "Напишите email.", "promptDetails": "Пригласите друга на день рождения.", "templateOutline": ["Liebe/r [Имя],", "ich möchte dich herzlich einladen...", "Viele Grüße,"], "requiredVocabulary": ["Party", "Geschenk", "feiern"] }
