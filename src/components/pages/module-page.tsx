@@ -11,7 +11,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useToast } from "@/hooks/use-toast";
 import { useUserData } from '@/context/user-data-context';
 import type { LanguageLevel, ModuleType, AILessonContent, AIEvaluationResult, VocabularyWord, MODULE_NAMES_RU as ModuleNamesRuType, AILessonVocabularyItem } from '@/types/german-learning';
-import { MODULE_NAMES_RU, DEFAULT_TOPICS, ALL_MODULE_TYPES } from '@/types/german-learning';
+import { MODULE_NAMES_RU, DEFAULT_TOPICS, ALL_MODULE_TYPES, ALL_LEVELS } from '@/types/german-learning';
 import { Speaker, RotateCcw, CheckCircle, AlertTriangle, ArrowRight } from 'lucide-react';
 
 // Dummy TTS function - replace with actual implementation
@@ -43,6 +43,7 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
     updateWordInBank, 
     getWordsForTopic, 
     isTopicCompleted,
+    isLevelCompleted, // Added for clearer next step logic
   } = useUserData();
   
   const [lessonContent, setLessonContent] = useState<AILessonContent | null>(null);
@@ -148,49 +149,78 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
 
   const currentModuleIndexInAll = ALL_MODULE_TYPES.indexOf(moduleId);
   const isLastModuleType = currentModuleIndexInAll === ALL_MODULE_TYPES.length - 1;
-  const nextModuleType = isLastModuleType ? null : ALL_MODULE_TYPES[currentModuleIndexInAll + 1];
-
+  
   useEffect(() => {
     if (isModuleFinished && finalModuleScore !== null && finalModuleScore >= 70 && isLastModuleType && userData) {
-      let link = `/levels/${levelId.toLowerCase()}/${topicId}`; 
-      let text = "К модулям темы";
-
-      const currentTopicIsCompleted = isTopicCompleted(levelId, topicId);
-
-      if (currentTopicIsCompleted) {
+      let link: string | null = null;
+      let text: string = '';
+  
+      const currentTopicIsNowCompletedByContext = isTopicCompleted(levelId, topicId);
+  
+      if (currentTopicIsNowCompletedByContext) {
+        const currentLevelData = userData.progress[levelId];
         const currentLevelDefaultTopics = DEFAULT_TOPICS[levelId] || [];
-        const customTopicObjectsForLevel = userData.customTopics.filter(
-          (ct) => ct.id.startsWith(levelId + "_custom_")
-        ).map(t => ({ id: t.id, name: t.name }));
+        const customTopicObjectsForLevel = userData.customTopics
+          .filter((ct) => ct.id.startsWith(levelId + "_custom_"))
+          .map(t => ({ id: t.id, name: t.name }));
         
         const allTopicObjectsForLevel: {id: string, name: string}[] = [
           ...currentLevelDefaultTopics.map(t => ({ id: t.id, name: t.name })),
           ...customTopicObjectsForLevel
         ];
-
+  
         const currentTopicIndexInAll = allTopicObjectsForLevel.findIndex(t => t.id === topicId);
         let foundNextIncompleteTopicId: string | null = null;
-
+  
         if (currentTopicIndexInAll !== -1) {
           for (let i = currentTopicIndexInAll + 1; i < allTopicObjectsForLevel.length; i++) {
             const potentialNextTopic = allTopicObjectsForLevel[i];
-            if (!isTopicCompleted(levelId, potentialNextTopic.id)) {
+            if (currentLevelData?.topics[potentialNextTopic.id] && !isTopicCompleted(levelId, potentialNextTopic.id)) {
               foundNextIncompleteTopicId = potentialNextTopic.id;
               break;
             }
           }
         }
-
+  
         if (foundNextIncompleteTopicId) {
           link = `/levels/${levelId.toLowerCase()}/${foundNextIncompleteTopicId}`;
           text = "Следующая тема";
         } else {
-          link = `/levels/${levelId.toLowerCase()}`;
-          text = "К темам уровня (все пройдено)";
+          // All topics in this level are now complete.
+          // userData.currentLevel might have been advanced by updateModuleProgress.
+          const originalLevelIndex = ALL_LEVELS.indexOf(levelId);
+          const levelAdvanced = userData.currentLevel !== levelId && ALL_LEVELS.indexOf(userData.currentLevel) > originalLevelIndex;
+          const currentLevelIsCompletedByContext = isLevelCompleted(levelId);
+
+          if (levelAdvanced) {
+            link = `/levels/${userData.currentLevel.toLowerCase()}`;
+            text = "К следующему уровню";
+          } else if (currentLevelIsCompletedByContext) {
+            if (levelId === ALL_LEVELS[ALL_LEVELS.length - 1]) { // Max level (e.g., C2)
+              link = `/levels`;
+              text = "Все уровни пройдены!";
+            } else {
+              link = `/levels/${ALL_LEVELS[originalLevelIndex + 1].toLowerCase()}`;
+              text = "Перейти к следующему уровню";
+            }
+          } else {
+            // Fallback: Should not happen if topic is complete and no next topic, means level should be complete.
+            link = `/levels/${levelId.toLowerCase()}`; 
+            text = "К темам уровня (все пройдено)";
+          }
         }
+      } else {
+        // Current topic is NOT yet complete, even though this last module type was passed.
+        link = `/levels/${levelId.toLowerCase()}/${topicId}`;
+        text = "К модулям темы";
       }
       setTopicContinuationLink(link);
       setTopicContinuationText(text);
+
+    } else if (isModuleFinished && finalModuleScore !== null && finalModuleScore < 70) {
+      // Module failed, clear any continuation link from previous success
+      setTopicContinuationLink(null);
+      setTopicContinuationText('');
     }
   }, [
     isModuleFinished, 
@@ -200,6 +230,7 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
     levelId, 
     topicId, 
     isTopicCompleted,
+    isLevelCompleted, // Added this dependency
   ]);
 
 
@@ -452,26 +483,28 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
                   <h3 className="text-2xl font-semibold mb-2">Модуль пройден успешно!</h3>
                   <p className="text-muted-foreground mb-4">Ваш результат: {finalModuleScore}%</p>
                   <div className="flex flex-col sm:flex-row gap-2 justify-center">
-                    {isLastModuleType ? (
-                      topicContinuationLink && topicContinuationText ? (
+                    {topicContinuationLink && topicContinuationText ? (
                         <Button asChild size="lg">
                           <Link href={topicContinuationLink}>
                             {topicContinuationText} <ArrowRight className="ml-2 h-5 w-5" />
                           </Link>
                         </Button>
                       ) : ( 
-                         <Button size="lg" onClick={() => router.push(`/levels/${levelId.toLowerCase()}/${topicId}`)}>
-                            К модулям темы <ArrowRight className="ml-2 h-5 w-5" />
-                         </Button>
+                        // Fallback if link/text not set, but module is last type & successful
+                        isLastModuleType && ( 
+                           <Button size="lg" onClick={() => router.push(`/levels/${levelId.toLowerCase()}/${topicId}`)}>
+                              К модулям темы <ArrowRight className="ml-2 h-5 w-5" />
+                           </Button>
+                        )
                       )
-                    ) : (
-                      nextModuleType && (
-                        <Button asChild size="lg">
-                          <Link href={`/levels/${levelId.toLowerCase()}/${topicId}/${nextModuleType}`}>
-                            Следующий модуль <ArrowRight className="ml-2 h-5 w-5" />
-                          </Link>
-                        </Button>
-                      )
+                    }
+                    {/* Show "Next Module" button only if it's not the last module type */}
+                    {!isLastModuleType && nextModuleType && (
+                      <Button asChild size="lg">
+                        <Link href={`/levels/${levelId.toLowerCase()}/${topicId}/${nextModuleType}`}>
+                          Следующий модуль <ArrowRight className="ml-2 h-5 w-5" />
+                        </Link>
+                      </Button>
                     )}
                      <Button variant="outline" size="lg" onClick={() => router.push(`/levels/${levelId.toLowerCase()}/${topicId}`)}>
                         К списку модулей
@@ -528,6 +561,8 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
     
 
       
+
+    
 
     
 
