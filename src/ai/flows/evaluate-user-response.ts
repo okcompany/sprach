@@ -34,12 +34,12 @@ const EvaluateUserResponseInputSchema = z.object({
 export type EvaluateUserResponseInput = z.infer<typeof EvaluateUserResponseInputSchema>;
 
 const WritingEvaluationDetailsSchema = z.object({
-  taskAchievement: z.string().optional().describe("Feedback on how well the user addressed the writing prompt. (Оценка выполнения задания.)"),
-  coherenceAndCohesion: z.string().optional().describe("Feedback on the logical structure and flow of the text. (Оценка связности и логичности текста.)"),
-  lexicalResource: z.string().optional().describe("Feedback on the appropriateness and richness of vocabulary. (Оценка использования лексики.)"),
-  grammaticalAccuracy: z.string().optional().describe("Feedback on grammatical correctness. (Оценка грамматической правильности.)"),
-  overallFeedback: z.string().describe("A summary of the overall performance and key suggestions. (Общее заключение и ключевые рекомендации.)"),
-  suggestedImprovements: z.array(z.string()).optional().describe("Specific sentences or phrases that could be improved, with suggestions. (Конкретные предложения по улучшению фраз или предложений.)")
+  taskAchievement: z.string().optional().describe("Feedback on how well the user addressed the writing prompt. (Оценка выполнения задания. ДОЛЖНО БЫТЬ НА РУССКОМ, ОЧЕНЬ КРАТКО)"),
+  coherenceAndCohesion: z.string().optional().describe("Feedback on the logical structure and flow of the text. (Оценка связности и логичности текста. ДОЛЖНО БЫТЬ НА РУССКОМ, КРАТКО)"),
+  lexicalResource: z.string().optional().describe("Feedback on the appropriateness and richness of vocabulary. (Оценка использования лексики. ДОЛЖНО БЫТЬ НА РУССКОМ, КРАТКО)"),
+  grammaticalAccuracy: z.string().optional().describe("Feedback on grammatical correctness. (Оценка грамматической правильности. ДОЛЖНО БЫТЬ НА РУССКОМ, КРАТКО)"),
+  overallFeedback: z.string().describe("A summary of the overall performance and key suggestions. (Общее заключение и ключевые рекомендации. ДОЛЖНО БЫТЬ НА РУССКОМ, 1-2 ПРЕДЛОЖЕНИЯ)"),
+  suggestedImprovements: z.array(z.string()).optional().describe("Specific sentences or phrases that could be improved, with suggestions. (Конкретные предложения по улучшению. НА РУССКОМ)")
 }).describe("Detailed feedback specific to the writing module, if applicable. This object itself is optional.");
 
 
@@ -115,23 +115,23 @@ This is a 'reading' module.
 - Provide 'grammarErrorTags' only if the user's answer itself contains significant grammatical errors that hinder understanding, and these errors are relevant to their learning level.
 {{/if}}
 {{#if isModuleWriting}}
-This is a 'writing' module. For the writing module, all feedback in 'writingDetails' must be concise and directly related to the specific criterion. Avoid lengthy elaborations or general commentary outside of \`overallFeedback\`.
-- When providing feedback in the 'writingDetails' object, ensure each field ('taskAchievement', 'coherenceAndCohesion', etc.) contains specific, DISTINCT, and CONCISE information relevant ONLY to that criterion.
+This is a 'writing' module. For the writing module, ALL feedback in 'writingDetails' (including 'taskAchievement', 'coherenceAndCohesion', 'lexicalResource', 'grammaticalAccuracy', 'overallFeedback', and 'suggestedImprovements') MUST be concise and in RUSSIAN. Avoid lengthy elaborations or general commentary outside of \`overallFeedback\`.
+- When providing feedback in the 'writingDetails' object, ensure each field ('taskAchievement', 'coherenceAndCohesion', etc.) contains specific, DISTINCT, and CONCISE information relevant ONLY to that criterion. ALL TEXT MUST BE IN RUSSIAN.
 - Evaluate the user's written text based on the following criteria, appropriate for their level ({{{userLevel}}}):
-  1.  'taskAchievement': Evaluate ONLY if the task was completed as per instructions (e.g., did they write about the topic, include specific information if asked, was it the right length for the level?). Do NOT include general praise or summaries here. Keep this section strictly analytical, factual, and concise.
-  2.  'coherenceAndCohesion': Evaluate ONLY the text's logical structure, flow, and use of linking words. No praise or generic comments. Keep this section concise.
-  3.  'lexicalResource' (Vocabulary): Evaluate ONLY vocabulary choice, range, and appropriateness for the level and topic. No praise or generic comments. Keep this section concise.
-  4.  'grammaticalAccuracy': Evaluate ONLY grammatical correctness and range of structures used, appropriate for the level. No praise or generic comments. Keep this section concise.
-- Provide detailed feedback in the 'writingDetails' object with these fields.
-- The 'writingDetails.overallFeedback' field should contain a VERY BRIEF (1-2 sentences maximum) holistic summary of overall performance. If you wish to add a short motivational sentence, this is the *only* place for it, and it must be unique and not repeated. THIS SUMMARY SHOULD BE THE VALUE for the main 'evaluation' field of the entire response.
-- The 'writingDetails.suggestedImprovements' field can contain 1-3 *specific* examples from the user's text with suggested rewrites, if applicable. Focus on concrete examples.
-- CRITICAL: Do NOT use lengthy, repetitive motivational phrases such as 'Вместе мы - непобедимы! У вас все получится! Я всегда буду рядом...' or similar extended encouragements in any field. If any encouragement is given in \`overallFeedback\`, it must be extremely brief (a few words) and not repeated. The user needs specific, actionable feedback, not repeated motivational slogans.
+  1.  'taskAchievement' (Оценка выполнения задания): This field MUST be in RUSSIAN. Strictly evaluate ONLY if the task was completed as per instructions (e.g., did they write about the topic, include specific information if asked, was it the right length for the level?). Provide a 1-2 sentence factual statement MAXIMUM. Do NOT include general praise, summaries, motivational phrases, or any text in English. Example of a good, concise, Russian response for this field: "Задание выполнено: пользователь рассказал о себе, упомянув имя, возраст и место жительства. Объем соответствует уровню." Avoid any further elaboration or repetition.
+  2.  'coherenceAndCohesion' (Оценка связности и логичности текста): This field MUST be in RUSSIAN. Evaluate ONLY the text's logical structure, flow, and use of linking words. No praise or generic comments. Keep this section concise (1-2 sentences).
+  3.  'lexicalResource' (Оценка использования лексики): This field MUST be in RUSSIAN. Evaluate ONLY vocabulary choice, range, and appropriateness for the level and topic. No praise or generic comments. Keep this section concise (1-2 sentences).
+  4.  'grammaticalAccuracy' (Оценка грамматической правильности): This field MUST be in RUSSIAN. Evaluate ONLY grammatical correctness and range of structures used, appropriate for the level. No praise or generic comments. Keep this section concise (1-2 sentences).
+- Provide detailed feedback in the 'writingDetails' object with these fields. ALL TEXT IN 'writingDetails' MUST BE IN RUSSIAN.
+- The 'writingDetails.overallFeedback' field (Общее заключение и ключевые рекомендации) MUST be in RUSSIAN and contain a VERY BRIEF (1-2 sentences maximum) holistic summary of overall performance. If you wish to add a short motivational sentence, this is the *only* place for it, and it must be unique and not repeated. THIS SUMMARY SHOULD BE THE VALUE for the main 'evaluation' field of the entire response.
+- The 'writingDetails.suggestedImprovements' field (Конкретные предложения по улучшению) MUST be in RUSSIAN and can contain 1-3 *specific* examples from the user's text with suggested rewrites, if applicable. Focus on concrete examples.
+- CRITICAL: Do NOT use lengthy, repetitive motivational phrases such as 'Вместе мы - непобедимы! У вас все получится! Я всегда буду рядом...' or similar extended encouragements in any field of 'writingDetails'. If any encouragement is given in \`overallFeedback\`, it must be extremely brief (a few words) and not repeated. The user needs specific, actionable feedback, not repeated motivational slogans.
 - Set 'isCorrect' to true if the text is generally understandable, adequately addresses the prompt for the user's level ({{{userLevel}}}), and doesn't contain an overwhelming number of errors that impede communication. Minor errors are acceptable for a 'true' evaluation, especially at lower levels.
 - If 'isCorrect' is false due to grammar, provide relevant 'grammarErrorTags'.
-- The 'suggestedCorrection' field can optionally contain a fully corrected version of the user's text if it's short and the corrections are significant, or a few key corrections otherwise.
+- The 'suggestedCorrection' field can optionally contain a fully corrected version of the user's text if it's short and the corrections are significant, or a few key corrections otherwise. This field, if present, MUST also be in RUSSIAN.
 {{/if}}
 
-IMPORTANT: If you provide a 'suggestedCorrection', ensure it is appropriate for the user's level ({{{userLevel}}}). If a more complex correction would be ideal but is above the user's level, first provide the ideal correction, and then explicitly state: "This might be a bit advanced. A simpler way to say this at your level ({{{userLevel}}}) would be: [simpler correction]". If the ideal correction is already appropriate for the user's level, you don't need to add the "simpler way" part.
+IMPORTANT: If you provide a 'suggestedCorrection', ensure it is appropriate for the user's level ({{{userLevel}}}). If a more complex correction would be ideal but is above the user's level, first provide the ideal correction, and then explicitly state: "This might be a bit advanced. A simpler way to say this at your level ({{{userLevel}}}) would be: [simpler correction]". If the ideal correction is already appropriate for the user's level, you don't need to add the "simpler way" part. ALL TEXT IN THIS EXPLANATION MUST BE IN RUSSIAN.
 
 Focus on these aspects for evaluation, depending on the module type:
 1.  Correctness of the answer.
@@ -139,7 +139,7 @@ Focus on these aspects for evaluation, depending on the module type:
 3.  Grammatical accuracy according to CEFR level {{{userLevel}}}.
 4.  Use of key vocabulary from the topic (if applicable for modules other than vocabulary/wordTest).
 
-Ensure your response is in Russian.
+Ensure your response is in Russian. All string values in the output JSON object, especially within 'writingDetails', MUST be in RUSSIAN.
 
 Output your response in the following JSON format (ensure grammarErrorTags is an array of strings, or omit if not applicable; ensure writingDetails is an object or omit if not applicable):
 {
