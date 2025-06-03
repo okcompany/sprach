@@ -3,13 +3,14 @@
 
 import type { ReactNode } from 'react';
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import type { UserData, LanguageLevel, TopicProgress, ModuleType, VocabularyWord, ModuleProgress, AILessonContent, AILessonVocabularyItem, AILessonListeningExercise } from '@/types/german-learning';
+import type { UserData, LanguageLevel, TopicProgress, ModuleType, VocabularyWord, ModuleProgress as ModuleProgressType, AILessonContent, AILessonVocabularyItem, AILessonListeningExercise, AIEvaluationResult as AIEvaluationResultType, GrammarWeaknessDetail, GrammarWeaknessContext } from '@/types/german-learning';
 import { ALL_LEVELS, ALL_MODULE_TYPES, DEFAULT_TOPICS, MODULE_NAMES_RU } from '@/types/german-learning';
 import { generateLessonContent as generateLessonContentAI } from '@/ai/flows/generate-lesson-content';
 import { evaluateUserResponse as evaluateUserResponseAI, type EvaluateUserResponseOutput } from '@/ai/flows/evaluate-user-response';
 import { recommendAiLesson as recommendAiLessonAI, type RecommendAiLessonOutput } from '@/ai/flows/recommend-ai-lesson';
 
 const USER_DATA_KEY = 'sprachheld_userData';
+const MAX_GRAMMAR_CONTEXTS = 5; // Max example contexts to store per grammar weakness
 
 const initialUserData: UserData = {
   currentLevel: 'A0',
@@ -24,6 +25,7 @@ const initialUserData: UserData = {
     lastActivityTimestamp: Date.now(),
   },
   customTopics: [],
+  grammarWeaknesses: {}, // Initialize grammarWeaknesses
 };
 
 interface UserDataContextType {
@@ -34,7 +36,7 @@ interface UserDataContextType {
   updateModuleProgress: (level: LanguageLevel, topicId: string, moduleId: ModuleType, score: number) => void;
   addCustomTopic: (topicName: string) => Promise<void>;
   getTopicLessonContent: (level: LanguageLevel, topicName: string) => Promise<AILessonContent | null>;
-  evaluateUserResponse: (moduleType: ModuleType, userResponse: string, questionContext: string, expectedAnswer?: string, grammarRules?:string) => Promise<EvaluateUserResponseOutput | null>;
+  evaluateUserResponse: (levelId: LanguageLevel, topicId: string, moduleId: ModuleType, userResponse: string, questionContext: string, expectedAnswer?: string, grammarRules?:string) => Promise<AIEvaluationResultType | null>;
   getAIRecommendedLesson: () => Promise<RecommendAiLessonOutput | null>;
   addWordToBank: (word: Omit<VocabularyWord, 'id' | 'consecutiveCorrectAnswers' | 'errorCount'>) => void;
   updateWordInBank: (updatedWord: VocabularyWord) => void;
@@ -83,6 +85,9 @@ export const UserDataProvider = ({ children }: { children: ReactNode }) => {
         if (!parsedData.profile.preferredTopics) { 
             parsedData.profile.preferredTopics = [];
         }
+        if (!parsedData.grammarWeaknesses) { // Initialize if missing
+            parsedData.grammarWeaknesses = {};
+        }
         setUserData(parsedData);
       } else {
         const defaultProgress: UserData['progress'] = {};
@@ -97,7 +102,7 @@ export const UserDataProvider = ({ children }: { children: ReactNode }) => {
             };
           });
         });
-        setUserData({...initialUserData, progress: defaultProgress});
+        setUserData({...initialUserData, progress: defaultProgress, grammarWeaknesses: {}});
       }
     } catch (error) {
       console.error("Failed to load user data from localStorage", error);
@@ -146,7 +151,7 @@ export const UserDataProvider = ({ children }: { children: ReactNode }) => {
         };
       });
     });
-    const freshUserData = {...initialUserData, progress: defaultProgress, currentTopicId: undefined }; 
+    const freshUserData = {...initialUserData, progress: defaultProgress, currentTopicId: undefined, grammarWeaknesses: {} }; 
     setUserData(freshUserData);
     localStorage.setItem(USER_DATA_KEY, JSON.stringify(freshUserData));
   }, []);
@@ -170,10 +175,8 @@ export const UserDataProvider = ({ children }: { children: ReactNode }) => {
     const levelData = userData?.progress?.[level];
     if (!levelData) return false;
 
-    // Use the stored completed flag first, as it's set by updateModuleProgress
     if (levelData.completed) return true; 
 
-    // Fallback to derived calculation if needed, though ideally the flag is authoritative
     const defaultTopicDefinitions = DEFAULT_TOPICS[level] || [];
     const customTopicDefinitions = userData?.customTopics?.filter(ct => ct.id.startsWith(level + "_")) || [];
 
@@ -187,7 +190,7 @@ export const UserDataProvider = ({ children }: { children: ReactNode }) => {
     if (relevantTopicIdsInProgess.length === 0 && allDefinedTopicIds.length > 0) {
         return false; 
     }
-    if (allDefinedTopicIds.length === 0) { // A level with no topics can't be "completed" in a meaningful way unless explicitly set
+    if (allDefinedTopicIds.length === 0) { 
         return false; 
     }
     
@@ -203,12 +206,10 @@ export const UserDataProvider = ({ children }: { children: ReactNode }) => {
   
     const requestedLevelIndex = ALL_LEVELS.indexOf(levelIdToCheck);
   
-    if (requestedLevelIndex < 0) return false; // Not a valid level
+    if (requestedLevelIndex < 0) return false; 
   
-    // The very first level (A0) is always accessible
     if (requestedLevelIndex === 0) return true;
   
-    // Check if all preceding levels are completed
     for (let i = 0; i < requestedLevelIndex; i++) {
       if (!isLevelCompleted(ALL_LEVELS[i])) {
         return false;
@@ -289,12 +290,9 @@ export const UserDataProvider = ({ children }: { children: ReactNode }) => {
       if (allModulesForTopicPassed && !topicData.completed) { 
         updatedUserData.progress[level]!.topics[topicId]!.completed = true;
       } else if (!allModulesForTopicPassed && topicData.completed) {
-        // If topic was completed, but now a module makes it incomplete
         updatedUserData.progress[level]!.topics[topicId]!.completed = false;
       }
 
-
-      // Check and update level completion status
       const currentLevelData = updatedUserData.progress[level]!;
       const defaultTopicDefs = DEFAULT_TOPICS[level] || [];
       const customTopicDefsFromUserData = updatedUserData.customTopics.filter((ct: TopicProgress) => ct.id.startsWith(level + "_"));
@@ -316,7 +314,6 @@ export const UserDataProvider = ({ children }: { children: ReactNode }) => {
       } else if (allDefinedTopicIdsForLevel.length === 0) {
           allLevelTopicsTrulyCompleted = false;
       }
-
 
       if (allLevelTopicsTrulyCompleted) { 
           updatedUserData.progress[level]!.completed = true;
@@ -354,7 +351,6 @@ export const UserDataProvider = ({ children }: { children: ReactNode }) => {
             updatedProgress[prev.currentLevel] = { topics: {}, completed: false };
         }
         updatedProgress[prev.currentLevel]!.topics[newTopicId] = newTopic;
-        // When a new custom topic is added, the level might no longer be 'completed'
         if (updatedProgress[prev.currentLevel]!.completed) {
             updatedProgress[prev.currentLevel]!.completed = false;
         }
@@ -380,15 +376,17 @@ export const UserDataProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   const evaluateUserResponse = useCallback(async (
+    levelId: LanguageLevel, // Added levelId
+    topicId: string,      // Added topicId
     moduleType: ModuleType, 
     userResponse: string, 
     questionContext: string, 
     expectedAnswer?: string, 
     grammarRules?: string 
-    ): Promise<EvaluateUserResponseOutput | null> => {
+    ): Promise<AIEvaluationResultType | null> => {
     if(!userData) return null;
     try {
-      const evaluation = await evaluateUserResponseAI({
+      const evaluation: EvaluateUserResponseOutput | null = await evaluateUserResponseAI({
         moduleType,
         userResponse,
         expectedAnswer,
@@ -396,12 +394,54 @@ export const UserDataProvider = ({ children }: { children: ReactNode }) => {
         userLevel: userData.currentLevel,
         grammarRules 
       });
-      return evaluation;
+
+      if (evaluation && evaluation.grammarErrorTags && evaluation.grammarErrorTags.length > 0) {
+        setUserData(prev => {
+          if (!prev) return null;
+          const updatedUserData = JSON.parse(JSON.stringify(prev)) as UserData;
+          if (!updatedUserData.grammarWeaknesses) {
+            updatedUserData.grammarWeaknesses = {};
+          }
+
+          const topicName = updatedUserData.progress[levelId]?.topics[topicId]?.name || 
+                            DEFAULT_TOPICS[levelId]?.find(t => t.id === topicId)?.name ||
+                            updatedUserData.customTopics.find(t => t.id === topicId)?.name ||
+                            topicId;
+
+          const currentContext: GrammarWeaknessContext = {
+            level: levelId,
+            topicId: topicId,
+            topicName: topicName,
+            moduleId: moduleType,
+          };
+
+          evaluation.grammarErrorTags.forEach(tag => {
+            const existingWeakness = updatedUserData.grammarWeaknesses![tag];
+            if (existingWeakness) {
+              existingWeakness.count++;
+              existingWeakness.lastEncounteredDate = new Date().toISOString();
+              existingWeakness.exampleContexts.unshift(currentContext); // Add to the beginning
+              if (existingWeakness.exampleContexts.length > MAX_GRAMMAR_CONTEXTS) {
+                existingWeakness.exampleContexts.pop(); // Remove the oldest if limit exceeded
+              }
+            } else {
+              updatedUserData.grammarWeaknesses![tag] = {
+                tag: tag,
+                count: 1,
+                lastEncounteredDate: new Date().toISOString(),
+                exampleContexts: [currentContext],
+              };
+            }
+          });
+          return updatedUserData;
+        });
+      }
+      return evaluation as AIEvaluationResultType | null;
     } catch (error) {
       console.error("Error evaluating user response:", error);
       return null;
     }
-  }, [userData]);
+  }, [userData, setUserData]); // Added setUserData to dependencies
 
   const getAIRecommendedLesson = useCallback(async (): Promise<RecommendAiLessonOutput | null> => {
     if (!userData) return null;
@@ -499,6 +539,22 @@ export const UserDataProvider = ({ children }: { children: ReactNode }) => {
     }
     
     weakAreas = [...new Set(weakAreas)].slice(0, MAX_WEAK_AREAS);
+    
+    const grammarWeaknessesForAI: Record<string, { count: number; lastEncounteredDate: string; exampleContexts: Array<{level: string; topicName: string; moduleId?: string}> }> = {};
+    if (userData.grammarWeaknesses) {
+        Object.entries(userData.grammarWeaknesses).forEach(([tag, detail]) => {
+            grammarWeaknessesForAI[tag] = {
+                count: detail.count,
+                lastEncounteredDate: detail.lastEncounteredDate,
+                exampleContexts: detail.exampleContexts.map(ctx => ({
+                    level: ctx.level,
+                    topicName: ctx.topicName,
+                    moduleId: ctx.moduleId
+                }))
+            };
+        });
+    }
+
 
     try {
       const recommendation = await recommendAiLessonAI({
@@ -506,6 +562,7 @@ export const UserDataProvider = ({ children }: { children: ReactNode }) => {
         userProgress: userProgressForAI,
         weakAreas: weakAreas, 
         preferredTopics: userData.profile.preferredTopics || [],
+        grammarWeaknesses: grammarWeaknessesForAI, // Pass the prepared grammar weaknesses
       });
       return recommendation;
     } catch (error: any) {
@@ -618,10 +675,3 @@ export const useUserData = () => {
   }
   return context;
 };
-
-
-    
-
-    
-
-    

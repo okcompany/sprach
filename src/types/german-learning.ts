@@ -19,7 +19,7 @@ export interface VocabularyWord {
   id: string;
   german: string;
   russian: string;
-  topic: string;
+  topic: string; // topicId
   level: LanguageLevel;
   consecutiveCorrectAnswers: number;
   lastTestedDate?: string; // ISO date string
@@ -58,6 +58,20 @@ export interface UserSettings {
   darkMode?: boolean;
 }
 
+export interface GrammarWeaknessContext {
+  level: LanguageLevel;
+  topicId: string;
+  topicName: string;
+  moduleId?: ModuleType; // Optional: in which module was this specific error instance noted
+}
+
+export interface GrammarWeaknessDetail {
+  tag: string; // The grammar error tag itself, e.g., "akkusativ_prepositions"
+  count: number;
+  lastEncounteredDate: string; // ISO date string
+  exampleContexts: GrammarWeaknessContext[]; // Store contexts of where this error occurred
+}
+
 export interface UserData {
   currentLevel: LanguageLevel;
   currentTopicId?: string; // ID of the current topic
@@ -66,6 +80,7 @@ export interface UserData {
   vocabularyBank: VocabularyWord[];
   settings: UserSettings;
   customTopics: TopicProgress[]; // For user-defined topics
+  grammarWeaknesses?: Record<string, GrammarWeaknessDetail>; // Keyed by grammar error tag
 }
 
 // --- AI Generated Content Types (matches flows) ---
@@ -128,7 +143,7 @@ export interface AILessonContent {
   lessonTitle: string;
   vocabulary: AILessonVocabularyItem[];
   grammarExplanation: string;
-  grammarExercises?: AIGrammarExercise[]; // Optional array of structured exercises
+  grammarExercises?: AIGrammarExercise[];
   listeningExercise: AILessonListeningExercise;
   readingPassage: string;
   readingQuestions: string[];
@@ -139,6 +154,7 @@ export interface AIEvaluationResult {
   evaluation: string;
   isCorrect: boolean;
   suggestedCorrection?: string;
+  grammarErrorTags?: string[]; // Specific grammar points the user made errors on
 }
 
 export interface AIRecommendedLesson {
@@ -205,5 +221,3 @@ export const DEFAULT_TOPICS: Record<LanguageLevel, { id: string; name: string }[
     { id: "c2_cultural_historical_references", name: "Культурные и исторические ссылки" }
   ],
 };
-
-    

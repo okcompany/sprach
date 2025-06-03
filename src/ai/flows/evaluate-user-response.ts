@@ -28,6 +28,7 @@ const EvaluateUserResponseOutputSchema = z.object({
   evaluation: z.string().describe('An evaluation of the user\u2019s response, including feedback and suggestions for improvement.'),
   isCorrect: z.boolean().describe('Whether the user response is correct or not.'),
   suggestedCorrection: z.string().optional().describe('A suggested correction to the user\u2019s response, if applicable.'),
+  grammarErrorTags: z.array(z.string()).optional().describe('Specific grammar points the user made errors on (e.g., "akkusativ_prepositions", "verb_conjugation_modal"). Provide these only if the response is incorrect and the error is related to a specific, identifiable grammar rule or pattern relevant to the user\'s level. Use short, snake_case, English tags.'),
 });
 
 export type EvaluateUserResponseOutput = z.infer<typeof EvaluateUserResponseOutputSchema>;
@@ -51,24 +52,31 @@ Here is the user's current proficiency level in German: {{{userLevel}}}
 
 Provide an evaluation of the user's response. Include feedback and suggestions for improvement, adjusted to the user's proficiency level. Indicate whether the response is correct or not. If the response is incorrect, provide a suggested correction.
 
+If the module type is 'grammar' or 'writing', and the user's response is incorrect due to specific grammatical errors relevant to their level ({{{userLevel}}}), please identify these errors and list them in the 'grammarErrorTags' field. Use short, English, snake_case tags (e.g., "nominative_case_error", "verb_position_subclause", "modal_verb_usage", "adjective_declension_dativ", "perfekt_auxiliary_verb"). Only include tags for clear, identifiable grammatical mistakes, not stylistic issues or minor vocabulary errors.
+
 {{#if (eq moduleType "wordTest")}}
 This is a 'wordTest' module. The user is being tested on their knowledge of vocabulary.
 - Be stricter in your evaluation.
 - If the user's response is incorrect, clearly state the correct answer in the 'suggestedCorrection'.
 - The primary goal is to assess if the user knows the word.
+- Do not provide 'grammarErrorTags' for this module type unless the error is directly tied to a grammatical aspect of a single word (e.g. gender of a noun if tested).
 {{else if (eq moduleType "vocabulary")}}
 This is a 'vocabulary' learning module. The user is learning new words.
 - Be encouraging.
 - If the user's response is incorrect, provide the 'suggestedCorrection' and explain briefly if necessary.
+- Do not provide 'grammarErrorTags' for this module type.
 {{else if (eq moduleType "grammar")}}
 This is a 'grammar' module.
 - Focus on grammatical correctness according to the user's level and the provided grammar rules.
+- If incorrect, provide 'grammarErrorTags' if applicable.
 {{else if (eq moduleType "reading")}}
 This is a 'reading' module.
 - Evaluate comprehension of the provided text based on the user's answer to the question.
+- Provide 'grammarErrorTags' only if the user's answer itself contains significant grammatical errors that hinder understanding, and these errors are relevant to their learning level.
 {{else if (eq moduleType "writing")}}
 This is a 'writing' module.
 - Evaluate the user's written text for clarity, grammar, and relevance to the prompt.
+- If incorrect due to grammar, provide 'grammarErrorTags'.
 {{/if}}
 
 IMPORTANT: If you provide a 'suggestedCorrection', ensure it is appropriate for the user's level ({{{userLevel}}}). If a more complex correction would be ideal but is above the user's level, first provide the ideal correction, and then explicitly state: "This might be a bit advanced. A simpler way to say this at your level ({{{userLevel}}}) would be: [simpler correction]". If the ideal correction is already appropriate for the user's level, you don't need to add the "simpler way" part.
@@ -81,11 +89,12 @@ Focus on these aspects for evaluation, depending on the module type:
 
 Ensure your response is in Russian.
 
-Output your response in the following JSON format:
+Output your response in the following JSON format (ensure grammarErrorTags is an array of strings, or omit if not applicable):
 {
   "evaluation": "Evaluation of the user's response...",
   "isCorrect": true or false,
-  "suggestedCorrection": "Suggested correction, if applicable..."
+  "suggestedCorrection": "Suggested correction, if applicable...",
+  "grammarErrorTags": ["tag1", "tag2"]
 }`,
 });
 

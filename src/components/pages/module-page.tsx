@@ -356,7 +356,8 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
         questionContext = `Напишите текст на тему: ${lessonContent.writingPrompt}`;
     }
     
-    const evaluation = await evaluateUserResponse(moduleId, userResponse, questionContext, expectedAnswerForAI, grammarRulesForAI);
+    // Pass levelId and topicId to the context's evaluateUserResponse
+    const evaluation = await evaluateUserResponse(levelId, topicId, moduleId, userResponse, questionContext, expectedAnswerForAI, grammarRulesForAI);
     
     if (!evaluation) {
         toast({
@@ -669,6 +670,18 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
                 {feedback.suggestedCorrection && (
                   <p className="text-sm mt-1">Предлагаемая коррекция: <span className="italic">{feedback.suggestedCorrection}</span></p>
                 )}
+                 {feedback.grammarErrorTags && feedback.grammarErrorTags.length > 0 && (
+                  <div className="mt-2">
+                    <p className="text-xs font-medium">Области грамматики для внимания:</p>
+                    <div className="flex flex-wrap gap-1 mt-1">
+                      {feedback.grammarErrorTags.map(tag => (
+                        <span key={tag} className="px-2 py-0.5 text-xs bg-rose-200 text-rose-700 dark:bg-rose-700 dark:text-rose-200 rounded-full">
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </CardContent>
             </Card>
           )}
@@ -689,7 +702,3 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
     </div>
   );
 }
-    
-
-    
-
