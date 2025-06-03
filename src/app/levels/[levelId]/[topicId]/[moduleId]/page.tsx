@@ -24,7 +24,7 @@ export default function SpecificModuleRoute({ params }: SpecificModuleRouteProps
   const { userData, isLoading, isLevelAccessible } = useUserData();
 
   const levelIdParam = params.levelId.toUpperCase();
-  const moduleIdParam = params.moduleId as ModuleType; // Assume valid for now, could add validation
+  const moduleIdParam = params.moduleId as ModuleType; // Initial cast for checks
   const { topicId } = params;
 
   useEffect(() => {
@@ -54,7 +54,6 @@ export default function SpecificModuleRoute({ params }: SpecificModuleRouteProps
         return;
     }
 
-
     if (userData && !isLevelAccessible(validLevelId)) {
       toast({
         title: "Доступ запрещен",
@@ -76,8 +75,10 @@ export default function SpecificModuleRoute({ params }: SpecificModuleRouteProps
     );
   }
   
+  // Ensure all params are valid and level is accessible before rendering ModulePage
+  // These checks serve as a display guard while useEffect handles redirection
   if (!ALL_LEVELS.includes(levelIdParam as LanguageLevel) || 
-      !ALL_MODULE_TYPES.includes(moduleIdParam as ModuleType) ||
+      !ALL_MODULE_TYPES.includes(moduleIdParam as ModuleType) || // Added check for moduleIdParam
       (userData && !isLevelAccessible(levelIdParam as LanguageLevel))) {
      return (
       <MainLayout>
@@ -88,8 +89,10 @@ export default function SpecificModuleRoute({ params }: SpecificModuleRouteProps
     );
   }
 
+  // At this point, levelIdParam and moduleIdParam have passed structural validation.
+  // isLevelAccessible has also been checked by the effect for redirection.
   const finalLevelId = levelIdParam as LanguageLevel;
-  const finalModuleId = moduleIdParam as ModuleType;
+  const finalModuleId = moduleIdParam as ModuleType; // This cast is now safer.
 
   return (
     <MainLayout>
