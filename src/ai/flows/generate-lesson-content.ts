@@ -1,3 +1,4 @@
+
 // This is an AI-powered German language learning system that generates lessons from A0 to C2.
 'use server';
 /**
@@ -76,6 +77,9 @@ const lessonPrompt = ai.definePrompt({
 `,
 });
 
+const MAX_RETRIES = 3;
+const INITIAL_RETRY_DELAY_MS = 2000;
+
 // Define the flow
 const generateLessonContentFlow = ai.defineFlow(
   {
@@ -84,7 +88,38 @@ const generateLessonContentFlow = ai.defineFlow(
     outputSchema: GenerateLessonOutputSchema,
   },
   async input => {
-    const {output} = await lessonPrompt(input);
-    return output!;
+    let retries = 0;
+    while (retries < MAX_RETRIES) {
+      try {
+        const {output} = await lessonPrompt(input);
+        if (!output) {
+          throw new Error('AI model returned an empty output during lesson generation.');
+        }
+        return output;
+      } catch (error: any) {
+        retries++;
+        if (retries >= MAX_RETRIES) {
+          console.error(`Failed to generate lesson content after ${MAX_RETRIES} attempts. Last error:`, error);
+          throw error;
+        }
+        
+        const errorMessage = error.message ? error.message.toLowerCase() : '';
+        if (
+          errorMessage.includes('503') ||
+          errorMessage.includes('service unavailable') ||
+          errorMessage.includes('model is overloaded') ||
+          errorMessage.includes('server error') ||
+          errorMessage.includes('internal error')
+        ) {
+          const delay = INITIAL_RETRY_DELAY_MS * Math.pow(2, retries - 1); // Exponential backoff
+          console.warn(`Lesson generation attempt ${retries} failed with transient error. Retrying in ${delay / 1000}s... Error: ${error.message}`);
+          await new Promise(resolve => setTimeout(resolve, delay));
+        } else {
+          console.error('Lesson generation failed with non-retryable error:', error);
+          throw error;
+        }
+      }
+    }
+    throw new Error('Failed to generate lesson content after multiple retries, and loop exited unexpectedly.');
   }
 );
