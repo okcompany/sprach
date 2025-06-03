@@ -27,11 +27,11 @@ import type {
   AITrueFalseExercise,
   AITrueFalseStatement,
   AISequencingExercise, 
-  AIWritingInteractiveExercise, // Added
-  AIStructuredWritingExercise, // Added
+  AIWritingInteractiveExercise,
+  AIStructuredWritingExercise,
 } from '@/types/german-learning';
 import { MODULE_NAMES_RU, DEFAULT_TOPICS, ALL_MODULE_TYPES, ALL_LEVELS } from '@/types/german-learning';
-import { Speaker, RotateCcw, CheckCircle, AlertTriangle, ArrowRight, Shuffle, ThumbsUp, ThumbsDown, ListOrdered, Trash2, Info, BookCheck } from 'lucide-react';
+import { Speaker, RotateCcw, CheckCircle, AlertTriangle, ArrowRight, Shuffle, ThumbsUp, ThumbsDown, ListOrdered, Trash2, Info, BookCheck, SearchX } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
@@ -133,6 +133,8 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
   // Sequencing Specific State
   const [userSequence, setUserSequence] = useState<string[]>([]);
   const [availableSequenceItems, setAvailableSequenceItems] = useState<string[]>([]);
+  
+  const [noContentForModule, setNoContentForModule] = useState(false);
 
 
   const topicName = useMemo(() => 
@@ -169,6 +171,7 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
     setCurrentTask(null);
     setFeedback(null);
     resetInteractiveStates();
+    setNoContentForModule(false);
 
     if (topicName === "Загрузка...") {
       setIsLoadingTask(false); 
@@ -195,7 +198,7 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
         } else if (audioQuiz) {
           setActiveAudioQuizExercise(audioQuiz);
           setTotalTasks(audioQuiz.items.length);
-        } else { // Fallback to standard vocabulary
+        } else { 
           let wordsToUse = getWordsForTopic(topicId); 
           if (content.vocabulary && content.vocabulary.length > 0) {
               content.vocabulary.forEach((vocabItem: AILessonVocabularyItem) => {
@@ -208,8 +211,8 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
           const effectiveVocabularyList = wordsToUse.length > 0 ? wordsToUse : content.vocabulary.map(v => ({...v, id: v.german, consecutiveCorrectAnswers: 0, errorCount: 0}));
           const availableWordsCount = effectiveVocabularyList.length;
           if (availableWordsCount === 0) {
-            updateModuleProgress(levelId, topicId, moduleId, 0); setFinalModuleScore(0); setIsModuleFinished(true);
-            toast({ title: "Модуль завершен", description: "Слов для этого модуля не найдено.", variant: "default", duration: 5000 });
+            setNoContentForModule(true);
+            toast({ title: "Нет слов для изучения", description: "AI не предоставил слова для этой темы, и ваш локальный банк слов для нее пуст.", variant: "default", duration: 7000 });
             setIsLoadingTask(false); return;
           }
           setTotalTasks(availableWordsCount); setCurrentTask(effectiveVocabularyList[0].german);
@@ -231,7 +234,7 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
             setAvailableSequenceItems(shuffleArray([...sequencingExercise.shuffledItems]));
             setUserSequence([]);
             setTotalTasks(1);
-        } else { // Fallback to open-ended questions
+        } else { 
             const questionsList = moduleId === 'listening' ? content.listeningExercise?.questions : content.readingQuestions;
             const baseText = moduleId === 'listening' ? content.listeningExercise?.script : content.readingPassage;
             if (baseText && questionsList && questionsList.length > 0) { 
@@ -239,33 +242,65 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
             } else if (baseText) { 
                 setCurrentTask("Какова главная идея этого текста?"); setTotalTasks(1); 
             } else { 
-                setCurrentTask(`Нет данных для модуля ${MODULE_NAMES_RU[moduleId]}.`); setTotalTasks(1); 
+                 setNoContentForModule(true); toast({ title: `Нет контента для модуля ${MODULE_NAMES_RU[moduleId]}`, description: "AI не смог сгенерировать необходимые материалы.", variant: "destructive", duration: 7000 }); setIsLoadingTask(false); return;
             }
         }
       } else if (moduleId === 'writing') {
         const structuredWritingExercise = content.interactiveWritingExercises?.find(ex => ex.type === 'structuredWriting') as AIStructuredWritingExercise | undefined;
         if (structuredWritingExercise) {
             setActiveInteractiveExercise(structuredWritingExercise);
-            setCurrentTask(structuredWritingExercise.promptDetails); // Main prompt
+            setCurrentTask(structuredWritingExercise.promptDetails); 
             setTotalTasks(1);
-        } else {
+        } else if (content.writingPrompt) {
             setCurrentTask(content.writingPrompt); 
             setTotalTasks(1);
+        } else {
+             setNoContentForModule(true); toast({ title: "Нет задания для письма", description: "AI не смог сгенерировать письменное задание.", variant: "destructive", duration: 7000 }); setIsLoadingTask(false); return;
         }
-      } else if (moduleId === 'grammar') { setCurrentTask(content.grammarExplanation); setTotalTasks(1); }
-      // Removed wordTest for now as it's similar to vocab without interactive parts
-    } else {  
-      if (moduleId === 'vocabulary') { 
+      } else if (moduleId === 'grammar') { 
+        if (content.grammarExplanation) {
+            setCurrentTask(content.grammarExplanation); setTotalTasks(1); 
+        } else {
+            setNoContentForModule(true); toast({ title: "Нет грамматического материала", description: "AI не смог сгенерировать объяснение грамматики.", variant: "destructive", duration: 7000 }); setIsLoadingTask(false); return;
+        }
+      } else if (moduleId === 'wordTest') {
+          let wordsToUse = getWordsForTopic(topicId);
+          if (content.vocabulary && content.vocabulary.length > 0) {
+              content.vocabulary.forEach((vocabItem: AILessonVocabularyItem) => {
+                  const existingWordInBankForTopic = wordsToUse.find(w => w.german.toLowerCase() === vocabItem.german.toLowerCase());
+                  if(!existingWordInBankForTopic) { addWordToBank({ german: vocabItem.german, russian: vocabItem.russian, exampleSentence: vocabItem.exampleSentence, topic: topicId, level: levelId }); }
+              });
+              wordsToUse = getWordsForTopic(topicId); 
+          }
+          setCurrentVocabulary(wordsToUse);
+          const availableWordsCount = wordsToUse.length;
+          if (availableWordsCount === 0) {
+            setNoContentForModule(true);
+            toast({ title: "Нет слов для теста", description: "Для этой темы нет слов, подходящих для теста.", variant: "default", duration: 7000 });
+            setIsLoadingTask(false); return;
+          }
+          setTotalTasks(availableWordsCount); setCurrentTask(wordsToUse[0].german);
+      }
+    } else {  // content is null
+      if (moduleId === 'vocabulary' || moduleId === 'wordTest') { 
         const wordsFromBank = getWordsForTopic(topicId); setCurrentVocabulary(wordsFromBank);
         const availableWordsCount = wordsFromBank.length;
         if (availableWordsCount > 0) {
           toast({ title: "Загрузка AI-контента не удалась", description: "Модуль будет использовать слова из вашего словаря для этой темы.", variant: "default", duration: 6000 });
           setTotalTasks(availableWordsCount); setCurrentTask(wordsFromBank[0].german);
-        } else { updateModuleProgress(levelId, topicId, moduleId, 0); setFinalModuleScore(0); setIsModuleFinished(true); toast({ title: "Модуль завершен", description: "Не удалось загрузить новый контент, и слов в банке для этой темы нет.", variant: "default", duration: 7000 }); setIsLoadingTask(false); return; }
-      } else { toast({ title: "Ошибка загрузки урока", description: `Не удалось получить материалы для модуля "${MODULE_NAMES_RU[moduleId]}".`, variant: "destructive", duration: 7000 }); setTotalTasks(1); setCurrentTask(null);  }
+        } else { 
+            setNoContentForModule(true); 
+            toast({ title: "Нет контента для модуля", description: "Не удалось загрузить новый контент от AI, и ваш локальный банк слов для этой темы пуст.", variant: "default", duration: 7000 }); 
+            setIsLoadingTask(false); return; 
+        }
+      } else { 
+          setNoContentForModule(true); 
+          toast({ title: "Ошибка загрузки урока", description: `Не удалось получить материалы для модуля "${MODULE_NAMES_RU[moduleId]}".`, variant: "destructive", duration: 7000 }); 
+          setIsLoadingTask(false); return; 
+      }
     }
     setIsLoadingTask(false);
-  }, [levelId, topicName, moduleId, getTopicLessonContent, getWordsForTopic, addWordToBank, topicId, toast, updateModuleProgress]);
+  }, [levelId, topicName, moduleId, getTopicLessonContent, getWordsForTopic, addWordToBank, topicId, toast]);
 
   useEffect(() => {
     if (topicName !== "Загрузка...") {
@@ -362,9 +397,9 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
     const totalPairs = activeMatchingExercise.pairs.length;
 
     const updatedGermanItems = germanMatchItems.map(gItem => {
-        if (!gItem.matchedId) return {...gItem, feedback: gItem.isPairTarget ? 'unmatched' : undefined}; // Unmatched pair targets are wrong
+        if (!gItem.matchedId) return {...gItem, feedback: gItem.isPairTarget ? 'unmatched' : undefined};
         const rItem = russianMatchItems.find(r => r.id === gItem.matchedId);
-        if (!rItem) return {...gItem, feedback: 'incorrect'}; // Should not happen
+        if (!rItem) return {...gItem, feedback: 'incorrect'}; 
 
         const isCorrectPair = activeMatchingExercise.pairs.some(p => p.german === gItem.originalText && p.russian === rItem.originalText);
         if (isCorrectPair) {
@@ -377,7 +412,7 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
     const updatedRussianItems = russianMatchItems.map(rItem => {
         if (!rItem.matchedId) return {...rItem, feedback: rItem.isPairTarget ? 'unmatched' : undefined};
         const gItem = germanMatchItems.find(g => g.id === rItem.matchedId);
-        if (!gItem) return {...rItem, feedback: 'incorrect'}; // Should not happen
+        if (!gItem) return {...rItem, feedback: 'incorrect'}; 
 
         const isCorrectPair = activeMatchingExercise.pairs.some(p => p.german === gItem.originalText && p.russian === rItem.originalText);
         return {...rItem, feedback: isCorrectPair ? 'correct' : 'incorrect'};
@@ -643,6 +678,23 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
   };
 
   const renderModuleContent = () => {
+    if (noContentForModule) {
+        return (
+            <div className="text-center p-6 text-muted-foreground">
+                <SearchX className="h-16 w-16 mx-auto mb-4 text-primary/50" />
+                <h3 className="text-xl font-semibold mb-2">Контент для модуля не найден</h3>
+                <p className="text-sm mb-1">
+                    К сожалению, для модуля "{MODULE_NAMES_RU[moduleId]}" по теме "{topicName}" сейчас нет доступных материалов.
+                </p>
+                <p className="text-sm">
+                    Это могло произойти, если AI не смог сгенерировать урок, или если для этой темы еще не были добавлены слова в ваш словарь.
+                </p>
+                 <Button onClick={fetchLesson} variant="outline" className="mt-6">
+                    <RotateCcw className="mr-2 h-4 w-4" /> Попробовать загрузить снова
+                </Button>
+            </div>
+        );
+    }
     // --- Vocabulary: Matching Exercise ---
     if (moduleId === 'vocabulary' && activeMatchingExercise) {
        return (
@@ -1000,7 +1052,7 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
   const progressPercent = totalTasks > 0 ? (tasksCompleted / totalTasks) * 100 : 0;
   let placeholderText = "Ваш ответ...";
   if (moduleId === 'wordTest') placeholderText = "Введите перевод на русский...";
-  if (activeMatchingExercise || activeAudioQuizExercise || (activeInteractiveExercise && activeInteractiveExercise.type !== 'structuredWriting')) placeholderText = ""; 
+  if (activeMatchingExercise || activeAudioQuizExercise || (activeInteractiveExercise && activeInteractiveExercise.type !== 'structuredWriting') || noContentForModule) placeholderText = ""; 
 
   if (isLoadingTask && topicName === "Загрузка...") { 
       return (
@@ -1063,9 +1115,10 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
             {activeInteractiveExercise?.type === 'structuredWriting' && <Info className="mr-2 h-6 w-6 text-primary"/>}
             {activeAudioQuizExercise && <Speaker className="mr-2 h-6 w-6 text-primary"/>}
             {activeMatchingExercise && <Shuffle className="mr-2 h-6 w-6 text-primary"/>}
+            {noContentForModule && <SearchX className="mr-2 h-6 w-6 text-destructive"/>}
             {moduleTitle}: {topicName}
           </CardTitle>
-          {!isModuleFinished ? (
+          {!isModuleFinished && !noContentForModule ? (
             <CardDescription>Уровень {levelId}. 
             {activeMatchingExercise ? " Упражнение на сопоставление." : 
              activeAudioQuizExercise ? `Аудио-квиз: Задание ${currentAudioQuizItemIndex + 1} из ${totalTasks}.` :
@@ -1074,10 +1127,12 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
              activeInteractiveExercise && activeInteractiveExercise.type === 'structuredWriting' ? `Структурированное письменное задание.` :
              `Задание ${tasksCompleted + 1} из ${totalTasks}.`}
             </CardDescription>
+          ) : noContentForModule ? (
+             <CardDescription>Уровень {levelId}. Нет доступного контента для этого модуля.</CardDescription>
           ) : (
             <CardDescription>Уровень {levelId}. Модуль завершен. Ваш результат: {finalModuleScore}%</CardDescription>
           )}
-          <Progress value={isModuleFinished ? (finalModuleScore ?? 0) : progressPercent} className="mt-2 h-2" />
+          {!noContentForModule && <Progress value={isModuleFinished ? (finalModuleScore ?? 0) : progressPercent} className="mt-2 h-2" />}
         </CardHeader>
         <CardContent>
           {!isModuleFinished ? (
@@ -1159,7 +1214,7 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
             </Card>
           )}
         </CardContent>
-        {!isModuleFinished && (
+        {!isModuleFinished && !noContentForModule && (
           <CardFooter>
             {/* Matching Exercise Button */}
             {activeMatchingExercise && moduleId === 'vocabulary' && !isMatchingChecked && (
@@ -1183,7 +1238,7 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
                     ) : activeInteractiveExercise.type === 'sequencing' ? (
                         <Button onClick={handleCheckSequence} className="w-full" size="lg" disabled={userSequence.length !== (activeInteractiveExercise as AISequencingExercise).shuffledItems.length}>Проверить последовательность</Button>
                     ) : null 
-                ) : ( // This button is for MCQ and TrueFalse, Sequencing handles its own completion.
+                ) : ( 
                      activeInteractiveExercise.type !== 'sequencing' && <Button onClick={handleNextInteractiveItem} className="w-full" size="lg">Следующее задание</Button>
                 )
             )}
@@ -1206,4 +1261,5 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
     
 
     
+
 
