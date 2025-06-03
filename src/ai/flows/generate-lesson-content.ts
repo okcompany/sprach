@@ -48,8 +48,8 @@ const lessonPrompt = ai.definePrompt({
   The topic is: {{{topic}}}
 
   The lesson should include:
-  - A lessonTitle field
-  - A vocabulary field which is a list of key vocabulary words (minimum 5 words) relevant to the topic.
+  - A lessonTitle field.
+  - A vocabulary field which is a list of key vocabulary words (minimum 5 words) relevant to the topic. Ensure this vocabulary list is based on common German language textbooks for the specified level and topic.
   - A grammarExplanation field which explains a grammar point relevant to the level and topic.
   - A listeningExercise field which describes a listening comprehension exercise.
   - A readingPassage field which provides a short reading passage related to the topic.
@@ -71,3 +71,4 @@ const generateLessonContentFlow = ai.defineFlow(
     return output!;
   }
 );
+
