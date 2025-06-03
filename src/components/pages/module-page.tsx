@@ -46,14 +46,14 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
   } = useUserData();
   
   const [lessonContent, setLessonContent] = useState<AILessonContent | null>(null);
-  const [currentTask, setCurrentTask] = useState<string | null>(null);
+  const [currentTask, setCurrentTask] = useState<string | null>(null); // For vocabulary/wordTest: German word; For listening: current question; For others: prompt/passage
   const [userResponse, setUserResponse] = useState('');
   const [feedback, setFeedback] = useState<AIEvaluationResult | null>(null);
   const [isLoadingTask, setIsLoadingTask] = useState(false);
   const [moduleScore, setModuleScore] = useState(0);
   const [tasksCompleted, setTasksCompleted] = useState(0);
   const [totalTasks, setTotalTasks] = useState(5); 
-  const [currentVocabulary, setCurrentVocabulary] = useState<VocabularyWord[]>([]);
+  const [currentVocabulary, setCurrentVocabulary] = useState<VocabularyWord[]>([]); // Stores words from bank for current topic
   const [isModuleFinished, setIsModuleFinished] = useState(false);
   const [finalModuleScore, setFinalModuleScore] = useState<number | null>(null);
 
@@ -108,14 +108,15 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
             wordsToUse = getWordsForTopic(topicId);
           }
 
-          setCurrentVocabulary(wordsToUse);
-          const availableWordsCount = wordsToUse.length > 0 ? wordsToUse.length : content.vocabulary.length;
+          setCurrentVocabulary(wordsToUse); // These are words from the user's bank for this topic
+          // If wordsToUse is empty but content.vocabulary is not, it means these are new words from AI
+          // Total tasks should be based on available words, preferring user's bank then AI's list
+          const effectiveVocabularyList = wordsToUse.length > 0 ? wordsToUse : content.vocabulary.map(v => ({...v, id: v.german, consecutiveCorrectAnswers: 0, errorCount: 0})); // Adapt AI vocab to VocabularyWord shape for consistency if needed
+          const availableWordsCount = effectiveVocabularyList.length;
           setTotalTasks(availableWordsCount > 0 ? availableWordsCount : 1);
 
-          if (wordsToUse.length > 0) {
-            setCurrentTask(wordsToUse[0].german);
-          } else if (content.vocabulary.length > 0) {
-            setCurrentTask(content.vocabulary[0].german);
+          if (availableWordsCount > 0) {
+            setCurrentTask(effectiveVocabularyList[0].german);
           }
 
       } else if (moduleId === 'grammar') {
@@ -157,15 +158,18 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
       let link = `/levels/${levelId.toLowerCase()}/${topicId}`; 
       let text = "К модулям темы";
 
-      if (isTopicCompleted(levelId, topicId)) {
+      // Check if the current topic is completed
+      const currentTopicIsCompleted = isTopicCompleted(levelId, topicId);
+
+      if (currentTopicIsCompleted) {
         const currentLevelDefaultTopics = DEFAULT_TOPICS[levelId] || [];
-        const currentLevelCustomTopics = userData.customTopics.filter(
+        const customTopicObjectsForLevel = userData.customTopics.filter(
           (ct) => ct.id.startsWith(levelId + "_custom_")
-        );
+        ).map(t => ({ id: t.id, name: t.name }));
         
         const allTopicObjectsForLevel: {id: string, name: string}[] = [
           ...currentLevelDefaultTopics.map(t => ({ id: t.id, name: t.name })),
-          ...customTopicObjectsForLevel.map(t => ({ id: t.id, name: t.name }))
+          ...customTopicObjectsForLevel
         ];
 
         const currentTopicIndexInAll = allTopicObjectsForLevel.findIndex(t => t.id === topicId);
@@ -185,8 +189,9 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
           link = `/levels/${levelId.toLowerCase()}/${foundNextIncompleteTopicId}`;
           text = "Следующая тема";
         } else {
+          // All topics in this level are completed
           link = `/levels/${levelId.toLowerCase()}`;
-          text = "К темам уровня";
+          text = "К темам уровня (все пройдено)";
         }
       }
       setTopicContinuationLink(link);
@@ -221,12 +226,19 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
     setFeedback(null);
 
     let questionContext = '';
-    let expectedAnswer = ''; 
+    let expectedAnswerForAI = ''; 
 
     if (moduleId === 'vocabulary' || moduleId === 'wordTest') {
-        const wordData = currentVocabulary.find(v => v.german === currentTask) || lessonContent.vocabulary.find(v => v.german === currentTask);
-        questionContext = `Переведите слово: "${currentTask}"${wordData?.exampleSentence ? ` (Пример: ${wordData.exampleSentence})` : ''}`;
-        expectedAnswer = wordData?.russian || '';
+        // Prefer word from user's bank, then from AI lesson content
+        const wordFromBank = currentVocabulary.find(v => v.german === currentTask);
+        const wordFromLesson = lessonContent.vocabulary.find(v => v.german === currentTask);
+        const wordData = wordFromBank || wordFromLesson;
+
+        questionContext = `Слово: "${currentTask}"${wordData?.exampleSentence ? ` (Пример: ${wordData.exampleSentence})` : ''}`;
+        if (moduleId === 'vocabulary') { // For vocabulary learning, provide expected answer to AI for softer eval
+            questionContext += `. Ожидаемый перевод: ${wordData?.russian || 'не указан'}`;
+        }
+        expectedAnswerForAI = wordData?.russian || '';
     } else if (moduleId === 'grammar') {
         questionContext = `Задание по грамматике (на основе объяснения): ${lessonContent.grammarExplanation}. Задание: ${lessonContent.writingPrompt || "Напишите предложение, используя это правило."}`;
     } else if (moduleId === 'listening') {
@@ -241,7 +253,7 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
         questionContext = `Напишите текст на тему: ${lessonContent.writingPrompt}`;
     }
     
-    const evaluation = await evaluateUserResponse(moduleId, userResponse, questionContext, expectedAnswer);
+    const evaluation = await evaluateUserResponse(moduleId, userResponse, questionContext, expectedAnswerForAI);
     setFeedback(evaluation);
     setIsLoadingTask(false);
     
@@ -282,14 +294,14 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
       }
     } else {
       if ((moduleId === 'vocabulary' || moduleId === 'wordTest')) {
-          if (currentVocabulary.length > newTasksCompleted) {
-            setCurrentTask(currentVocabulary[newTasksCompleted].german);
-          } else if (lessonContent.vocabulary.length > newTasksCompleted) {
-             setCurrentTask(lessonContent.vocabulary[newTasksCompleted].german);
+          const effectiveVocabularyList = currentVocabulary.length > 0 ? currentVocabulary : lessonContent.vocabulary.map(v => ({...v, id: v.german, consecutiveCorrectAnswers: 0, errorCount: 0}));
+          if (effectiveVocabularyList.length > newTasksCompleted) {
+            setCurrentTask(effectiveVocabularyList[newTasksCompleted].german);
           } else {
              setIsModuleFinished(true); 
-             setFinalModuleScore(Math.round(moduleScore));
-             updateModuleProgress(levelId, topicId, moduleId, Math.round(moduleScore));
+             const finalScoreFallback = Math.round(moduleScore);
+             updateModuleProgress(levelId, topicId, moduleId, finalScoreFallback);
+             setFinalModuleScore(finalScoreFallback);
              toast({title: "Неожиданное завершение модуля", description: "Кажется, задания закончились раньше."});
           }
       } else if (moduleId === 'listening') {
@@ -298,8 +310,9 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
             setCurrentTask(lessonContent.listeningExercise.questions[newTasksCompleted]);
         } else {
             setIsModuleFinished(true); 
-            setFinalModuleScore(Math.round(moduleScore));
-            updateModuleProgress(levelId, topicId, moduleId, Math.round(moduleScore));
+            const finalScoreFallback = Math.round(moduleScore);
+            updateModuleProgress(levelId, topicId, moduleId, finalScoreFallback);
+            setFinalModuleScore(finalScoreFallback);
             toast({title: "Неожиданное завершение модуля (аудирование)", description: "Кажется, вопросы закончились раньше."});
         }
       }
@@ -315,11 +328,14 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
       case 'vocabulary':
       case 'wordTest':
         if (!currentTask) return <p className="text-center p-4 text-muted-foreground">Загрузка слова...</p>;
-        const currentWordData = currentVocabulary.find(v => v.german === currentTask) || 
-                                lessonContent.vocabulary.find(v => v.german === currentTask);
+        const wordFromBank = currentVocabulary.find(v => v.german === currentTask);
+        const wordFromLesson = lessonContent.vocabulary.find(v => v.german === currentTask);
+        const currentWordData = wordFromBank || wordFromLesson;
+        const displayExpectedAnswer = moduleId === 'vocabulary' ? (currentWordData?.russian || '...') : '???';
+
         return (
           <div>
-            <p className="text-lg mb-1">Слово для изучения/тестирования:</p>
+            <p className="text-lg mb-1">{moduleId === 'vocabulary' ? "Слово для изучения:" : "Слово для тестирования:"}</p>
             <div className="flex items-center gap-2 mb-1">
                 <h2 className="text-3xl font-bold font-headline">{currentTask}</h2>
                 <Button variant="ghost" size="icon" onClick={() => speak(currentTask, 'de-DE')}>
@@ -327,7 +343,10 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
                 </Button>
             </div>
             {currentWordData?.exampleSentence && <p className="text-sm italic text-muted-foreground mb-2">Пример: {currentWordData.exampleSentence}</p>}
-            <p className="text-md text-muted-foreground mt-1">Введите перевод на русский (ожидается: {currentWordData?.russian || '...'}):</p>
+            <p className="text-md text-muted-foreground mt-1">
+              Введите перевод на русский 
+              {moduleId === 'vocabulary' ? ` (ожидается: ${displayExpectedAnswer})` : ':'}
+            </p>
           </div>
         );
       case 'grammar':
@@ -384,6 +403,7 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
 
   const moduleTitle = MODULE_NAMES_RU[moduleId as keyof typeof ModuleNamesRuType] || "Модуль";
   const progressPercent = totalTasks > 0 ? (tasksCompleted / totalTasks) * 100 : 0;
+  const placeholderText = moduleId === 'wordTest' ? "Введите перевод на русский..." : "Ваш ответ...";
 
   return (
     <div className="container mx-auto py-8">
@@ -407,7 +427,7 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
                 {renderModuleContent()}
               </div>
               <Textarea
-                placeholder="Ваш ответ..."
+                placeholder={placeholderText}
                 value={userResponse}
                 onChange={(e) => setUserResponse(e.target.value)}
                 className="mb-4 min-h-[100px]"
