@@ -115,23 +115,22 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
           setCurrentVocabulary(wordsToUse); 
           const effectiveVocabularyList = wordsToUse.length > 0 ? wordsToUse : content.vocabulary.map(v => ({...v, id: v.german, consecutiveCorrectAnswers: 0, errorCount: 0}));
           const availableWordsCount = effectiveVocabularyList.length;
-          setTotalTasks(availableWordsCount > 0 ? availableWordsCount : 1);
-
-          if (availableWordsCount > 0) {
-            setCurrentTask(effectiveVocabularyList[0].german);
-          } else {
+          
+          if (availableWordsCount === 0) {
             updateModuleProgress(levelId, topicId, moduleId, 0);
             setFinalModuleScore(0);
             setIsModuleFinished(true);
             setIsLoadingTask(false);
             toast({
               title: "Модуль завершен",
-              description: "Слов для этого модуля не найдено. Результат: 0%.",
+              description: "Слов для этого модуля не найдено. Модуль завершен с результатом 0%.",
               variant: "default",
               duration: 5000,
             });
             return; 
           }
+          setTotalTasks(availableWordsCount);
+          setCurrentTask(effectiveVocabularyList[0].german);
 
       } else if (moduleId === 'grammar') {
           setCurrentTask(content.grammarExplanation); 
@@ -159,14 +158,13 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
           setCurrentTask(content.writingPrompt);
           setTotalTasks(1);
       }
-    } else {
+    } else { // content is null
         setTotalTasks(1); 
         if (moduleId === 'vocabulary' || moduleId === 'wordTest') {
              const wordsFromBank = getWordsForTopic(topicId);
              setCurrentVocabulary(wordsFromBank);
              const availableWordsCount = wordsFromBank.length;
-             setTotalTasks(availableWordsCount > 0 ? availableWordsCount : 1);
-
+             
             if (availableWordsCount === 0) {
                 updateModuleProgress(levelId, topicId, moduleId, 0);
                 setFinalModuleScore(0);
@@ -174,14 +172,14 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
                 setIsLoadingTask(false);
                 toast({
                     title: "Модуль завершен",
-                    description: "Не удалось загрузить контент и слов в банке нет. Результат: 0%.",
+                    description: "Не удалось загрузить новый контент, и слов в банке для этой темы нет. Модуль завершен с результатом 0%.",
                     variant: "default",
                     duration: 7000,
                 });
                 return; 
-            } else {
-                 setCurrentTask(wordsFromBank[0].german);
             }
+            setTotalTasks(availableWordsCount);
+            setCurrentTask(wordsFromBank[0].german);
         }
     }
     setIsLoadingTask(false);
@@ -219,17 +217,18 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
           const topicIsNowFullyCompleted = isTopicCompleted(levelId, topicId);
 
           if (topicIsNowFullyCompleted) {
-            if (userData.currentLevel !== levelId && ALL_LEVELS.indexOf(userData.currentLevel) > ALL_LEVELS.indexOf(levelId)) {
-                setTopicContinuationLink(`/levels/${userData.currentLevel.toLowerCase()}`);
-                setTopicContinuationText("К следующему уровню");
-            } else if (isLevelCompleted(levelId)) { 
+            const currentLevelAfterUpdate = userData.currentLevel; 
+            const originalLevelCompleted = isLevelCompleted(levelId);
+
+            if (originalLevelCompleted) { 
                 const originalLvlIdx = ALL_LEVELS.indexOf(levelId);
                 if (levelId === ALL_LEVELS[ALL_LEVELS.length - 1]) { 
                     setTopicContinuationLink(`/levels`);
                     setTopicContinuationText("Все уровни пройдены!");
                 } else { 
-                    setTopicContinuationLink(`/levels/${ALL_LEVELS[originalLvlIdx + 1].toLowerCase()}`);
-                    setTopicContinuationText("Перейти к следующему уровню");
+                    const nextDesignatedLevel = currentLevelAfterUpdate !== levelId ? currentLevelAfterUpdate : ALL_LEVELS[originalLvlIdx + 1];
+                    setTopicContinuationLink(`/levels/${nextDesignatedLevel.toLowerCase()}`);
+                    setTopicContinuationText(`Перейти к уровню ${nextDesignatedLevel}`);
                 }
             } else { 
               const currentLvlData = userData.progress[levelId];
@@ -283,7 +282,7 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
   };
 
   const handleSubmit = async () => {
-    if (!currentTask || isModuleFinished) return; // Simplified guard, lessonContent check moved
+    if (!currentTask || isModuleFinished) return;
     setIsLoadingTask(true);
     setFeedback(null);
 
@@ -296,7 +295,7 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
         const wordFromLesson = lessonContent?.vocabulary.find(v => v.german === currentTask);
         const wordData = wordFromBank || wordFromLesson;
 
-        if (!wordData) { // Should be caught by renderModuleContent, but as a safeguard
+        if (!wordData) {
              toast({ title: "Ошибка данных слова", description: "Не удалось получить данные для оценки.", variant: "destructive" });
              setIsLoadingTask(false);
              return;
@@ -364,7 +363,7 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
       setModuleScore(prev => prev + scoreIncrement);
       toast({ title: "Правильно!", description: "Отличная работа!", variant: "default" });
       if (moduleId === 'vocabulary' || moduleId === 'wordTest') {
-        const wordData = currentVocabulary.find(v => v.german === currentTask); // Rely on currentVocabulary as source of truth for bank
+        const wordData = currentVocabulary.find(v => v.german === currentTask);
         if (wordData) {
             updateWordInBank({...wordData, consecutiveCorrectAnswers: (wordData.consecutiveCorrectAnswers || 0) + 1, lastTestedDate: new Date().toISOString() });
         }
@@ -665,4 +664,6 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
     </div>
   );
 }
+    
+
     
