@@ -369,8 +369,13 @@ export const UserDataProvider = ({ children }: { children: ReactNode }) => {
     try {
       const lesson = await generateLessonContentAI({ level, topic: topicName }) as AILessonContent;
       return lesson;
-    } catch (error) {
-      console.error("Error generating lesson content:", error);
+    } catch (error: any) {
+      const errorMessage = error?.message || "";
+      if (errorMessage.includes("503") || errorMessage.includes("overloaded") || errorMessage.includes("Service Unavailable")) {
+        console.warn(`[UserDataContext] AI Service Overloaded (503) while generating lesson for "${topicName}". Returning null. Error: ${error.message}`);
+      } else {
+        console.error(`[UserDataContext] Error generating lesson content for "${topicName}" in context:`, error);
+      }
       return null;
     }
   }, []);
@@ -675,3 +680,4 @@ export const useUserData = () => {
   }
   return context;
 };
+
