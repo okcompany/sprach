@@ -157,11 +157,11 @@ export function DashboardPage() {
   }, [recommendedLesson, userData, isLoading, nextTopicId, currentLevelSlug, isLevelCompleted]);
 
 
-  if (isLoading || (!actionableAIReco && !nextStepDetails && !isRecommendationLoading) ) { 
+  if (isLoading) {
     return <div className="text-center p-10">Загрузка данных пользователя...</div>;
   }
   
-  if (!userData && !isLoading) {
+  if (!userData) { // Should not happen if isLoading is false, but good fallback
     return <div className="text-center p-10">Не удалось загрузить данные. Пожалуйста, обновите страницу.</div>;
   }
   
