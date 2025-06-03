@@ -371,15 +371,29 @@ export const UserDataProvider = ({ children }: { children: ReactNode }) => {
         weakAreas: weakAreas.slice(0, 15), 
         preferredTopics: userData.profile.preferredTopics,
       });
-       if (recommendation && userData) { // userData check is redundant here but safe
+       if (recommendation && userData) {
          const recommendedTopicName = recommendation.topic;
          const currentLvl = userData.currentLevel;
-         const defaultMatch = DEFAULT_TOPICS[currentLvl]?.find(t => t.name === recommendedTopicName);
-         const customMatch = userData.customTopics.find(t => t.name === recommendedTopicName && t.id.startsWith(currentLvl + "_"));
-         const recommendedTopicId = defaultMatch?.id || customMatch?.id;
+         
+         const defaultTopicsForLevel = DEFAULT_TOPICS[currentLvl] || [];
+         const customTopicsForLevel = userData.customTopics.filter(ct => ct.id.startsWith(currentLvl + "_custom_"));
 
-         if(recommendedTopicId) {
-            updateUserData({ currentTopicId: recommendedTopicId });
+         let foundRecommendedTopicId: string | null = null;
+         
+         const defaultMatch = defaultTopicsForLevel.find(t => t.name === recommendedTopicName);
+         if (defaultMatch) {
+            foundRecommendedTopicId = defaultMatch.id;
+         }
+
+         if (!foundRecommendedTopicId) {
+            const customMatch = customTopicsForLevel.find(t => t.name === recommendedTopicName);
+            if (customMatch) {
+                foundRecommendedTopicId = customMatch.id;
+            }
+         }
+
+         if(foundRecommendedTopicId) {
+            updateUserData({ currentTopicId: foundRecommendedTopicId });
          }
       }
       return recommendation;
@@ -472,3 +486,6 @@ export const useUserData = () => {
   }
   return context;
 };
+
+
+    
