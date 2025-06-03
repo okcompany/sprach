@@ -68,7 +68,8 @@ export interface UserData {
   customTopics: TopicProgress[]; // For user-defined topics
 }
 
-// AI Generated Content Types (matches flows)
+// --- AI Generated Content Types (matches flows) ---
+
 export interface AILessonVocabularyItem {
   german: string;
   russian: string;
@@ -80,13 +81,57 @@ export interface AILessonListeningExercise {
   questions: string[];
 }
 
+// Grammar Exercise Types
+export interface AIFillInTheBlanksQuestion {
+  promptText: string;
+  correctAnswers: string[];
+  explanation?: string;
+}
+
+export interface AIFillInTheBlanksExercise {
+  type: "fillInTheBlanks";
+  instructions: string;
+  questions: AIFillInTheBlanksQuestion[];
+}
+
+export interface AIMultipleChoiceQuestion {
+  questionText: string;
+  options: string[];
+  correctAnswer: string;
+  explanation?: string;
+}
+
+export interface AIMultipleChoiceExercise {
+  type: "multipleChoice";
+  instructions: string;
+  questions: AIMultipleChoiceQuestion[];
+}
+
+export interface AISentenceConstructionTask {
+  words: string[];
+  possibleCorrectSentences: string[];
+  explanation?: string;
+}
+
+export interface AISentenceConstructionExercise {
+  type: "sentenceConstruction";
+  instructions: string;
+  tasks: AISentenceConstructionTask[];
+}
+
+export type AIGrammarExercise = 
+  | AIFillInTheBlanksExercise 
+  | AIMultipleChoiceExercise 
+  | AISentenceConstructionExercise;
+
 export interface AILessonContent {
   lessonTitle: string;
   vocabulary: AILessonVocabularyItem[];
   grammarExplanation: string;
+  grammarExercises?: AIGrammarExercise[]; // Optional array of structured exercises
   listeningExercise: AILessonListeningExercise;
   readingPassage: string;
-  readingQuestions: string[]; // Added for specific reading comprehension questions
+  readingQuestions: string[];
   writingPrompt: string;
 }
 
@@ -160,3 +205,5 @@ export const DEFAULT_TOPICS: Record<LanguageLevel, { id: string; name: string }[
     { id: "c2_cultural_historical_references", name: "Культурные и исторические ссылки" }
   ],
 };
+
+    
