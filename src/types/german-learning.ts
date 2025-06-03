@@ -256,11 +256,38 @@ export interface AIRecommendedLesson {
   reasoning: string;
 }
 
+export interface DefaultTopicDefinition {
+  id: string;
+  name: string;
+  fallbackVocabulary?: AILessonVocabularyItem[];
+}
+
 // Default Topics
-export const DEFAULT_TOPICS: Record<LanguageLevel, { id: string; name: string }[]> = {
+export const DEFAULT_TOPICS: Record<LanguageLevel, DefaultTopicDefinition[]> = {
   A0: [
-    { id: "a0_greetings_farewells", name: "Основные приветствия и прощания" },
-    { id: "a0_numbers_dates", name: "Числа и даты" },
+    { 
+      id: "a0_greetings_farewells", name: "Основные приветствия и прощания",
+      fallbackVocabulary: [
+        { german: "Hallo", russian: "Привет", exampleSentence: "Hallo, wie geht's?" },
+        { german: "Guten Morgen", russian: "Доброе утро", exampleSentence: "Guten Morgen, Herr Schmidt." },
+        { german: "Guten Tag", russian: "Добрый день", exampleSentence: "Guten Tag, Frau Meier." },
+        { german: "Guten Abend", russian: "Добрый вечер", exampleSentence: "Guten Abend zusammen." },
+        { german: "Tschüss", russian: "Пока", exampleSentence: "Tschüss, bis bald!" },
+        { german: "Auf Wiedersehen", russian: "До свидания", exampleSentence: "Auf Wiedersehen, meine Damen und Herren." },
+        { german: "Bitte", russian: "Пожалуйста / Прошу", exampleSentence: "Kann ich bitte Wasser haben?" },
+        { german: "Danke", russian: "Спасибо", exampleSentence: "Danke für Ihre Hilfe." },
+        { german: "Ja", russian: "Да", exampleSentence: "Ja, das stimmt." },
+        { german: "Nein", russian: "Нет", exampleSentence: "Nein, das ist nicht richtig." },
+      ]
+    },
+    { 
+      id: "a0_numbers_dates", name: "Числа и даты",
+      fallbackVocabulary: [
+        { german: "eins", russian: "один" }, { german: "zwei", russian: "два" }, { german: "drei", russian: "три" },
+        { german: "vier", russian: "четыре" }, { german: "fünf", russian: "пять" },
+        { german: "Montag", russian: "понедельник" }, { german: "Januar", russian: "январь" },
+      ]
+    },
     { id: "a0_family_friends", name: "Семья и друзья" },
     { id: "a0_colors", name: "Цвета" },
     { id: "a0_body_parts", name: "Части тела" },
@@ -314,3 +341,4 @@ export const DEFAULT_TOPICS: Record<LanguageLevel, { id: string; name: string }[
     { id: "c2_cultural_historical_references", name: "Культурные и исторические ссылки" }
   ],
 };
+
