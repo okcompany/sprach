@@ -119,6 +119,19 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
 
           if (availableWordsCount > 0) {
             setCurrentTask(effectiveVocabularyList[0].german);
+          } else {
+            // No words available for vocabulary or wordTest module
+            updateModuleProgress(levelId, topicId, moduleId, 0);
+            setFinalModuleScore(0);
+            setIsModuleFinished(true);
+            setIsLoadingTask(false);
+            toast({
+              title: "Модуль завершен",
+              description: "Слов для этого модуля не найдено. Результат: 0%.",
+              variant: "default",
+              duration: 5000,
+            });
+            return; // Exit early
           }
 
       } else if (moduleId === 'grammar') {
@@ -149,9 +162,33 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
       }
     } else {
         setTotalTasks(1); 
+        if (moduleId === 'vocabulary' || moduleId === 'wordTest') {
+            // Content is null, and it's a vocab/wordTest module
+            // Check if there are any words from bank
+             const wordsFromBank = getWordsForTopic(topicId);
+             setCurrentVocabulary(wordsFromBank);
+             const availableWordsCount = wordsFromBank.length;
+             setTotalTasks(availableWordsCount > 0 ? availableWordsCount : 1);
+
+            if (availableWordsCount === 0) {
+                updateModuleProgress(levelId, topicId, moduleId, 0);
+                setFinalModuleScore(0);
+                setIsModuleFinished(true);
+                setIsLoadingTask(false);
+                toast({
+                    title: "Модуль завершен",
+                    description: "Не удалось загрузить контент и слов в банке нет. Результат: 0%.",
+                    variant: "default",
+                    duration: 7000,
+                });
+                return; 
+            } else {
+                 setCurrentTask(wordsFromBank[0].german);
+            }
+        }
     }
     setIsLoadingTask(false);
-  }, [levelId, topicName, moduleId, getTopicLessonContent, getWordsForTopic, addWordToBank, topicId, toast]);
+  }, [levelId, topicName, moduleId, getTopicLessonContent, getWordsForTopic, addWordToBank, topicId, toast, updateModuleProgress]);
 
   useEffect(() => {
     if (topicName !== "Загрузка...") {
@@ -185,19 +222,22 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
           const topicIsNowFullyCompleted = isTopicCompleted(levelId, topicId);
 
           if (topicIsNowFullyCompleted) {
+            // Check if the current level itself has been updated due to this completion
             if (userData.currentLevel !== levelId && ALL_LEVELS.indexOf(userData.currentLevel) > ALL_LEVELS.indexOf(levelId)) {
+                // User has leveled up
                 setTopicContinuationLink(`/levels/${userData.currentLevel.toLowerCase()}`);
                 setTopicContinuationText("К следующему уровню");
-            } else if (isLevelCompleted(levelId)) { 
+            } else if (isLevelCompleted(levelId)) { // Current level is completed
                 const originalLvlIdx = ALL_LEVELS.indexOf(levelId);
-                if (levelId === ALL_LEVELS[ALL_LEVELS.length - 1]) { 
+                if (levelId === ALL_LEVELS[ALL_LEVELS.length - 1]) { // Max level completed
                     setTopicContinuationLink(`/levels`);
                     setTopicContinuationText("Все уровни пройдены!");
-                } else { 
+                } else { // Not max level, offer next level
                     setTopicContinuationLink(`/levels/${ALL_LEVELS[originalLvlIdx + 1].toLowerCase()}`);
                     setTopicContinuationText("Перейти к следующему уровню");
                 }
             } else { 
+              // Level not completed, try to find next topic in this level
               const currentLvlData = userData.progress[levelId];
               const defaultTopics = DEFAULT_TOPICS[levelId] || [];
               const customLevelTopics = userData.customTopics?.filter(ct => ct.id.startsWith(levelId + "_")) || [];
@@ -221,11 +261,13 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
                 setTopicContinuationLink(`/levels/${levelId.toLowerCase()}/${nextIncompleteTopicFoundId}`);
                 setTopicContinuationText("Следующая тема");
               } else {
+                // No more incomplete topics in this level, or no topics configured
                 setTopicContinuationLink(`/levels/${levelId.toLowerCase()}`);
                 setTopicContinuationText("К темам уровня"); 
               }
             }
           } else { 
+            // Topic not fully completed, but this module is. Go to topic modules.
             setTopicContinuationLink(`/levels/${levelId.toLowerCase()}/${topicId}`);
             setTopicContinuationText("К модулям темы");
           }
@@ -341,7 +383,7 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
       }
     } else {
       if ((moduleId === 'vocabulary' || moduleId === 'wordTest')) {
-          const effectiveVocabularyList = currentVocabulary.length > 0 ? currentVocabulary : lessonContent.vocabulary.map(v => ({...v, id: v.german, consecutiveCorrectAnswers: 0, errorCount: 0}));
+          const effectiveVocabularyList = currentVocabulary.length > 0 ? currentVocabulary : (lessonContent?.vocabulary?.map(v => ({...v, id: v.german, consecutiveCorrectAnswers: 0, errorCount: 0})) || []);
           if (effectiveVocabularyList.length > newTasksCompleted) {
             setCurrentTask(effectiveVocabularyList[newTasksCompleted].german);
           } else {
@@ -372,7 +414,12 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
 
   const renderModuleContent = () => {
     // Skeleton loading is handled above this function call if isLoadingTask && !lessonContent
-    if (!lessonContent) return <p className="text-center p-4 text-muted-foreground">Не удалось загрузить содержание модуля. Попробуйте обновить страницу или вернуться назад.</p>;
+    if (!lessonContent && (moduleId !== 'vocabulary' && moduleId !== 'wordTest')) {
+        return <p className="text-center p-4 text-muted-foreground">Не удалось загрузить содержание модуля. Попробуйте обновить страницу или вернуться назад.</p>;
+    }
+     if (!lessonContent && (moduleId === 'vocabulary' || moduleId === 'wordTest') && currentVocabulary.length === 0) {
+        return <p className="text-center p-4 text-muted-foreground">Слов для этого модуля не найдено.</p>;
+    }
 
 
     switch (moduleId) {
@@ -380,7 +427,7 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
       case 'wordTest':
         if (!currentTask) return <p className="text-center p-4 text-muted-foreground">Загрузка слова...</p>;
         const wordFromBank = currentVocabulary.find(v => v.german === currentTask);
-        const wordFromLesson = lessonContent.vocabulary.find(v => v.german === currentTask);
+        const wordFromLesson = lessonContent?.vocabulary.find(v => v.german === currentTask);
         const currentWordData = wordFromBank || wordFromLesson;
         const displayExpectedAnswer = moduleId === 'vocabulary' ? (currentWordData?.russian || '...') : '???';
 
@@ -401,7 +448,7 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
           </div>
         );
       case 'grammar':
-        if (!currentTask) return <p className="text-center p-4 text-muted-foreground">Загрузка грамматики...</p>;
+        if (!currentTask || !lessonContent?.grammarExplanation) return <p className="text-center p-4 text-muted-foreground">Загрузка грамматики...</p>;
         return (
           <div>
             <h3 className="text-xl font-semibold mb-2">Грамматическое правило:</h3>
@@ -410,7 +457,7 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
           </div>
         );
       case 'listening':
-        if (!lessonContent.listeningExercise || !lessonContent.listeningExercise.script) return <p className="text-center p-4 text-muted-foreground">Загрузка аудирования...</p>;
+        if (!lessonContent?.listeningExercise || !lessonContent.listeningExercise.script) return <p className="text-center p-4 text-muted-foreground">Загрузка аудирования...</p>;
         const currentListeningQuestion = lessonContent.listeningExercise.questions?.[currentQuestionIndex];
         return (
           <div>
@@ -430,7 +477,7 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
           </div>
         );
       case 'reading':
-        if (!lessonContent.readingPassage) return <p className="text-center p-4 text-muted-foreground">Загрузка текста для чтения...</p>;
+        if (!lessonContent?.readingPassage) return <p className="text-center p-4 text-muted-foreground">Загрузка текста для чтения...</p>;
         return (
           <div>
             <h3 className="text-xl font-semibold mb-2">Чтение:</h3>
@@ -446,7 +493,7 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
           </div>
         );
       case 'writing':
-        if (!currentTask) return <p className="text-center p-4 text-muted-foreground">Загрузка задания для письма...</p>;
+        if (!currentTask || !lessonContent?.writingPrompt) return <p className="text-center p-4 text-muted-foreground">Загрузка задания для письма...</p>;
         return (
           <div>
             <h3 className="text-xl font-semibold mb-2">Письмо:</h3>
@@ -462,7 +509,7 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
   const progressPercent = totalTasks > 0 ? (tasksCompleted / totalTasks) * 100 : 0;
   const placeholderText = moduleId === 'wordTest' ? "Введите перевод на русский..." : "Ваш ответ...";
 
-  if (isLoadingTask && !lessonContent) {
+  if (isLoadingTask && !lessonContent && !( (moduleId === 'vocabulary' || moduleId === 'wordTest') && currentVocabulary.length > 0 )  ) {
     return (
       <div className="container mx-auto py-8">
         <Skeleton className="h-9 w-32 mb-6" /> {/* Back button skeleton */}
