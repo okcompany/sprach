@@ -69,6 +69,16 @@ export function LevelTopicsPage({ levelId }: LevelTopicsPageProps) {
     return (completedModules / ALL_MODULE_TYPES.length) * 100;
   };
 
+  const getButtonTextForTopic = (topic: TopicProgress | (typeof defaultTopicsForLevel[0] & Partial<TopicProgress>), progressPercent: number) => {
+    if (topic.completed) {
+      return "Повторить тему";
+    } else if (progressPercent > 0) {
+      return "Продолжить тему";
+    } else {
+      return "Начать тему";
+    }
+  };
+
   return (
     <div className="container mx-auto py-8">
       <Button variant="outline" onClick={() => router.back()} className="mb-6">
@@ -125,13 +135,13 @@ export function LevelTopicsPage({ levelId }: LevelTopicsPageProps) {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {allTopics.map((topic) => {
           const progressPercent = calculateTopicProgress(topic);
-          const completed = topic.completed;
+          const buttonText = getButtonTextForTopic(topic, progressPercent);
           return (
             <Card key={topic.id} className="shadow-lg hover:shadow-xl transition-shadow duration-300 flex flex-col">
               <CardHeader>
                 <div className="flex justify-between items-center">
                   <CardTitle className="font-headline text-xl">{topic.name}</CardTitle>
-                  {completed && <CheckCircle className="h-5 w-5 text-green-500" />}
+                  {topic.completed && <CheckCircle className="h-5 w-5 text-green-500" />}
                 </div>
                  {topic.custom && <CardDescription className="text-xs text-primary">Пользовательская тема</CardDescription>}
               </CardHeader>
@@ -146,8 +156,8 @@ export function LevelTopicsPage({ levelId }: LevelTopicsPageProps) {
               </CardContent>
               <CardFooter>
                 <Button asChild className="w-full">
-                  <Link href={`/levels/${levelId.toLowerCase()}/${topicId}`}>
-                    {completed ? "Повторить тему" : "Начать тему"}
+                  <Link href={`/levels/${levelId.toLowerCase()}/${topic.id}`}>
+                    {buttonText}
                   </Link>
                 </Button>
               </CardFooter>
