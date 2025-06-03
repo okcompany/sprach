@@ -63,8 +63,8 @@ export function MainLayout({ children }: { children: ReactNode }) {
       <aside className="hidden md:flex h-screen w-64 flex-col border-r bg-sidebar text-sidebar-foreground fixed">
         <div className="flex h-16 items-center border-b px-6 bg-primary text-primary-foreground">
           <Link href="/" className="flex items-center gap-2 font-headline text-lg font-semibold">
-            <Image src="https://placehold.co/32x32.png" alt="Sprachheld Logo" width={32} height={32} data-ai-hint="logo language" className="rounded-sm"/>
-            Sprachheld
+            <Image src="https://placehold.co/32x32.png" alt="Учимся с Олегом Logo" width={32} height={32} data-ai-hint="logo language" className="rounded-sm"/>
+            Учимся с Олегом
           </Link>
         </div>
         <div className="flex-1 overflow-auto py-2">
@@ -85,8 +85,8 @@ export function MainLayout({ children }: { children: ReactNode }) {
         {/* Mobile Header */}
         <header className="sticky top-0 z-30 flex h-16 items-center justify-between gap-4 border-b bg-background px-6 md:hidden">
           <Link href="/" className="flex items-center gap-2 font-headline text-lg font-semibold">
-             <Image src="https://placehold.co/32x32.png" alt="Sprachheld Logo" width={32} height={32} data-ai-hint="logo language" className="rounded-sm"/>
-            Sprachheld
+             <Image src="https://placehold.co/32x32.png" alt="Учимся с Олегом Logo" width={32} height={32} data-ai-hint="logo language" className="rounded-sm"/>
+            Учимся с Олегом
           </Link>
           <Sheet>
             <SheetTrigger asChild>
@@ -98,8 +98,8 @@ export function MainLayout({ children }: { children: ReactNode }) {
             <SheetContent side="left" className="flex flex-col p-0 bg-sidebar text-sidebar-foreground">
               <div className="flex h-16 items-center border-b px-6 bg-primary text-primary-foreground">
                 <Link href="/" className="flex items-center gap-2 font-headline text-lg font-semibold">
-                   <Image src="https://placehold.co/32x32.png" alt="Sprachheld Logo" width={32} height={32} data-ai-hint="logo language" className="rounded-sm"/>
-                  Sprachheld
+                   <Image src="https://placehold.co/32x32.png" alt="Учимся с Олегом Logo" width={32} height={32} data-ai-hint="logo language" className="rounded-sm"/>
+                  Учимся с Олегом
                 </Link>
               </div>
               {renderNavLinks(true)}

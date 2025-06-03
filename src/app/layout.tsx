@@ -7,7 +7,7 @@ import AppProviders from './app-providers';
 
 
 export const metadata: Metadata = {
-  title: 'Sprachheld - Изучай немецкий с ИИ',
+  title: 'Учимся с Олегом - Изучай немецкий с ИИ',
   description: 'Автономная система для изучения немецкого языка от A0 до C2 с помощью ИИ.',
 };
 
