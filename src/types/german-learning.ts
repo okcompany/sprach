@@ -75,11 +75,16 @@ export interface AILessonVocabularyItem {
   exampleSentence?: string;
 }
 
+export interface AILessonListeningExercise {
+  script: string;
+  questions: string[];
+}
+
 export interface AILessonContent {
   lessonTitle: string;
-  vocabulary: AILessonVocabularyItem[]; // Updated: List of objects with German, Russian, and example sentence
+  vocabulary: AILessonVocabularyItem[];
   grammarExplanation: string;
-  listeningExercise: string; // Description or script
+  listeningExercise: AILessonListeningExercise; // Updated
   readingPassage: string;
   writingPrompt: string;
 }

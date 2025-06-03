@@ -28,14 +28,20 @@ const VocabularyItemSchema = z.object({
   exampleSentence: z.string().optional().describe('An optional example sentence in German using the word/phrase, appropriate for the user\'s level.'),
 });
 
+// Define Zod schema for the listening exercise
+const ListeningExerciseSchema = z.object({
+  script: z.string().describe("The script for the listening exercise, appropriate for the user's level."),
+  questions: z.array(z.string()).min(1).max(3).describe("An array of 1 to 3 specific comprehension questions about the script, appropriate for the user's level."),
+});
+
 // Define Zod schema for the output
 const GenerateLessonOutputSchema = z.object({
   lessonTitle: z.string().describe('The title of the generated lesson.'),
-  vocabulary: z.array(VocabularyItemSchema).describe('An array of key vocabulary items for the lesson, each including the German word/phrase, its Russian translation, and an optional example sentence. Ensure this vocabulary list is based on common German language textbooks for the specified level and topic.'),
-  grammarExplanation: z.string().describe('A detailed explanation of a relevant grammar point.'),
-  listeningExercise: z.string().describe('A description or script for a listening comprehension exercise.'),
-  readingPassage: z.string().describe('A short reading passage related to the topic.'),
-  writingPrompt: z.string().describe('A writing prompt for the learner to practice their writing skills.'),
+  vocabulary: z.array(VocabularyItemSchema).describe('An array of key vocabulary items for the lesson (minimum 5 items), each including the German word/phrase, its Russian translation, and an optional example sentence. Ensure this vocabulary list is based on common German language textbooks for the specified level and topic.'),
+  grammarExplanation: z.string().describe('A detailed explanation of a relevant grammar point, appropriate for the user\'s level.'),
+  listeningExercise: ListeningExerciseSchema.describe('A listening comprehension exercise including a script and specific questions.'),
+  readingPassage: z.string().describe('A short reading passage related to the topic, appropriate for the user\'s level.'),
+  writingPrompt: z.string().describe('A writing prompt for the learner to practice their writing skills, appropriate for the user\'s level.'),
 });
 
 export type GenerateLessonOutput = z.infer<typeof GenerateLessonOutputSchema>;
@@ -58,9 +64,11 @@ const lessonPrompt = ai.definePrompt({
   - A lessonTitle field.
   - A vocabulary field which is a list of key vocabulary items (minimum 5 items). Each item must be an object with "german" (the word/phrase), "russian" (its translation), and an optional "exampleSentence" (in German, appropriate for the user's level). Ensure this vocabulary list is based on common German language textbooks for the specified level and topic.
   - A grammarExplanation field which explains a grammar point relevant to the level and topic.
-  - A listeningExercise field which describes a listening comprehension exercise.
-  - A readingPassage field which provides a short reading passage related to the topic.
-  - A writingPrompt field which provides a writing prompt for the learner.
+  - A listeningExercise field which must be an object containing:
+    - "script": A script for a listening comprehension exercise, appropriate for the user's level.
+    - "questions": An array of 1 to 3 specific comprehension questions about the script, also appropriate for the user's level.
+  - A readingPassage field which provides a short reading passage related to the topic, appropriate for the user's level.
+  - A writingPrompt field which provides a writing prompt for the learner, appropriate for the user's level.
 
   Ensure that all content is appropriate for the specified level.
 `,

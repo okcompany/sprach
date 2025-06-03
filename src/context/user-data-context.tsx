@@ -3,7 +3,7 @@
 
 import type { ReactNode } from 'react';
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import type { UserData, LanguageLevel, TopicProgress, ModuleType, VocabularyWord, ModuleProgress, AILessonContent, AILessonVocabularyItem } from '@/types/german-learning';
+import type { UserData, LanguageLevel, TopicProgress, ModuleType, VocabularyWord, ModuleProgress, AILessonContent, AILessonVocabularyItem, AILessonListeningExercise } from '@/types/german-learning';
 import { ALL_LEVELS, ALL_MODULE_TYPES, DEFAULT_TOPICS } from '@/types/german-learning';
 import { generateLessonContent as generateLessonContentAI } from '@/ai/flows/generate-lesson-content';
 import { evaluateUserResponse as evaluateUserResponseAI } from '@/ai/flows/evaluate-user-response';
@@ -145,16 +145,9 @@ export const UserDataProvider = ({ children }: { children: ReactNode }) => {
     });
     
     // If all modules passed and topic not yet marked completed, update it
-    if (allModulesPassed && !topic.completed) {
-        // This update might be better handled in updateModuleProgress or a dedicated function to avoid side effects in a 'is' function
-        // For now, keeping it as per existing structure, but be mindful of re-renders
-        // Directly calling setUserData here can lead to complex update flows.
-        // It's better to ensure topic.completed is set when the last module marks it so.
-        // This function should ideally be pure.
-        // The actual update of topic.completed status is now fully handled in updateModuleProgress.
-        return true; // Assuming updateModuleProgress would have set it.
-    }
-    return topic.completed; // Return the potentially updated or original 'completed' status
+    // This function should ideally be pure.
+    // The actual update of topic.completed status is now fully handled in updateModuleProgress.
+    return allModulesPassed; // Return based on actual module status
   }, [userData]);
 
 
