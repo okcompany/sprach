@@ -98,8 +98,8 @@ Output your response in the following JSON format (ensure grammarErrorTags is an
 }`,
 });
 
-const MAX_RETRIES = 3;
-const INITIAL_RETRY_DELAY_MS = 2000;
+const MAX_RETRIES = 5;
+const INITIAL_RETRY_DELAY_MS = 3000;
 
 const evaluateUserResponseFlow = ai.defineFlow(
   {

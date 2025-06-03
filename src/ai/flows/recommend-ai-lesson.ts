@@ -92,7 +92,7 @@ const prompt = ai.definePrompt({
 
   **Prioritization Strategy:**
   1.  **Specific Grammar Weaknesses:** If 'grammarWeaknesses' data is present, STRONGLY prioritize recommending a topic and the 'grammar' module to address the most pressing or frequently occurring grammar error. Choose a topic that is either one of 'exampleContexts' for that weakness (if it's not yet completed) or a new topic known to cover that grammar concept well for the user's level ({{{userLevel}}}). Clearly state in 'reasoning' which grammar weakness you are addressing.
-  2.  **General Weaker Areas in Grammar:** If 'weakAreas' contains entries like "Низкий результат по модулю 'Грамматика' в теме X" or "Модуль 'Грамматика' в теме X не начат", and no specific grammar weaknesses override this, consider recommending topic X with a focus on 'grammar', or a new topic suitable for grammar practice at level {{{userLevel}}}.
+  2.  **General Weaker Areas in Grammar:** If 'weakAreas' contains entries like "Низкий результат по модулю 'Грамматика' в теме X" or "Модуль 'Грамматика' в теме X не начат", and no specific grammar weaknesses override this, consider recommending topic X with a focus on 'grammar', or a new topic suitable for grammar practice at level {{{userLevel}}}. Consider also suggesting a grammar-focused exercise for a topic that the user did well on if that topic is particularly well-suited to review the identified weak grammar concept.
   3.  **Other General Weaker Areas:** Address other module weaknesses (vocabulary, listening, etc.) by suggesting relevant topics and modules.
   4.  **Preferred Topics:** If preferred topics align with an opportunity to address a weakness (especially grammar), prioritize that. Otherwise, if no pressing weaknesses, select a preferred topic if suitable for the user's level and progress.
   5.  **Progression:** If no specific weaknesses or strong preferences guide the choice, select the next logical uncompleted topic for the user's current level.
@@ -109,8 +109,8 @@ const prompt = ai.definePrompt({
   `,
 });
 
-const MAX_RETRIES = 3; 
-const INITIAL_RETRY_DELAY_MS = 2000; 
+const MAX_RETRIES = 5; 
+const INITIAL_RETRY_DELAY_MS = 3000; 
 
 const recommendAiLessonFlow = ai.defineFlow(
   {

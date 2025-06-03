@@ -272,8 +272,8 @@ const lessonPrompt = ai.definePrompt({
 `,
 });
 
-const MAX_RETRIES = 3;
-const INITIAL_RETRY_DELAY_MS = 2000;
+const MAX_RETRIES = 5;
+const INITIAL_RETRY_DELAY_MS = 3000;
 
 // Define the flow
 const generateLessonContentFlow = ai.defineFlow(
