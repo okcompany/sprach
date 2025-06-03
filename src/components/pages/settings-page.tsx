@@ -21,6 +21,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import { XCircle, PlusCircle } from 'lucide-react';
+import { ThemeToggle } from '@/components/theme-toggle';
 
 
 export function SettingsPage() {
@@ -83,6 +84,17 @@ export function SettingsPage() {
   return (
     <div className="container mx-auto py-8 max-w-2xl">
       <h1 className="text-3xl font-headline font-bold mb-8 text-center">Настройки</h1>
+
+      <Card className="mb-6 shadow-md">
+        <CardHeader>
+          <CardTitle className="font-headline">Внешний вид</CardTitle>
+          <CardDescription>Выберите тему оформления приложения.</CardDescription>
+        </CardHeader>
+        <CardContent className="flex items-center justify-between">
+          <Label htmlFor="theme-toggle-button">Тема:</Label>
+          <ThemeToggle />
+        </CardContent>
+      </Card>
       
       <Card className="mb-6 shadow-md">
         <CardHeader>
