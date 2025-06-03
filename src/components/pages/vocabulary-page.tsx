@@ -1,14 +1,15 @@
 
 "use client";
 
-import { useState, useMemo } from 'react';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
+import { useState, useMemo, useEffect } from 'react';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useUserData } from '@/context/user-data-context';
 import type { VocabularyWord } from '@/types/german-learning';
-import { Speaker, CheckCircle, AlertCircle, RotateCcw } from 'lucide-react';
+import { Speaker, CheckCircle, AlertCircle, RotateCcw, Lightbulb, Send, ArrowRight } from 'lucide-react';
+import { useToast } from "@/hooks/use-toast";
 
 // Dummy TTS function - replace with actual implementation from module-page or central util
 const speak = (text: string, lang: 'ru-RU' | 'de-DE') => {
@@ -23,7 +24,25 @@ const speak = (text: string, lang: 'ru-RU' | 'de-DE') => {
 
 export function VocabularyPage() {
   const { userData, isLoading, getWordsForReview, updateWordInBank } = useUserData();
+  const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState('');
+
+  // Review Session State
+  const [isReviewSessionActive, setIsReviewSessionActive] = useState(false);
+  const [reviewWordsQueue, setReviewWordsQueue] = useState<VocabularyWord[]>([]);
+  const [currentReviewWordIndex, setCurrentReviewWordIndex] = useState(0);
+  const [currentReviewWord, setCurrentReviewWord] = useState<VocabularyWord | null>(null);
+  const [userReviewInput, setUserReviewInput] = useState('');
+  const [reviewFeedback, setReviewFeedback] = useState<string | null>(null);
+  const [showCorrectAnswer, setShowCorrectAnswer] = useState(false);
+
+  useEffect(() => {
+    if (isReviewSessionActive && reviewWordsQueue.length > 0) {
+      setCurrentReviewWord(reviewWordsQueue[currentReviewWordIndex]);
+    } else {
+      setCurrentReviewWord(null);
+    }
+  }, [isReviewSessionActive, reviewWordsQueue, currentReviewWordIndex]);
 
   const allWords = useMemo(() => userData?.vocabularyBank || [], [userData]);
   
@@ -36,7 +55,7 @@ export function VocabularyPage() {
     return allWords.filter(word => word.errorCount > 0 && word.consecutiveCorrectAnswers < 3);
   }, [allWords]);
 
-  const reviewWords = useMemo(() => {
+  const wordsToReviewList = useMemo(() => {
     // Words that are not yet mastered (less than 3 consecutive correct answers)
     return allWords.filter(word => word.consecutiveCorrectAnswers < 3);
   }, [allWords]);
@@ -50,7 +69,74 @@ export function VocabularyPage() {
     );
   };
 
-  const WordCard = ({ word }: { word: VocabularyWord }) => (
+  const startReviewSession = () => {
+    const words = getWordsForReview(); // This should use the logic from useUserData context
+    if (words.length === 0) {
+      toast({ title: "Словарь пуст", description: "Нет слов для повторения.", variant: "default" });
+      return;
+    }
+    // Shuffle words for review
+    const shuffledWords = [...words].sort(() => Math.random() - 0.5);
+    setReviewWordsQueue(shuffledWords);
+    setCurrentReviewWordIndex(0);
+    setUserReviewInput('');
+    setReviewFeedback(null);
+    setShowCorrectAnswer(false);
+    setIsReviewSessionActive(true);
+    toast({ title: "Сессия повторения начата!", description: `Слов для повторения: ${shuffledWords.length}` });
+  };
+
+  const handleReviewSubmit = () => {
+    if (!currentReviewWord) return;
+
+    const isCorrect = userReviewInput.trim().toLowerCase() === currentReviewWord.russian.trim().toLowerCase();
+    let feedbackMsg = '';
+    let updatedWord = { ...currentReviewWord };
+
+    if (isCorrect) {
+      feedbackMsg = "Правильно!";
+      updatedWord.consecutiveCorrectAnswers = (updatedWord.consecutiveCorrectAnswers || 0) + 1;
+      toast({ title: "Отлично!", description: "Верный ответ.", variant: "default" });
+    } else {
+      feedbackMsg = `Неправильно. Правильный ответ: ${currentReviewWord.russian}`;
+      updatedWord.consecutiveCorrectAnswers = 0;
+      updatedWord.errorCount = (updatedWord.errorCount || 0) + 1;
+      toast({ title: "Ошибка", description: `Правильный ответ: ${currentReviewWord.russian}`, variant: "destructive" });
+    }
+    
+    updatedWord.lastTestedDate = new Date().toISOString();
+    updateWordInBank(updatedWord);
+    setReviewFeedback(feedbackMsg);
+    setShowCorrectAnswer(true);
+  };
+
+  const handleShowAnswer = () => {
+    if (!currentReviewWord) return;
+    let updatedWord = { ...currentReviewWord, 
+        consecutiveCorrectAnswers: 0, 
+        errorCount: (currentReviewWord.errorCount || 0) + 1,
+        lastTestedDate: new Date().toISOString() 
+    };
+    updateWordInBank(updatedWord);
+    setReviewFeedback(`Правильный ответ: ${currentReviewWord.russian}`);
+    setShowCorrectAnswer(true);
+    toast({ title: "Показан ответ", description: `Слово: ${currentReviewWord.german}`, variant: "default" });
+  };
+
+  const handleNextWord = () => {
+    if (currentReviewWordIndex < reviewWordsQueue.length - 1) {
+      setCurrentReviewWordIndex(prevIndex => prevIndex + 1);
+      setUserReviewInput('');
+      setReviewFeedback(null);
+      setShowCorrectAnswer(false);
+    } else {
+      setIsReviewSessionActive(false);
+      toast({ title: "Сессия завершена!", description: "Отличная работа! Все слова пройдены.", duration: 5000 });
+    }
+  };
+
+
+  const WordCardDisplay = ({ word }: { word: VocabularyWord }) => (
     <Card className="mb-4 shadow-sm">
       <CardContent className="p-4">
         <div className="flex justify-between items-start">
@@ -84,7 +170,67 @@ export function VocabularyPage() {
   );
 
   if (isLoading) {
-    return <div>Загрузка словаря...</div>;
+    return <div className="text-center p-10">Загрузка словаря...</div>;
+  }
+
+  if (isReviewSessionActive && currentReviewWord) {
+    return (
+      <div className="container mx-auto py-8 flex flex-col items-center">
+        <Card className="w-full max-w-lg shadow-xl">
+          <CardHeader>
+            <CardTitle className="font-headline text-2xl text-center">Сессия повторения</CardTitle>
+            <CardDescription className="text-center">
+              Слово {currentReviewWordIndex + 1} из {reviewWordsQueue.length}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="text-center">
+            <div className="flex items-center justify-center gap-2 mb-4">
+                <h2 className="text-4xl font-bold font-headline">{currentReviewWord.german}</h2>
+                <Button variant="ghost" size="icon" onClick={() => speak(currentReviewWord.german, 'de-DE')}>
+                    <Speaker className="h-8 w-8" />
+                </Button>
+            </div>
+            {currentReviewWord.exampleSentence && (
+                <p className="text-sm italic text-muted-foreground mb-4">Пример: {currentReviewWord.exampleSentence}</p>
+            )}
+            
+            {!showCorrectAnswer ? (
+              <Input 
+                type="text"
+                placeholder="Введите перевод на русский..."
+                value={userReviewInput}
+                onChange={(e) => setUserReviewInput(e.target.value)}
+                className="text-lg text-center h-12 mb-4"
+                onKeyPress={(e) => e.key === 'Enter' && handleReviewSubmit()}
+              />
+            ) : (
+              <div className={`p-3 rounded-md text-lg mb-4 ${reviewFeedback?.toLowerCase().includes("правильно") ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                {reviewFeedback}
+              </div>
+            )}
+          </CardContent>
+          <CardFooter className="flex flex-col gap-3">
+            {!showCorrectAnswer ? (
+              <>
+                <Button onClick={handleReviewSubmit} className="w-full" size="lg" disabled={!userReviewInput.trim()}>
+                  <Send className="mr-2" /> Проверить
+                </Button>
+                <Button variant="outline" onClick={handleShowAnswer} className="w-full">
+                  <Lightbulb className="mr-2" /> Не помню / Показать ответ
+                </Button>
+              </>
+            ) : (
+              <Button onClick={handleNextWord} className="w-full" size="lg">
+                Следующее слово <ArrowRight className="ml-2" />
+              </Button>
+            )}
+             <Button variant="ghost" onClick={() => setIsReviewSessionActive(false)} className="w-full mt-2 text-muted-foreground">
+                Завершить сессию
+            </Button>
+          </CardFooter>
+        </Card>
+      </div>
+    );
   }
   
   return (
@@ -108,8 +254,8 @@ export function VocabularyPage() {
           <Card>
             <CardHeader><CardTitle>Слова текущей темы</CardTitle><CardDescription>Слова, связанные с активной темой ({userData?.progress[userData?.currentLevel]?.topics[userData?.currentTopicId || ""]?.name || "не выбрана"})</CardDescription></CardHeader>
             <CardContent>
-              {filteredWords(wordsForCurrentTopic).length === 0 && <p>Нет слов для текущей темы или по вашему запросу.</p>}
-              {filteredWords(wordsForCurrentTopic).map(word => <WordCard key={word.id} word={word} />)}
+              {filteredWords(wordsForCurrentTopic).length === 0 && <p className="text-muted-foreground text-center py-4">Нет слов для текущей темы или по вашему запросу.</p>}
+              {filteredWords(wordsForCurrentTopic).map(word => <WordCardDisplay key={word.id} word={word} />)}
             </CardContent>
           </Card>
         </TabsContent>
@@ -118,8 +264,8 @@ export function VocabularyPage() {
           <Card>
             <CardHeader><CardTitle>Слова с ошибками</CardTitle><CardDescription>Слова, в которых вы недавно допускали ошибки.</CardDescription></CardHeader>
             <CardContent>
-              {filteredWords(errorWords).length === 0 && <p>Нет слов с ошибками или по вашему запросу. Отлично!</p>}
-              {filteredWords(errorWords).map(word => <WordCard key={word.id} word={word} />)}
+              {filteredWords(errorWords).length === 0 && <p className="text-muted-foreground text-center py-4">Нет слов с ошибками или по вашему запросу. Отлично!</p>}
+              {filteredWords(errorWords).map(word => <WordCardDisplay key={word.id} word={word} />)}
             </CardContent>
           </Card>
         </TabsContent>
@@ -128,8 +274,8 @@ export function VocabularyPage() {
           <Card>
             <CardHeader><CardTitle>Слова на повторение</CardTitle><CardDescription>Слова, которые требуют вашего внимания для закрепления.</CardDescription></CardHeader>
             <CardContent>
-              {filteredWords(reviewWords).length === 0 && <p>Нет слов для повторения или по вашему запросу.</p>}
-              {filteredWords(reviewWords).map(word => <WordCard key={word.id} word={word} />)}
+              {filteredWords(wordsToReviewList).length === 0 && <p className="text-muted-foreground text-center py-4">Нет слов для повторения или по вашему запросу. Все слова усвоены!</p>}
+              {filteredWords(wordsToReviewList).map(word => <WordCardDisplay key={word.id} word={word} />)}
             </CardContent>
           </Card>
         </TabsContent>
@@ -138,18 +284,21 @@ export function VocabularyPage() {
            <Card>
             <CardHeader><CardTitle>Все изученные слова</CardTitle><CardDescription>Полный список всех слов в вашем словаре.</CardDescription></CardHeader>
             <CardContent>
-              {filteredWords(allWords).length === 0 && <p>Ваш словарь пуст или нет слов по вашему запросу.</p>}
-              {filteredWords(allWords).map(word => <WordCard key={word.id} word={word} />)}
+              {filteredWords(allWords).length === 0 && <p className="text-muted-foreground text-center py-4">Ваш словарь пуст или нет слов по вашему запросу.</p>}
+              {filteredWords(allWords).map(word => <WordCardDisplay key={word.id} word={word} />)}
             </CardContent>
           </Card>
         </TabsContent>
       </Tabs>
        <div className="mt-8 text-center">
-            <Button variant="outline">
-                <RotateCcw className="mr-2 h-4 w-4" /> Начать сессию повторения (Интервальное повторение)
+            <Button onClick={startReviewSession} size="lg" className="shadow-md">
+                <RotateCcw className="mr-2 h-5 w-5" /> Начать сессию повторения
             </Button>
             <p className="text-sm text-muted-foreground mt-2">ИИ подберет слова, которые вам нужно повторить.</p>
         </div>
     </div>
   );
 }
+
+
+    
