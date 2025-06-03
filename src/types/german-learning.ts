@@ -93,38 +93,58 @@ export interface AIRecommendedLesson {
 // Default Topics (example, should be expanded)
 export const DEFAULT_TOPICS: Record<LanguageLevel, { id: string; name: string }[]> = {
   A0: [
-    { id: "alphabet", name: "Алфавит и звуки" },
-    { id: "greetings", name: "Приветствия и прощания" },
-    { id: "numbers", name: "Цифры и счет" },
+    { id: "a0_greetings_farewells", name: "Основные приветствия и прощания" },
+    { id: "a0_numbers_dates", name: "Числа и даты" },
+    { id: "a0_family_friends", name: "Семья и друзья" },
+    { id: "a0_colors", name: "Цвета" },
+    { id: "a0_body_parts", name: "Части тела" },
+    { id: "a0_home_objects", name: "Дом и предметы в доме" },
+    { id: "a0_food_drinks", name: "Продукты питания и напитки" },
+    { id: "a0_clothing", name: "Одежда" },
+    { id: "a0_simple_motion_verbs", name: "Простые глаголы движения" },
+    { id: "a0_simple_nouns_city_school", name: "Простые существительные (город, школа)" }
   ],
   A1: [
-    { id: "family", name: "Семья" },
-    { id: "hobbies", name: "Хобби и свободное время" },
-    { id: "food", name: "Еда и напитки" },
+    { id: "a1_work_professions", name: "Работа и профессии" },
+    { id: "a1_travel_transport", name: "Путешествия и транспорт" },
+    { id: "a1_time_schedule", name: "Время и расписание" },
+    { id: "a1_hobbies_interests", name: "Хобби и увлечения" },
+    { id: "a1_shops_shopping", name: "Магазины и покупки" },
+    { id: "a1_emotions_states", name: "Простые эмоции и состояния" },
+    { id: "a1_simple_adjectives", name: "Простые прилагательные" }
   ],
   A2: [
-    { id: "travel", name: "Путешествия" },
-    { id: "daily-routine", name: "Распорядок дня" },
-    { id: "shopping", name: "Покупки" },
+    { id: "a2_health_medical_care", name: "Здоровье и медицинская помощь" },
+    { id: "a2_weather_nature", name: "Погода и природа" },
+    { id: "a2_education_studies", name: "Образование и учеба" },
+    { id: "a2_relationships_family", name: "Отношения и семья (углубл.)" },
+    { id: "a2_city_surroundings", name: "Город и окрестности" },
+    { id: "a2_simple_phrasal_verbs", name: "Простые фразовые глаголы" }
   ],
   B1: [
-    { id: "work", name: "Работа и профессия" },
-    { id: "health", name: "Здоровье и медицина" },
-    { id: "education", name: "Образование" },
+    { id: "b1_work_career", name: "Работа и карьера" },
+    { id: "b1_travel_culture", name: "Путешествия и культура" },
+    { id: "b1_politics_society", name: "Политика и общество" },
+    { id: "b1_technology", name: "Технологии" },
+    { id: "b1_ecology_environment", name: "Экология и окружающая среда" },
+    { id: "b1_holidays_traditions", name: "Праздники и традиции" }
   ],
   B2: [
-    { id: "environment", name: "Окружающая среда" },
-    { id: "technology", name: "Технологии и интернет" },
-    { id: "culture", name: "Культура и искусство" },
+    { id: "b2_science_technology", name: "Наука и техника" },
+    { id: "b2_art_culture", name: "Искусство и культура" },
+    { id: "b2_education_science", name: "Образование и наука" },
+    { id: "b2_politics_economics", name: "Политика и экономика" },
+    { id: "b2_social_issues", name: "Социальные проблемы" }
   ],
   C1: [
-    { id: "politics", name: "Политика и общество" },
-    { id: "science", name: "Наука и исследования" },
-    { id: "literature", name: "Литература" },
+    { id: "c1_abstract_topics", name: "Абстрактные темы" },
+    { id: "c1_professional_vocabulary", name: "Профессиональная лексика" },
+    { id: "c1_discussion_topics", name: "Дискуссионные темы" },
+    { id: "c1_philosophy_psychology", name: "Философия и психология" }
   ],
   C2: [
-    { id: "philosophy", name: "Философия и этика" },
-    { id: "globalization", name: "Глобализация" },
-    { id: "advanced-discussions", name: "Сложные дискуссии" },
+    { id: "c2_expert_terminology", name: "Экспертная терминология" },
+    { id: "c2_rare_stylized_expressions", name: "Редкие и высоко стилизованные выражения" },
+    { id: "c2_cultural_historical_references", name: "Культурные и исторические ссылки" }
   ],
 };
