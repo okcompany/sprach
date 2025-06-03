@@ -156,7 +156,12 @@ export function LevelTopicsPage({ levelId }: LevelTopicsPageProps) {
                 </p>
               </CardContent>
               <CardFooter>
-                <Button asChild className="w-full" onClick={() => updateUserData({ currentTopicId: topic.id })}>
+                <Button 
+                  asChild 
+                  className="w-full" 
+                  onClick={() => updateUserData({ currentTopicId: topic.id })}
+                  variant={topic.completed ? "outline" : "default"}
+                >
                   <Link href={`/levels/${levelId.toLowerCase()}/${topic.id}`}>
                     {buttonText}
                   </Link>
