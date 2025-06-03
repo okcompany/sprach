@@ -292,7 +292,8 @@ export const UserDataProvider = ({ children }: { children: ReactNode }) => {
   
   const getTopicLessonContent = useCallback(async (level: LanguageLevel, topicName: string): Promise<AILessonContent | null> => {
     try {
-      const lesson = await generateLessonContentAI({ level, topic: topicName });
+      // Type assertion for lesson to match updated AILessonContent
+      const lesson = await generateLessonContentAI({ level, topic: topicName }) as AILessonContent;
       return lesson;
     } catch (error) {
       console.error("Error generating lesson content:", error);

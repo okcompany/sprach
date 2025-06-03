@@ -41,6 +41,7 @@ const GenerateLessonOutputSchema = z.object({
   grammarExplanation: z.string().describe('A detailed explanation of a relevant grammar point, appropriate for the user\'s level.'),
   listeningExercise: ListeningExerciseSchema.describe('A listening comprehension exercise including a script and specific questions.'),
   readingPassage: z.string().describe('A short reading passage related to the topic, appropriate for the user\'s level.'),
+  readingQuestions: z.array(z.string()).min(1).max(3).describe("An array of 1 to 3 specific comprehension questions about the reading passage, appropriate for the user's level."),
   writingPrompt: z.string().describe('A writing prompt for the learner to practice their writing skills, appropriate for the user\'s level.'),
 });
 
@@ -68,6 +69,7 @@ const lessonPrompt = ai.definePrompt({
     - "script": A script for a listening comprehension exercise, appropriate for the user's level.
     - "questions": An array of 1 to 3 specific comprehension questions about the script, also appropriate for the user's level.
   - A readingPassage field which provides a short reading passage related to the topic, appropriate for the user's level.
+  - A readingQuestions field which is an array of 1 to 3 specific comprehension questions about the reading passage, appropriate for the user's level.
   - A writingPrompt field which provides a writing prompt for the learner, appropriate for the user's level.
 
   Ensure that all content is appropriate for the specified level.

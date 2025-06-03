@@ -84,8 +84,9 @@ export interface AILessonContent {
   lessonTitle: string;
   vocabulary: AILessonVocabularyItem[];
   grammarExplanation: string;
-  listeningExercise: AILessonListeningExercise; // Updated
+  listeningExercise: AILessonListeningExercise;
   readingPassage: string;
+  readingQuestions: string[]; // Added for specific reading comprehension questions
   writingPrompt: string;
 }
 
