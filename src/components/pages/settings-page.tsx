@@ -1,10 +1,12 @@
 
 "use client";
 
+import { useState } from 'react';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
 import { useToast } from "@/hooks/use-toast";
 import { useUserData } from '@/context/user-data-context';
 import {
@@ -18,11 +20,13 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
+import { XCircle, PlusCircle } from 'lucide-react';
 
 
 export function SettingsPage() {
   const { userData, resetProgress, updateUserData, isLoading } = useUserData();
   const { toast } = useToast();
+  const [newPreferredTopic, setNewPreferredTopic] = useState('');
 
   const handleResetProgress = () => {
     resetProgress();
@@ -41,11 +45,37 @@ export function SettingsPage() {
       });
     }
   };
+
+  const handleAddPreferredTopic = () => {
+    if (newPreferredTopic.trim() && userData) {
+      const currentTopics = userData.profile.preferredTopics || [];
+      if (!currentTopics.includes(newPreferredTopic.trim())) {
+        updateUserData({ 
+          profile: { 
+            ...userData.profile, 
+            preferredTopics: [...currentTopics, newPreferredTopic.trim()] 
+          } 
+        });
+        setNewPreferredTopic('');
+        toast({ title: "Предпочитаемая тема добавлена" });
+      } else {
+        toast({ title: "Эта тема уже в списке", variant: "destructive" });
+      }
+    }
+  };
+
+  const handleRemovePreferredTopic = (topicToRemove: string) => {
+    if (userData) {
+      updateUserData({
+        profile: {
+          ...userData.profile,
+          preferredTopics: (userData.profile.preferredTopics || []).filter(topic => topic !== topicToRemove)
+        }
+      });
+      toast({ title: "Предпочитаемая тема удалена" });
+    }
+  };
   
-  // Dark mode toggle can be added here if desired
-  // const handleDarkModeToggle = (checked: boolean) => { ... }
-
-
   if (isLoading) {
     return <div>Загрузка настроек...</div>;
   }
@@ -74,19 +104,41 @@ export function SettingsPage() {
         </CardContent>
       </Card>
 
-      {/* Example for Dark Mode Toggle - can be expanded
       <Card className="mb-6 shadow-md">
         <CardHeader>
-          <CardTitle className="font-headline">Тема оформления</CardTitle>
+          <CardTitle className="font-headline">Предпочитаемые темы</CardTitle>
+          <CardDescription>Укажите темы, которые ИИ будет учитывать при подборе уроков.</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="flex items-center space-x-2">
-            <Switch id="darkmode-switch" />
-            <Label htmlFor="darkmode-switch">Темная тема</Label>
+          <div className="flex items-center gap-2 mb-4">
+            <Input 
+              placeholder="Например, 'Искусство', 'Спорт', 'Бизнес'"
+              value={newPreferredTopic}
+              onChange={(e) => setNewPreferredTopic(e.target.value)}
+              onKeyPress={(e) => e.key === 'Enter' && handleAddPreferredTopic()}
+            />
+            <Button onClick={handleAddPreferredTopic} disabled={!newPreferredTopic.trim()}>
+              <PlusCircle className="mr-2 h-4 w-4" /> Добавить
+            </Button>
           </div>
+          {userData?.profile?.preferredTopics && userData.profile.preferredTopics.length > 0 ? (
+            <ul className="space-y-2">
+              {userData.profile.preferredTopics.map(topic => (
+                <li key={topic} className="flex items-center justify-between p-2 border rounded-md bg-muted/30">
+                  <span className="text-sm">{topic}</span>
+                  <Button variant="ghost" size="sm" onClick={() => handleRemovePreferredTopic(topic)}>
+                    <XCircle className="h-4 w-4 text-destructive" />
+                    <span className="sr-only">Удалить</span>
+                  </Button>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-sm text-muted-foreground text-center py-2">Вы еще не добавили предпочитаемые темы.</p>
+          )}
         </CardContent>
       </Card>
-      */}
+
 
       <Card className="border-destructive shadow-md">
         <CardHeader>
