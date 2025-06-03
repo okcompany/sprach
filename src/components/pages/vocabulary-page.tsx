@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useUserData } from '@/context/user-data-context';
 import type { VocabularyWord } from '@/types/german-learning';
-import { Speaker, CheckCircle, AlertCircle, RotateCcw, Lightbulb, Send, ArrowRight } from 'lucide-react';
+import { Speaker, CheckCircle, AlertCircle, RotateCcw, Lightbulb, Send, ArrowRight, BookCopy, Sparkles, Repeat as RepeatIcon } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 
 // Dummy TTS function - replace with actual implementation from module-page or central util
@@ -36,6 +36,9 @@ export function VocabularyPage() {
   const [reviewFeedback, setReviewFeedback] = useState<string | null>(null);
   const [showCorrectAnswer, setShowCorrectAnswer] = useState(false);
 
+  const allWords = useMemo(() => userData?.vocabularyBank || [], [userData]);
+  const wordsForReview = useMemo(() => getWordsForReview(), [getWordsForReview]);
+
   useEffect(() => {
     if (isReviewSessionActive && reviewWordsQueue.length > 0) {
       setCurrentReviewWord(reviewWordsQueue[currentReviewWordIndex]);
@@ -43,8 +46,6 @@ export function VocabularyPage() {
       setCurrentReviewWord(null);
     }
   }, [isReviewSessionActive, reviewWordsQueue, currentReviewWordIndex]);
-
-  const allWords = useMemo(() => userData?.vocabularyBank || [], [userData]);
   
   const wordsForCurrentTopic = useMemo(() => {
     if (!userData?.currentTopicId) return [];
@@ -52,14 +53,8 @@ export function VocabularyPage() {
   }, [allWords, userData?.currentTopicId]);
 
   const errorWords = useMemo(() => {
-    return allWords.filter(word => word.errorCount > 0 && word.consecutiveCorrectAnswers < 3);
+    return allWords.filter(word => (word.errorCount || 0) > 0 && (word.consecutiveCorrectAnswers || 0) < 3);
   }, [allWords]);
-
-  const wordsToReviewList = useMemo(() => {
-    // Words that are not yet mastered (less than 3 consecutive correct answers)
-    return allWords.filter(word => word.consecutiveCorrectAnswers < 3);
-  }, [allWords]);
-
 
   const filteredWords = (words: VocabularyWord[]) => {
     if (!searchTerm) return words;
@@ -70,13 +65,13 @@ export function VocabularyPage() {
   };
 
   const startReviewSession = () => {
-    const words = getWordsForReview(); // This should use the logic from useUserData context
-    if (words.length === 0) {
-      toast({ title: "Словарь пуст", description: "Нет слов для повторения.", variant: "default" });
+    // wordsForReview is already calculated via useMemo using getWordsForReview
+    if (wordsForReview.length === 0) {
+      toast({ title: "Словарь для повторения пуст", description: "Нет слов для повторения.", variant: "default" });
       return;
     }
     // Shuffle words for review
-    const shuffledWords = [...words].sort(() => Math.random() - 0.5);
+    const shuffledWords = [...wordsForReview].sort(() => Math.random() - 0.5);
     setReviewWordsQueue(shuffledWords);
     setCurrentReviewWordIndex(0);
     setUserReviewInput('');
@@ -135,7 +130,6 @@ export function VocabularyPage() {
     }
   };
 
-
   const WordCardDisplay = ({ word }: { word: VocabularyWord }) => (
     <Card className="mb-4 shadow-sm">
       <CardContent className="p-4">
@@ -156,12 +150,12 @@ export function VocabularyPage() {
         </div>
         <div className="mt-2 flex items-center justify-between text-xs">
             <div className="flex items-center gap-2">
-                <CheckCircle className={`h-4 w-4 ${word.consecutiveCorrectAnswers > 0 ? 'text-green-500' : 'text-muted'}`} />
-                <span>Верно подряд: {word.consecutiveCorrectAnswers}</span>
+                <CheckCircle className={`h-4 w-4 ${ (word.consecutiveCorrectAnswers || 0) > 0 ? 'text-green-500' : 'text-muted'}`} />
+                <span>Верно подряд: {word.consecutiveCorrectAnswers || 0}</span>
             </div>
              <div className="flex items-center gap-2">
-                <AlertCircle className={`h-4 w-4 ${word.errorCount > 0 ? 'text-red-500' : 'text-muted'}`} />
-                 <span>Ошибок: {word.errorCount}</span>
+                <AlertCircle className={`h-4 w-4 ${(word.errorCount || 0) > 0 ? 'text-red-500' : 'text-muted'}`} />
+                 <span>Ошибок: {word.errorCount || 0}</span>
             </div>
         </div>
         {word.exampleSentence && <p className="text-sm mt-1 italic">Пример: {word.exampleSentence}</p>}
@@ -172,6 +166,11 @@ export function VocabularyPage() {
   if (isLoading) {
     return <div className="text-center p-10">Загрузка словаря...</div>;
   }
+
+  const totalWordsCount = allWords.length;
+  const masteredWordsCount = allWords.filter(w => (w.consecutiveCorrectAnswers || 0) >= 3).length;
+  const wordsNeedingReviewCount = wordsForReview.length;
+
 
   if (isReviewSessionActive && currentReviewWord) {
     return (
@@ -204,7 +203,7 @@ export function VocabularyPage() {
                 onKeyPress={(e) => e.key === 'Enter' && handleReviewSubmit()}
               />
             ) : (
-              <div className={`p-3 rounded-md text-lg mb-4 ${reviewFeedback?.toLowerCase().includes("правильно") ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+              <div className={`p-3 rounded-md text-lg mb-4 ${reviewFeedback?.toLowerCase().includes("правильно") ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300' : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300'}`}>
                 {reviewFeedback}
               </div>
             )}
@@ -235,7 +234,31 @@ export function VocabularyPage() {
   
   return (
     <div className="container mx-auto py-8">
-      <h1 className="text-3xl font-headline font-bold mb-8 text-center">Мой словарь</h1>
+      <h1 className="text-3xl font-headline font-bold mb-6 text-center">Мой словарь</h1>
+      
+      <Card className="mb-8 shadow-md bg-card">
+        <CardHeader>
+          <CardTitle className="font-headline text-xl text-center">Статистика</CardTitle>
+        </CardHeader>
+        <CardContent className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-center">
+          <div className="flex flex-col items-center p-3 rounded-lg bg-muted/50">
+            <BookCopy className="h-8 w-8 mb-2 text-primary" />
+            <p className="text-2xl font-bold">{totalWordsCount}</p>
+            <p className="text-sm text-muted-foreground">Всего слов</p>
+          </div>
+          <div className="flex flex-col items-center p-3 rounded-lg bg-muted/50">
+            <Sparkles className="h-8 w-8 mb-2 text-accent" />
+            <p className="text-2xl font-bold">{masteredWordsCount}</p>
+            <p className="text-sm text-muted-foreground">Освоено</p>
+          </div>
+          <div className="flex flex-col items-center p-3 rounded-lg bg-muted/50">
+            <RepeatIcon className="h-8 w-8 mb-2 text-destructive" />
+            <p className="text-2xl font-bold">{wordsNeedingReviewCount}</p>
+            <p className="text-sm text-muted-foreground">На повторении</p>
+          </div>
+        </CardContent>
+      </Card>
+
       <Input 
         placeholder="Поиск слова..."
         value={searchTerm}
@@ -252,7 +275,7 @@ export function VocabularyPage() {
         
         <TabsContent value="currentTopic">
           <Card>
-            <CardHeader><CardTitle>Слова текущей темы</CardTitle><CardDescription>Слова, связанные с активной темой ({userData?.progress[userData?.currentLevel]?.topics[userData?.currentTopicId || ""]?.name || "не выбрана"})</CardDescription></CardHeader>
+            <CardHeader><CardTitle>Слова текущей темы</CardTitle><CardDescription>Слова, связанные с активной темой ({userData?.progress[userData?.currentLevel || 'A0']?.topics[userData?.currentTopicId || ""]?.name || "не выбрана"})</CardDescription></CardHeader>
             <CardContent>
               {filteredWords(wordsForCurrentTopic).length === 0 && <p className="text-muted-foreground text-center py-4">Нет слов для текущей темы или по вашему запросу.</p>}
               {filteredWords(wordsForCurrentTopic).map(word => <WordCardDisplay key={word.id} word={word} />)}
@@ -262,7 +285,7 @@ export function VocabularyPage() {
 
         <TabsContent value="errors">
           <Card>
-            <CardHeader><CardTitle>Слова с ошибками</CardTitle><CardDescription>Слова, в которых вы недавно допускали ошибки.</CardDescription></CardHeader>
+            <CardHeader><CardTitle>Слова с ошибками</CardTitle><CardDescription>Слова, в которых вы недавно допускали ошибки и которые еще не освоены.</CardDescription></CardHeader>
             <CardContent>
               {filteredWords(errorWords).length === 0 && <p className="text-muted-foreground text-center py-4">Нет слов с ошибками или по вашему запросу. Отлично!</p>}
               {filteredWords(errorWords).map(word => <WordCardDisplay key={word.id} word={word} />)}
@@ -274,8 +297,8 @@ export function VocabularyPage() {
           <Card>
             <CardHeader><CardTitle>Слова на повторение</CardTitle><CardDescription>Слова, которые требуют вашего внимания для закрепления.</CardDescription></CardHeader>
             <CardContent>
-              {filteredWords(wordsToReviewList).length === 0 && <p className="text-muted-foreground text-center py-4">Нет слов для повторения или по вашему запросу. Все слова усвоены!</p>}
-              {filteredWords(wordsToReviewList).map(word => <WordCardDisplay key={word.id} word={word} />)}
+              {filteredWords(wordsForReview).length === 0 && <p className="text-muted-foreground text-center py-4">Нет слов для повторения или по вашему запросу. Все слова усвоены!</p>}
+              {filteredWords(wordsForReview).map(word => <WordCardDisplay key={word.id} word={word} />)}
             </CardContent>
           </Card>
         </TabsContent>
@@ -291,14 +314,20 @@ export function VocabularyPage() {
         </TabsContent>
       </Tabs>
        <div className="mt-8 text-center">
-            <Button onClick={startReviewSession} size="lg" className="shadow-md">
+            <Button 
+                onClick={startReviewSession} 
+                size="lg" 
+                className="shadow-md"
+                disabled={wordsNeedingReviewCount === 0}
+            >
                 <RotateCcw className="mr-2 h-5 w-5" /> Начать сессию повторения
             </Button>
-            <p className="text-sm text-muted-foreground mt-2">ИИ подберет слова, которые вам нужно повторить.</p>
+            <p className="text-sm text-muted-foreground mt-2">
+                {wordsNeedingReviewCount > 0 
+                    ? `Доступно слов для повторения: ${wordsNeedingReviewCount}.`
+                    : "Отлично! Все слова, требующие повторения, пройдены."}
+            </p>
         </div>
     </div>
   );
 }
-
-
-    
