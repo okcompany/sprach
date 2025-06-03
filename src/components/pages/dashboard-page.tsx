@@ -84,7 +84,7 @@ export function DashboardPage() {
         setIsRecommendationLoading(false);
       }
     };
-    if (!isLoading) {
+    if (!isLoading) { // Only fetch if user data is loaded
         fetchRecommendation();
     }
   }, [userData, isLoading, getAIRecommendedLesson]);
@@ -96,8 +96,9 @@ export function DashboardPage() {
       return;
     }
 
-    setActionableAIReco(null); // Reset first
-    setNextStepDetails(null); // Reset first
+    // Reset actionableAIReco and nextStepDetails at the beginning of each run
+    setActionableAIReco(null);
+    setNextStepDetails(null);
 
     if (recommendedLesson) {
         const currentLvl = userData.currentLevel;
@@ -210,7 +211,7 @@ export function DashboardPage() {
         </CardContent>
       </Card>
 
-      {isRecommendationLoading && !actionableAIReco && !nextStepDetails && (
+      {isRecommendationLoading && (
         <Card className="mb-8 animate-pulse">
           <CardHeader>
             <div className="h-6 bg-muted rounded w-3/4"></div>
@@ -253,10 +254,9 @@ export function DashboardPage() {
             <Button 
               asChild
               onClick={() => {
-                if (actionableAIReco.topicId) { // Only update if it's a known topic ID
+                if (actionableAIReco.topicId) { 
                   updateUserData({ currentTopicId: actionableAIReco.topicId });
                 }
-                // No need to update currentTopicId if it's a new topic suggestion, link goes to LevelTopicsPage
               }}
             >
                 <Link href={actionableAIReco.link}>
