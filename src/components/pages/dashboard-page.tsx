@@ -6,16 +6,17 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { useUserData } from '@/context/user-data-context';
-import type { AIRecommendedLesson, LanguageLevel, ModuleType } from '@/types/german-learning';
+import type { AIRecommendedLesson, LanguageLevel, ModuleType, TopicProgress } from '@/types/german-learning';
 import { MODULE_NAMES_RU, DEFAULT_TOPICS } from '@/types/german-learning';
-import { Sparkles, BookOpen, ArrowRight, AlertTriangle, CheckCircle, PartyPopper } from 'lucide-react';
+import { Sparkles, BookOpen, ArrowRight, AlertTriangle, CheckCircle, PartyPopper, Brain } from 'lucide-react';
 
 interface ActionableAIReco {
-  topicId: string;
+  topicId?: string; // Optional: only present if a direct match is found
   topicName: string;
   link: string;
   reasoning: string;
   modules: ModuleType[];
+  buttonText: string;
 }
 
 interface NextStepDetails {
@@ -40,7 +41,6 @@ export function DashboardPage() {
   
   const currentLevelSlug = userData?.currentLevel.toLowerCase();
 
-  // Calculate nextTopicId
   const nextTopicId = useMemo(() => {
     if (!userData || !currentLevelSlug) return null;
 
@@ -70,7 +70,7 @@ export function DashboardPage() {
     const fetchRecommendation = async () => {
       if (userData) {
         setIsRecommendationLoading(true);
-        const lesson = await getAIRecommendedLesson(); // This might update currentTopicId internally
+        const lesson = await getAIRecommendedLesson();
         setRecommendedLesson(lesson);
         setIsRecommendationLoading(false);
       }
@@ -87,42 +87,50 @@ export function DashboardPage() {
       return;
     }
 
-    // Process AI Recommendation
-    // currentTopicId should already be updated by getAIRecommendedLesson if recommendation is valid
-    if (recommendedLesson && userData.currentTopicId) {
-        const currentLevelKey = userData.currentLevel;
-        const levelTopics = DEFAULT_TOPICS[currentLevelKey] || [];
-        const customLevelTopics = userData.customTopics.filter(ct => ct.id.startsWith(currentLevelKey + "_custom_"));
+    setActionableAIReco(null); // Reset first
+    setNextStepDetails(null); // Reset first
+
+    if (recommendedLesson) {
+        const currentLvl = userData.currentLevel;
+        const defaultTopics = DEFAULT_TOPICS[currentLvl] || [];
+        const customTopics = userData.customTopics.filter((ct: TopicProgress) => ct.id.startsWith(currentLvl + "_custom_"));
         
-        let foundAIRecoTopicId: string | null = null;
-        const defaultMatch = levelTopics.find(t => t.name === recommendedLesson.topic);
+        let foundAIRecoTopicId: string | undefined = undefined;
+        const defaultMatch = defaultTopics.find(t => t.name.toLowerCase() === recommendedLesson.topic.toLowerCase());
         if (defaultMatch) {
             foundAIRecoTopicId = defaultMatch.id;
         } else {
-            const customMatch = customLevelTopics.find(t => t.name === recommendedLesson.topic);
+            const customMatch = customTopics.find((t: TopicProgress) => t.name.toLowerCase() === recommendedLesson.topic.toLowerCase());
             if (customMatch) {
                 foundAIRecoTopicId = customMatch.id;
             }
         }
-        // Check if the AI-recommended topic matches the currentTopicId in context
-        if (foundAIRecoTopicId && foundAIRecoTopicId === userData.currentTopicId) {
+
+        if (foundAIRecoTopicId) {
             setActionableAIReco({
                 topicId: foundAIRecoTopicId,
                 topicName: recommendedLesson.topic,
                 link: `/levels/${currentLevelSlug}/${foundAIRecoTopicId}`,
                 reasoning: recommendedLesson.reasoning,
                 modules: recommendedLesson.modules as ModuleType[],
+                buttonText: "Начать рекомендованный урок",
             });
-            setNextStepDetails(null); // AI reco takes precedence
-            return;
+            return; // AI recommendation with found ID takes precedence
+        } else {
+            // AI recommended a topic that doesn't exist yet
+            setActionableAIReco({
+                // No topicId here
+                topicName: recommendedLesson.topic,
+                link: `/levels/${currentLevelSlug}`, // Link to LevelTopicsPage
+                reasoning: recommendedLesson.reasoning,
+                modules: recommendedLesson.modules as ModuleType[],
+                buttonText: `К темам уровня (AI советует: "${recommendedLesson.topic}")`,
+            });
+            return; // AI recommendation for new topic takes precedence
         }
     }
     
-
-    // If no actionable AI recommendation, or recommendedLesson is null, or it doesn't match currentTopicId
-    setActionableAIReco(null); // Ensure it's reset
-
-    // Determine next step based on user progress
+    // If no actionable AI recommendation, determine next step based on user progress
     if (nextTopicId) { 
       setNextStepDetails({
         topicId: nextTopicId,
@@ -135,7 +143,6 @@ export function DashboardPage() {
       });
     } else if (isLevelCompleted(userData.currentLevel)) { 
       setNextStepDetails({
-        // No topicId for completed level card
         link: `/levels`,
         cardIcon: PartyPopper, 
         cardTitle: `Уровень ${userData.currentLevel} пройден!`,
@@ -145,7 +152,6 @@ export function DashboardPage() {
       });
     } else { 
       setNextStepDetails({
-        // No specific topicId if all topics are done but level not marked complete OR no topics exist
         link: `/levels/${currentLevelSlug}`,
         cardIcon: AlertTriangle,
         cardTitle: "Исследуйте уровень дальше",
@@ -154,14 +160,14 @@ export function DashboardPage() {
         cardBorderClass: "border-orange-500",
       });
     }
-  }, [recommendedLesson, userData, isLoading, nextTopicId, currentLevelSlug, isLevelCompleted]);
+  }, [recommendedLesson, userData, isLoading, nextTopicId, currentLevelSlug, isLevelCompleted, isTopicCompleted]);
 
 
   if (isLoading) {
     return <div className="text-center p-10">Загрузка данных пользователя...</div>;
   }
   
-  if (!userData) { // Should not happen if isLoading is false, but good fallback
+  if (!userData) { 
     return <div className="text-center p-10">Не удалось загрузить данные. Пожалуйста, обновите страницу.</div>;
   }
   
@@ -212,11 +218,11 @@ export function DashboardPage() {
       )}
 
       {!isRecommendationLoading && actionableAIReco && (
-        <Card className={`mb-8 shadow-md border-l-4 border-accent`}>
+        <Card className={`mb-8 shadow-md border-l-4 ${actionableAIReco.topicId ? 'border-accent' : 'border-blue-500'}`}>
           <CardHeader>
             <div className="flex items-center gap-2">
-              <Sparkles className="h-6 w-6 text-accent" />
-              <CardTitle className="font-headline text-2xl">Рекомендованный урок от ИИ</CardTitle>
+              {actionableAIReco.topicId ? <Sparkles className="h-6 w-6 text-accent" /> : <Brain className="h-6 w-6 text-blue-500" />}
+              <CardTitle className="font-headline text-2xl">Рекомендация от ИИ</CardTitle>
             </div>
             <CardDescription>{actionableAIReco.reasoning}</CardDescription>
           </CardHeader>
@@ -225,10 +231,17 @@ export function DashboardPage() {
             <p className="text-muted-foreground mb-3">
               Рекомендуемые модули: {actionableAIReco.modules.map(m => MODULE_NAMES_RU[m] || m).join(', ')}
             </p>
-            <Button asChild>
-                {/* currentTopicId should be set by getAIRecommendedLesson context update */}
+            <Button 
+              asChild
+              onClick={() => {
+                if (actionableAIReco.topicId) { // Only update if it's a known topic ID
+                  updateUserData({ currentTopicId: actionableAIReco.topicId });
+                }
+                // No need to update currentTopicId if it's a new topic suggestion, link goes to LevelTopicsPage
+              }}
+            >
                 <Link href={actionableAIReco.link}>
-                    Начать рекомендованный урок <ArrowRight className="ml-2 h-4 w-4" />
+                    {actionableAIReco.buttonText} <ArrowRight className="ml-2 h-4 w-4" />
                 </Link>
             </Button>
           </CardContent>
@@ -290,3 +303,4 @@ export function DashboardPage() {
     </div>
   );
 }
+
