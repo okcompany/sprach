@@ -230,17 +230,16 @@ export interface AILessonContent {
   lessonTitle: string;
   vocabulary: AILessonVocabularyItem[];
   grammarExplanation: string;
-  grammarExercises?: AIGrammarExercise[];
-  listeningExercise: AILessonListeningExercise; // Contains script and open questions
+  grammarExercise?: AIGrammarExercise; // Changed from array to single optional object
+  listeningExercise: AILessonListeningExercise; 
   readingPassage: string;
-  readingQuestions: string[]; // Open questions for reading passage
-  writingPrompt: string; // General open writing prompt
+  readingQuestions: string[]; 
+  writingPrompt: string; 
 
-  // New optional interactive exercises
-  interactiveVocabularyExercises?: AIVocabularyInteractiveExercise[];
-  interactiveListeningExercises?: AIListeningInteractiveExercise[]; // Based on listeningExercise.script
-  interactiveReadingExercises?: AIReadingInteractiveExercise[];   // Based on readingPassage
-  interactiveWritingExercises?: AIWritingInteractiveExercise[]; // Can augment or replace writingPrompt
+  interactiveVocabularyExercise?: AIVocabularyInteractiveExercise; // Changed from array
+  interactiveListeningExercise?: AIListeningInteractiveExercise; // Changed from array
+  interactiveReadingExercise?: AIReadingInteractiveExercise;   // Changed from array
+  interactiveWritingExercise?: AIWritingInteractiveExercise; // Changed from array
 }
 
 export interface AIEvaluationResult {
@@ -435,5 +434,3 @@ export const DEFAULT_TOPICS: Record<LanguageLevel, DefaultTopicDefinition[]> = {
     { id: "c2_cultural_historical_references", name: "Культурные и исторические ссылки" }
   ],
 };
-
-
