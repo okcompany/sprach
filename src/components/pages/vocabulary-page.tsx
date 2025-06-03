@@ -32,21 +32,19 @@ export function VocabularyPage() {
   const [isReviewSessionActive, setIsReviewSessionActive] = useState(false);
   const [reviewWordsQueue, setReviewWordsQueue] = useState<VocabularyWord[]>([]);
   const [currentReviewWordIndex, setCurrentReviewWordIndex] = useState(0);
-  const [currentReviewWord, setCurrentReviewWord] = useState<VocabularyWord | null>(null);
   const [userReviewInput, setUserReviewInput] = useState('');
   const [reviewFeedback, setReviewFeedback] = useState<string | null>(null);
   const [showCorrectAnswer, setShowCorrectAnswer] = useState(false);
 
+  const currentReviewWord = useMemo(() => {
+    if (isReviewSessionActive && reviewWordsQueue.length > 0 && currentReviewWordIndex < reviewWordsQueue.length) {
+      return reviewWordsQueue[currentReviewWordIndex];
+    }
+    return null;
+  }, [isReviewSessionActive, reviewWordsQueue, currentReviewWordIndex]);
+
   const allWords = useMemo(() => userData?.vocabularyBank || [], [userData]);
   const wordsForReview = useMemo(() => getWordsForReview(), [getWordsForReview]);
-
-  useEffect(() => {
-    if (isReviewSessionActive && reviewWordsQueue.length > 0) {
-      setCurrentReviewWord(reviewWordsQueue[currentReviewWordIndex]);
-    } else {
-      setCurrentReviewWord(null);
-    }
-  }, [isReviewSessionActive, reviewWordsQueue, currentReviewWordIndex]);
   
   const wordsForCurrentTopic = useMemo(() => {
     if (!userData?.currentTopicId) return [];
