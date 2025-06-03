@@ -5,17 +5,65 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
-import { Progress } from '@/components/ui/progress';
 import { useUserData } from '@/context/user-data-context';
 import type { AIRecommendedLesson, LanguageLevel, ModuleType } from '@/types/german-learning';
 import { MODULE_NAMES_RU, DEFAULT_TOPICS } from '@/types/german-learning';
-import { Sparkles, BookOpen, ArrowRight, AlertTriangle, CheckCircle } from 'lucide-react';
+import { Sparkles, BookOpen, ArrowRight, AlertTriangle, CheckCircle, PartyPopper } from 'lucide-react';
+
+interface ActionableAIReco {
+  topicId: string;
+  topicName: string;
+  link: string;
+  reasoning: string;
+  modules: ModuleType[];
+}
+
+interface NextStepDetails {
+  topicId?: string;
+  topicName?: string;
+  link: string;
+  cardIcon: React.ElementType;
+  cardTitle: string;
+  cardDescription: string;
+  buttonText: string;
+  cardBorderClass?: string;
+}
+
 
 export function DashboardPage() {
   const { userData, isLoading, getAIRecommendedLesson, isLevelCompleted, isTopicCompleted } = useUserData();
   const [recommendedLesson, setRecommendedLesson] = useState<AIRecommendedLesson | null>(null);
   const [isRecommendationLoading, setIsRecommendationLoading] = useState(true);
-  const [recommendedTopicActionLink, setRecommendedTopicActionLink] = useState<string>('');
+  
+  const [actionableAIReco, setActionableAIReco] = useState<ActionableAIReco | null>(null);
+  const [nextStepDetails, setNextStepDetails] = useState<NextStepDetails | null>(null);
+  
+  const currentLevelSlug = userData?.currentLevel.toLowerCase();
+
+  // Calculate nextTopicId
+  const nextTopicId = useMemo(() => {
+    if (!userData || !currentLevelSlug) return null;
+
+    const currentLevelData = userData.progress[userData.currentLevel];
+    if (!currentLevelData) return null;
+
+    const defaultTopicsForLevel = DEFAULT_TOPICS[userData.currentLevel] || [];
+    const customTopicsForLevel = userData.customTopics
+      .filter(topic => topic.id.startsWith(userData.currentLevel + "_custom_"))
+      .map(ct => ({ id: ct.id, name: ct.name }));
+
+    const allTopicsOrder = [
+      ...defaultTopicsForLevel.map(t => t.id),
+      ...customTopicsForLevel.map(t => t.id)
+    ];
+
+    for (const topicId of allTopicsOrder) {
+      if (currentLevelData.topics[topicId] && !isTopicCompleted(userData.currentLevel, topicId)) {
+        return topicId;
+      }
+    }
+    return null;
+  }, [userData, currentLevelSlug, isTopicCompleted]);
 
 
   useEffect(() => {
@@ -32,16 +80,90 @@ export function DashboardPage() {
     }
   }, [userData, isLoading, getAIRecommendedLesson]);
 
-  if (isLoading) {
+  useEffect(() => {
+    if (isLoading || !userData || !currentLevelSlug) {
+      setActionableAIReco(null);
+      setNextStepDetails(null);
+      return;
+    }
+
+    // Process AI Recommendation
+    if (recommendedLesson) {
+      const currentLevelKey = userData.currentLevel;
+      const levelTopics = DEFAULT_TOPICS[currentLevelKey] || [];
+      const customLevelTopics = userData.customTopics.filter(ct => ct.id.startsWith(currentLevelKey + "_custom_"));
+      let foundAIRecoTopicId: string | null = null;
+
+      const defaultMatch = levelTopics.find(t => t.name === recommendedLesson.topic);
+      if (defaultMatch) {
+        foundAIRecoTopicId = defaultMatch.id;
+      } else {
+        const customMatch = customLevelTopics.find(t => t.name === recommendedLesson.topic);
+        if (customMatch) {
+          foundAIRecoTopicId = customMatch.id;
+        }
+      }
+
+      if (foundAIRecoTopicId) {
+        setActionableAIReco({
+          topicId: foundAIRecoTopicId,
+          topicName: recommendedLesson.topic,
+          link: `/levels/${currentLevelSlug}/${foundAIRecoTopicId}`,
+          reasoning: recommendedLesson.reasoning,
+          modules: recommendedLesson.modules as ModuleType[],
+        });
+        setNextStepDetails(null); // AI reco takes precedence
+        return; 
+      }
+    }
+
+    // If no actionable AI recommendation, or recommendedLesson is null
+    setActionableAIReco(null); // Ensure it's reset
+
+    // Determine next step based on user progress
+    if (nextTopicId) { 
+      setNextStepDetails({
+        topicId: nextTopicId,
+        topicName: userData.progress[userData.currentLevel]?.topics[nextTopicId]?.name || "Следующая тема",
+        link: `/levels/${currentLevelSlug}/${nextTopicId}`,
+        cardIcon: BookOpen,
+        cardTitle: "Следующий урок",
+        cardDescription: "Продолжите обучение с того места, где остановились.",
+        buttonText: "Продолжить обучение",
+      });
+    } else if (isLevelCompleted(userData.currentLevel)) { 
+      setNextStepDetails({
+        link: `/levels`,
+        cardIcon: PartyPopper, // Or CheckCircle
+        cardTitle: `Уровень ${userData.currentLevel} пройден!`,
+        cardDescription: "Поздравляем! Вы успешно завершили текущий уровень.",
+        buttonText: "Выбрать новый уровень",
+        cardBorderClass: "border-green-500",
+      });
+    } else { 
+      setNextStepDetails({
+        link: `/levels/${currentLevelSlug}`,
+        cardIcon: AlertTriangle,
+        cardTitle: "Исследуйте уровень дальше",
+        cardDescription: "Все стандартные темы этого уровня пройдены, или для этого уровня пока нет тем. Добавьте свою или выберите другую тему из списка.",
+        buttonText: `К темам уровня ${userData.currentLevel}`,
+        cardBorderClass: "border-orange-500",
+      });
+    }
+  }, [recommendedLesson, userData, isLoading, nextTopicId, currentLevelSlug, isLevelCompleted]);
+
+
+  if (isLoading || (!actionableAIReco && !nextStepDetails && !isRecommendationLoading) ) { // Added !isRecommendationLoading to prevent premature loader
     return <div className="text-center p-10">Загрузка данных пользователя...</div>;
   }
-
-  if (!userData) {
+  
+  if (!userData && !isLoading) {
     return <div className="text-center p-10">Не удалось загрузить данные. Пожалуйста, обновите страницу.</div>;
   }
-
+  
   // Calculate overall progress
   const calculateOverallProgress = () => {
+    if (!userData) return 0;
     let totalTopics = 0;
     let completedTopics = 0;
     Object.values(userData.progress).forEach(levelData => {
@@ -49,68 +171,9 @@ export function DashboardPage() {
       totalTopics += topicsInLevel.length;
       completedTopics += topicsInLevel.filter(topic => topic.completed).length;
     });
-    return totalTopics > 0 ? (completedTopics / totalTopics) * 100 : 0;
+    return totalTopics > 0 ? Math.round((completedTopics / totalTopics) * 100) : 0;
   };
   const overallProgress = calculateOverallProgress();
-
-  const currentLevelSlug = userData.currentLevel.toLowerCase();
-  
-  // Find the first non-completed topic in the current level
-  let nextTopicId: string | null = null;
-  const currentLevelData = userData.progress[userData.currentLevel];
-  if (currentLevelData) {
-    // Combine default and custom topics for the current level to find the next one
-    const defaultTopicsForLevel = DEFAULT_TOPICS[userData.currentLevel] || [];
-    const customTopicsForLevel = userData.customTopics.filter(ct => ct.id.startsWith(userData.currentLevel + "_custom_"));
-    // Assuming a certain order or just taking them as they are stored
-    const allTopicsOrder = [
-        ...defaultTopicsForLevel.map(t => t.id),
-        ...customTopicsForLevel.map(t => t.id)
-    ];
-
-    for (const topicId of allTopicsOrder) {
-      if (currentLevelData.topics[topicId] && !isTopicCompleted(userData.currentLevel, topicId)) {
-        nextTopicId = topicId;
-        break;
-      }
-    }
-  }
-  
-  useEffect(() => {
-    if (recommendedLesson && userData) {
-        const currentLevelKey = userData.currentLevel;
-        const levelTopics = DEFAULT_TOPICS[currentLevelKey] || [];
-        const customLevelTopics = userData.customTopics.filter(ct => ct.id.startsWith(currentLevelKey + "_custom_"));
-
-        let foundTopicId: string | null = null;
-
-        // Check default topics
-        const defaultMatch = levelTopics.find(t => t.name === recommendedLesson.topic);
-        if (defaultMatch) {
-            foundTopicId = defaultMatch.id;
-        }
-
-        // If not found in default, check custom topics
-        if (!foundTopicId) {
-            const customMatch = customLevelTopics.find(t => t.name === recommendedLesson.topic);
-            if (customMatch) {
-                foundTopicId = customMatch.id;
-            }
-        }
-
-        if (foundTopicId) {
-            setRecommendedTopicActionLink(`/levels/${currentLevelSlug}/${foundTopicId}`);
-        } else if (nextTopicId) {
-            setRecommendedTopicActionLink(`/levels/${currentLevelSlug}/${nextTopicId}`);
-        } else {
-            setRecommendedTopicActionLink(`/levels/${currentLevelSlug}`);
-        }
-    } else if (nextTopicId) {
-         setRecommendedTopicActionLink(`/levels/${currentLevelSlug}/${nextTopicId}`);
-    } else {
-         setRecommendedTopicActionLink(`/levels/${currentLevelSlug}`);
-    }
-  }, [recommendedLesson, userData, nextTopicId, currentLevelSlug]);
 
 
   return (
@@ -121,15 +184,15 @@ export function DashboardPage() {
           <CardDescription className="text-blue-100">Ваш ИИ-помощник в изучении немецкого языка.</CardDescription>
         </CardHeader>
         <CardContent>
-          <p className="mb-1">Текущий уровень: <span className="font-semibold">{userData.currentLevel}</span></p>
+          <p className="mb-1">Текущий уровень: <span className="font-semibold">{userData?.currentLevel}</span></p>
           <div className="w-full bg-blue-200/30 rounded-full h-2.5 mb-4">
             <div className="bg-accent h-2.5 rounded-full" style={{ width: `${overallProgress}%` }}></div>
           </div>
-          <p className="text-sm text-blue-100">Общий прогресс: {Math.round(overallProgress)}%</p>
+          <p className="text-sm text-blue-100">Общий прогресс: {overallProgress}%</p>
         </CardContent>
       </Card>
 
-      {isRecommendationLoading && (
+      {isRecommendationLoading && !actionableAIReco && !nextStepDetails && (
         <Card className="mb-8 animate-pulse">
           <CardHeader>
             <div className="h-6 bg-muted rounded w-3/4"></div>
@@ -145,22 +208,22 @@ export function DashboardPage() {
         </Card>
       )}
 
-      {!isRecommendationLoading && recommendedLesson && (
-        <Card className="mb-8 shadow-md border-l-4 border-accent">
+      {!isRecommendationLoading && actionableAIReco && (
+        <Card className={`mb-8 shadow-md border-l-4 border-accent`}>
           <CardHeader>
             <div className="flex items-center gap-2">
               <Sparkles className="h-6 w-6 text-accent" />
               <CardTitle className="font-headline text-2xl">Рекомендованный урок от ИИ</CardTitle>
             </div>
-            <CardDescription>{recommendedLesson.reasoning}</CardDescription>
+            <CardDescription>{actionableAIReco.reasoning}</CardDescription>
           </CardHeader>
           <CardContent>
-            <h3 className="text-xl font-semibold mb-2">{recommendedLesson.topic}</h3>
+            <h3 className="text-xl font-semibold mb-2">{actionableAIReco.topicName}</h3>
             <p className="text-muted-foreground mb-3">
-              Рекомендуемые модули: {recommendedLesson.modules.map(m => MODULE_NAMES_RU[m as ModuleType] || m).join(', ')}
+              Рекомендуемые модули: {actionableAIReco.modules.map(m => MODULE_NAMES_RU[m] || m).join(', ')}
             </p>
-            <Button asChild disabled={!recommendedTopicActionLink}>
-                <Link href={recommendedTopicActionLink || '#'}>
+            <Button asChild>
+                <Link href={actionableAIReco.link}>
                     Начать рекомендованный урок <ArrowRight className="ml-2 h-4 w-4" />
                 </Link>
             </Button>
@@ -168,73 +231,25 @@ export function DashboardPage() {
         </Card>
       )}
       
-      {!isRecommendationLoading && !recommendedLesson && nextTopicId && (
-         <Card className="mb-8 shadow-md">
+      {!isRecommendationLoading && !actionableAIReco && nextStepDetails && (
+         <Card className={`mb-8 shadow-md ${nextStepDetails.cardBorderClass ? `border-l-4 ${nextStepDetails.cardBorderClass}` : ''}`}>
           <CardHeader>
             <div className="flex items-center gap-2">
-              <BookOpen className="h-6 w-6 text-primary" />
-              <CardTitle className="font-headline text-2xl">Следующий урок</CardTitle>
+              <nextStepDetails.cardIcon className={`h-6 w-6 ${nextStepDetails.cardBorderClass ? nextStepDetails.cardBorderClass.replace('border-','text-') : 'text-primary'}`} />
+              <CardTitle className="font-headline text-2xl">{nextStepDetails.cardTitle}</CardTitle>
             </div>
-            <CardDescription>Продолжите обучение с того места, где остановились.</CardDescription>
+            <CardDescription>{nextStepDetails.cardDescription}</CardDescription>
           </CardHeader>
           <CardContent>
-            <h3 className="text-xl font-semibold mb-2">{userData.progress[userData.currentLevel]?.topics[nextTopicId]?.name || "Следующая тема"}</h3>
-            <p className="text-muted-foreground mb-3">
-              Продолжайте улучшать свои навыки немецкого языка.
-            </p>
-             <Button asChild disabled={!recommendedTopicActionLink}>
-                <Link href={recommendedTopicActionLink || '#'}>
-                    Продолжить обучение <ArrowRight className="ml-2 h-4 w-4" />
+            {nextStepDetails.topicName && <h3 className="text-xl font-semibold mb-2">{nextStepDetails.topicName}</h3>}
+             <Button asChild variant={nextStepDetails.topicName ? 'default' : 'outline'}>
+                <Link href={nextStepDetails.link}>
+                    {nextStepDetails.buttonText} <ArrowRight className="ml-2 h-4 w-4" />
                 </Link>
             </Button>
           </CardContent>
         </Card>
       )}
-      
-      {!isRecommendationLoading && !recommendedLesson && !nextTopicId && isLevelCompleted(userData.currentLevel) && (
-        <Card className="mb-8 shadow-md border-l-4 border-green-500">
-            <CardHeader>
-                 <div className="flex items-center gap-2">
-                    <CheckCircle className="h-6 w-6 text-green-500" />
-                    <CardTitle className="font-headline text-2xl">Уровень {userData.currentLevel} пройден!</CardTitle>
-                </div>
-                <CardDescription>Поздравляем! Вы успешно завершили текущий уровень.</CardDescription>
-            </CardHeader>
-            <CardContent>
-                <p className="text-muted-foreground mb-3">
-                    Готовы к новым вызовам? Переходите на следующий уровень или повторите пройденный материал.
-                </p>
-                 <Button asChild>
-                    <Link href={`/levels`}>
-                        Выбрать новый уровень <ArrowRight className="ml-2 h-4 w-4" />
-                    </Link>
-                </Button>
-            </CardContent>
-        </Card>
-      )}
-      
-      {!isRecommendationLoading && !recommendedLesson && !nextTopicId && !isLevelCompleted(userData.currentLevel) && (
-         <Card className="mb-8 shadow-md border-l-4 border-orange-500">
-            <CardHeader>
-                 <div className="flex items-center gap-2">
-                    <AlertTriangle className="h-6 w-6 text-orange-500" />
-                    <CardTitle className="font-headline text-2xl">Все темы уровня пройдены?</CardTitle>
-                </div>
-                <CardDescription>Кажется, вы прошли все стандартные темы этого уровня, или что-то пошло не так с рекомендацией.</CardDescription>
-            </CardHeader>
-            <CardContent>
-                <p className="text-muted-foreground mb-3">
-                    Проверьте список тем или добавьте свою пользовательскую тему.
-                </p>
-                 <Button asChild variant="outline">
-                    <Link href={`/levels/${currentLevelSlug}`}>
-                        К темам уровня {userData.currentLevel}
-                    </Link>
-                </Button>
-            </CardContent>
-        </Card>
-      )}
-
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <Card className="shadow-sm">
@@ -264,4 +279,3 @@ export function DashboardPage() {
   );
 }
 
-    
