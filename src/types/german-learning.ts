@@ -62,25 +62,25 @@ export interface GrammarWeaknessContext {
   level: LanguageLevel;
   topicId: string;
   topicName: string;
-  moduleId?: ModuleType; 
+  moduleId?: ModuleType;
 }
 
 export interface GrammarWeaknessDetail {
-  tag: string; 
+  tag: string;
   count: number;
-  lastEncounteredDate: string; 
-  exampleContexts: GrammarWeaknessContext[]; 
+  lastEncounteredDate: string;
+  exampleContexts: GrammarWeaknessContext[];
 }
 
 export interface UserData {
   currentLevel: LanguageLevel;
-  currentTopicId?: string; 
+  currentTopicId?: string;
   profile: UserProfile;
   progress: Partial<Record<LanguageLevel, LevelProgress>>;
   vocabularyBank: VocabularyWord[];
   settings: UserSettings;
-  customTopics: TopicProgress[]; 
-  grammarWeaknesses?: Record<string, GrammarWeaknessDetail>; 
+  customTopics: TopicProgress[];
+  grammarWeaknesses?: Record<string, GrammarWeaknessDetail>;
 }
 
 // --- AI Generated Content Types (matches flows) ---
@@ -130,9 +130,9 @@ export interface AISentenceConstructionExercise {
 }
 
 // This type is now only for individual exercise structures, not for the main lesson content.
-export type AIGrammarExercise = 
-  | AIFillInTheBlanksExercise 
-  | AIMultipleChoiceExercise 
+export type AIGrammarExercise =
+  | AIFillInTheBlanksExercise
+  | AIMultipleChoiceExercise
   | AISentenceConstructionExercise;
 
 // --- Standard Listening ---
@@ -167,7 +167,7 @@ export interface AIAudioQuizExercise {
 }
 
 // --- Common Interactive Exercise Types for Listening/Reading ---
-export interface AIComprehensionMQ_Question { 
+export interface AIComprehensionMQ_Question {
   questionText: string;
   options: string[];
   correctAnswer: string;
@@ -200,18 +200,18 @@ export interface AISequencingExercise {
 // --- Main Lesson Content Structure ---
 export interface AILessonContent {
   lessonTitle: string;
-  vocabulary: AILessonVocabularyItem[]; // No .min constraint in Zod
+  vocabulary: AILessonVocabularyItem[];
   grammarExplanation: string;
-  
+
   // Grammar exercises split into individual optional fields
   grammarFillInTheBlanks?: AIFillInTheBlanksExercise;
   grammarMultipleChoice?: AIMultipleChoiceExercise;
   grammarSentenceConstruction?: AISentenceConstructionExercise;
-  
-  listeningExercise: AILessonListeningExercise; // questions array has no .min constraint in Zod
+
+  listeningExercise: AILessonListeningExercise;
   readingPassage: string;
-  readingQuestions: string[]; // No .min constraint in Zod
-  writingPrompt: string; 
+  readingQuestions: string[];
+  writingPrompt: string;
 
   // Interactive Vocabulary (Split)
   interactiveMatchingExercise?: AIMatchingExercise;
@@ -221,23 +221,33 @@ export interface AILessonContent {
   interactiveListeningMCQ?: AIComprehensionMultipleChoiceExercise;
   interactiveListeningTrueFalse?: AITrueFalseExercise;
   interactiveListeningSequencing?: AISequencingExercise;
-  
+
   // Interactive Reading (Split)
   interactiveReadingMCQ?: AIComprehensionMultipleChoiceExercise;
   interactiveReadingTrueFalse?: AITrueFalseExercise;
   interactiveReadingSequencing?: AISequencingExercise;
 }
 
+export interface WritingEvaluationDetails {
+  taskAchievement?: string;
+  coherenceAndCohesion?: string;
+  lexicalResource?: string;
+  grammaticalAccuracy?: string;
+  overallFeedback: string;
+  suggestedImprovements?: string[];
+}
+
 export interface AIEvaluationResult {
   evaluation: string;
   isCorrect: boolean;
   suggestedCorrection?: string;
-  grammarErrorTags?: string[]; 
+  grammarErrorTags?: string[];
+  writingDetails?: WritingEvaluationDetails;
 }
 
 export interface AIRecommendedLesson {
   topic: string;
-  modules: string[]; 
+  modules: string[];
   reasoning: string;
 }
 
@@ -250,7 +260,7 @@ export interface DefaultTopicDefinition {
 // Default Topics
 export const DEFAULT_TOPICS: Record<LanguageLevel, DefaultTopicDefinition[]> = {
   A0: [
-    { 
+    {
       id: "a0_greetings_farewells", name: "Основные приветствия и прощания",
       fallbackVocabulary: [
         { german: "Hallo", russian: "Привет", exampleSentence: "Hallo, wie geht's?" },
@@ -265,7 +275,7 @@ export const DEFAULT_TOPICS: Record<LanguageLevel, DefaultTopicDefinition[]> = {
         { german: "Nein", russian: "Нет", exampleSentence: "Nein, das ist nicht richtig." },
       ]
     },
-    { 
+    {
       id: "a0_numbers_dates", name: "Числа и даты",
       fallbackVocabulary: [
         { german: "eins", russian: "один", exampleSentence: "Ich habe eins." },
@@ -279,7 +289,7 @@ export const DEFAULT_TOPICS: Record<LanguageLevel, DefaultTopicDefinition[]> = {
         { german: "Februar", russian: "февраль" },
       ]
     },
-    { 
+    {
       id: "a0_family_friends", name: "Семья и друзья",
       fallbackVocabulary: [
         { german: "die Familie", russian: "семья", exampleSentence: "Das ist meine Familie." },
@@ -291,7 +301,7 @@ export const DEFAULT_TOPICS: Record<LanguageLevel, DefaultTopicDefinition[]> = {
         { german: "die Freundin", russian: "подруга", exampleSentence: "Sie ist meine Freundin." },
       ]
     },
-    { 
+    {
       id: "a0_colors", name: "Цвета",
       fallbackVocabulary: [
         { german: "rot", russian: "красный", exampleSentence: "Der Apfel ist rot." },
@@ -303,7 +313,7 @@ export const DEFAULT_TOPICS: Record<LanguageLevel, DefaultTopicDefinition[]> = {
         { german: "die Farbe", russian: "цвет", exampleSentence: "Was ist deine Lieblingsfarbe?" },
       ]
     },
-    { 
+    {
       id: "a0_body_parts", name: "Части тела",
       fallbackVocabulary: [
         { german: "der Kopf", russian: "голова", exampleSentence: "Das ist mein Kopf." },
@@ -315,7 +325,7 @@ export const DEFAULT_TOPICS: Record<LanguageLevel, DefaultTopicDefinition[]> = {
         { german: "die Nase", russian: "нос", exampleSentence: "Eine kleine Nase." },
       ]
     },
-    { 
+    {
       id: "a0_home_objects", name: "Дом и предметы в доме",
       fallbackVocabulary: [
         { german: "das Haus", russian: "дом", exampleSentence: "Wir wohnen in einem Haus." },
@@ -327,7 +337,7 @@ export const DEFAULT_TOPICS: Record<LanguageLevel, DefaultTopicDefinition[]> = {
         { german: "die Lampe", russian: "лампа", exampleSentence: "Die Lampe ist an." },
       ]
     },
-    { 
+    {
       id: "a0_food_drinks", name: "Продукты питания и напитки",
       fallbackVocabulary: [
         { german: "das Brot", russian: "хлеб", exampleSentence: "Ich esse Brot mit Käse." },
@@ -339,7 +349,7 @@ export const DEFAULT_TOPICS: Record<LanguageLevel, DefaultTopicDefinition[]> = {
         { german: "das Ei", russian: "яйцо", exampleSentence: "Ich koche ein Ei." },
       ]
     },
-    { 
+    {
       id: "a0_clothing", name: "Одежда",
       fallbackVocabulary: [
         { german: "das Hemd", russian: "рубашка", exampleSentence: "Er trägt ein blaues Hemd." },
@@ -351,7 +361,7 @@ export const DEFAULT_TOPICS: Record<LanguageLevel, DefaultTopicDefinition[]> = {
         { german: "der Hut", russian: "шляпа", exampleSentence: "Ein großer Hut." },
       ]
     },
-    { 
+    {
       id: "a0_simple_motion_verbs", name: "Простые глаголы движения",
       fallbackVocabulary: [
         { german: "gehen", russian: "идти", exampleSentence: "Ich gehe nach Hause." },
@@ -363,7 +373,7 @@ export const DEFAULT_TOPICS: Record<LanguageLevel, DefaultTopicDefinition[]> = {
         { german: "fliegen", russian: "летать", exampleSentence: "Vögel können fliegen." },
       ]
     },
-    { 
+    {
       id: "a0_simple_nouns_city_school", name: "Простые существительные (город, школа)",
       fallbackVocabulary: [
         { german: "die Stadt", russian: "город", exampleSentence: "Berlin ist eine große Stadt." },

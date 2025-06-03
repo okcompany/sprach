@@ -12,13 +12,15 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
+import type { WritingEvaluationDetails } from '@/types/german-learning';
+
 
 const EvaluateUserResponseInputSchema = z.object({
   moduleType: z.enum(['vocabulary', 'grammar', 'reading', 'writing', 'wordTest', 'listening']).describe('The type of module the user is responding to.'),
-  userResponse: z.string().describe('The user\u2019s response to the question or task.'),
+  userResponse: z.string().describe('The user’s response to the question or task.'),
   expectedAnswer: z.string().optional().describe('The expected answer to the question or task, if applicable.'),
   questionContext: z.string().describe('The context of the question or task.'),
-  userLevel: z.enum(['A0', 'A1', 'A2', 'B1', 'B2', 'C1', 'C2']).describe('The user\u2019s proficiency level in German.'),
+  userLevel: z.enum(['A0', 'A1', 'A2', 'B1', 'B2', 'C1', 'C2']).describe('The user’s proficiency level in German.'),
   grammarRules: z.string().optional().describe('Relevant grammar rules for the given user level.'),
   // Boolean flags for Handlebars templating based on moduleType
   isModuleWordTest: z.boolean().optional().describe('Internal flag: true if moduleType is "wordTest".'),
@@ -31,14 +33,27 @@ const EvaluateUserResponseInputSchema = z.object({
 
 export type EvaluateUserResponseInput = z.infer<typeof EvaluateUserResponseInputSchema>;
 
+const WritingEvaluationDetailsSchema = z.object({
+  taskAchievement: z.string().optional().describe("Feedback on how well the user addressed the writing prompt. (Оценка выполнения задания.)"),
+  coherenceAndCohesion: z.string().optional().describe("Feedback on the logical structure and flow of the text. (Оценка связности и логичности текста.)"),
+  lexicalResource: z.string().optional().describe("Feedback on the appropriateness and richness of vocabulary. (Оценка использования лексики.)"),
+  grammaticalAccuracy: z.string().optional().describe("Feedback on grammatical correctness. (Оценка грамматической правильности.)"),
+  overallFeedback: z.string().describe("A summary of the overall performance and key suggestions. (Общее заключение и ключевые рекомендации.)"),
+  suggestedImprovements: z.array(z.string()).optional().describe("Specific sentences or phrases that could be improved, with suggestions. (Конкретные предложения по улучшению фраз или предложений.)")
+}).describe("Detailed feedback specific to the writing module, if applicable. This object itself is optional.");
+
+
 const EvaluateUserResponseOutputSchema = z.object({
-  evaluation: z.string().describe('An evaluation of the user\u2019s response, including feedback and suggestions for improvement.'),
-  isCorrect: z.boolean().describe('Whether the user response is correct or not.'),
-  suggestedCorrection: z.string().optional().describe('A suggested correction to the user\u2019s response, if applicable.'),
+  evaluation: z.string().describe('An evaluation of the user’s response, including feedback and suggestions for improvement. For writing, this will be the overallFeedback from writingDetails.'),
+  isCorrect: z.boolean().describe('Whether the user response is correct or not. For writing, true if the text is generally understandable and addresses the prompt adequately for the level.'),
+  suggestedCorrection: z.string().optional().describe('A suggested correction to the user’s response, if applicable. For writing, this could be a fully corrected version of the text if feasible, or key corrections.'),
   grammarErrorTags: z.array(z.string()).optional().describe('Specific grammar points the user made errors on (e.g., "akkusativ_prepositions", "verb_conjugation_modal"). Provide these only if the response is incorrect and the error is related to a specific, identifiable grammar rule or pattern relevant to the user\'s level. Use short, snake_case, English tags.'),
+  writingDetails: WritingEvaluationDetailsSchema.optional()
 });
 
-export type EvaluateUserResponseOutput = z.infer<typeof EvaluateUserResponseOutputSchema>;
+export type EvaluateUserResponseOutput = z.infer<typeof EvaluateUserResponseOutputSchema> & {
+  writingDetails?: WritingEvaluationDetails; // Ensure this is part of the TS type
+};
 
 export async function evaluateUserResponse(input: EvaluateUserResponseInput): Promise<EvaluateUserResponseOutput> {
   // Populate boolean flags for templating based on input.moduleType
@@ -56,7 +71,7 @@ export async function evaluateUserResponse(input: EvaluateUserResponseInput): Pr
 
 const evaluateUserResponsePrompt = ai.definePrompt({
   name: 'evaluateUserResponsePrompt',
-  input: {schema: EvaluateUserResponseInputSchema}, 
+  input: {schema: EvaluateUserResponseInputSchema},
   output: {schema: EvaluateUserResponseOutputSchema},
   prompt: `You are an AI-powered German language tutor. Your task is to evaluate a user's response to a question or task.
 
@@ -101,8 +116,17 @@ This is a 'reading' module.
 {{/if}}
 {{#if isModuleWriting}}
 This is a 'writing' module.
-- Evaluate the user's written text for clarity, grammar, and relevance to the prompt.
-- If incorrect due to grammar, provide 'grammarErrorTags'.
+- Evaluate the user's written text based on the following criteria, appropriate for their level ({{{userLevel}}}):
+  1. Task Achievement: How well does the text address the prompt '{{{questionContext}}}'?
+  2. Coherence and Cohesion: Is the text logically structured? Are ideas connected smoothly?
+  3. Lexical Resource (Vocabulary): Is the vocabulary appropriate for the level and topic? Is there a range of words?
+  4. Grammatical Range and Accuracy: Are grammatical structures used correctly and appropriately for the level?
+- Provide detailed feedback in the 'writingDetails' object with the following fields: 'taskAchievement', 'coherenceAndCohesion', 'lexicalResource', 'grammaticalAccuracy', 'overallFeedback', and optionally 'suggestedImprovements' (array of strings).
+- The 'writingDetails.overallFeedback' field should contain a summary of performance and main suggestions. This summary should also be the value for the main 'evaluation' field of the entire response.
+- The 'writingDetails.suggestedImprovements' field can contain 1-3 specific sentences from the user's text with suggestions for how to improve them.
+- Set 'isCorrect' to true if the text is generally understandable, adequately addresses the prompt for the user's level ({{{userLevel}}}), and doesn't contain an overwhelming number of errors that impede communication. Minor errors are acceptable for a 'true' evaluation, especially at lower levels.
+- If 'isCorrect' is false due to grammar, provide relevant 'grammarErrorTags'.
+- The 'suggestedCorrection' field can optionally contain a fully corrected version of the user's text if it's short and the corrections are significant, or a few key corrections otherwise.
 {{/if}}
 
 IMPORTANT: If you provide a 'suggestedCorrection', ensure it is appropriate for the user's level ({{{userLevel}}}). If a more complex correction would be ideal but is above the user's level, first provide the ideal correction, and then explicitly state: "This might be a bit advanced. A simpler way to say this at your level ({{{userLevel}}}) would be: [simpler correction]". If the ideal correction is already appropriate for the user's level, you don't need to add the "simpler way" part.
@@ -115,12 +139,20 @@ Focus on these aspects for evaluation, depending on the module type:
 
 Ensure your response is in Russian.
 
-Output your response in the following JSON format (ensure grammarErrorTags is an array of strings, or omit if not applicable):
+Output your response in the following JSON format (ensure grammarErrorTags is an array of strings, or omit if not applicable; ensure writingDetails is an object or omit if not applicable):
 {
   "evaluation": "Evaluation of the user's response...",
   "isCorrect": true or false,
   "suggestedCorrection": "Suggested correction, if applicable...",
-  "grammarErrorTags": ["tag1", "tag2"]
+  "grammarErrorTags": ["tag1", "tag2"],
+  "writingDetails": {
+    "taskAchievement": "...",
+    "coherenceAndCohesion": "...",
+    "lexicalResource": "...",
+    "grammaticalAccuracy": "...",
+    "overallFeedback": "...",
+    "suggestedImprovements": ["..."]
+  }
 }`,
 });
 
@@ -130,16 +162,23 @@ const INITIAL_RETRY_DELAY_MS = 3000;
 const evaluateUserResponseFlow = ai.defineFlow(
   {
     name: 'evaluateUserResponseFlow',
-    inputSchema: EvaluateUserResponseInputSchema, 
+    inputSchema: EvaluateUserResponseInputSchema,
     outputSchema: EvaluateUserResponseOutputSchema,
   },
-  async (inputWithFlags: EvaluateUserResponseInput) => { 
+  async (inputWithFlags: EvaluateUserResponseInput) => {
     let retries = 0;
     while (retries < MAX_RETRIES) {
       try {
-        const {output} = await evaluateUserResponsePrompt(inputWithFlags); 
+        const {output} = await evaluateUserResponsePrompt(inputWithFlags);
         if (!output) {
           throw new Error('[evaluateUserResponseFlow] AI model returned an empty output during response evaluation.');
+        }
+        // Ensure that if it's a writing module, the 'evaluation' field is populated from 'writingDetails.overallFeedback'
+        if (inputWithFlags.isModuleWriting && output.writingDetails && output.writingDetails.overallFeedback && !output.evaluation) {
+            output.evaluation = output.writingDetails.overallFeedback;
+        } else if (inputWithFlags.isModuleWriting && output.writingDetails && output.writingDetails.overallFeedback && output.evaluation !== output.writingDetails.overallFeedback) {
+            // If AI provided both, prefer the specific overallFeedback from writingDetails for the main evaluation field.
+            output.evaluation = output.writingDetails.overallFeedback;
         }
         return output;
       } catch (error: any) {
@@ -148,18 +187,18 @@ const evaluateUserResponseFlow = ai.defineFlow(
         console.error(`[evaluateUserResponseFlow] Attempt ${retries} FAILED. Input keys: ${inputKeys}. Error:`, error.message ? error.message : error);
         if (retries >= MAX_RETRIES) {
           console.error(`[evaluateUserResponseFlow] All ${MAX_RETRIES} retries FAILED for input:`, JSON.stringify(inputWithFlags, null, 2), "Last error:", error.message ? error.message : error);
-          throw error; 
+          throw error;
         }
-        
+
         const errorMessage = error.message ? error.message.toLowerCase() : '';
         if (
           errorMessage.includes('503') ||
           errorMessage.includes('service unavailable') ||
           errorMessage.includes('model is overloaded') ||
-          errorMessage.includes('server error') || 
-          errorMessage.includes('internal error') 
+          errorMessage.includes('server error') ||
+          errorMessage.includes('internal error')
         ) {
-          const delay = INITIAL_RETRY_DELAY_MS * Math.pow(2, retries - 1); 
+          const delay = INITIAL_RETRY_DELAY_MS * Math.pow(2, retries - 1);
           console.warn(`[evaluateUserResponseFlow] Attempt ${retries} failed with transient error. Retrying in ${delay / 1000}s...`);
           await new Promise(resolve => setTimeout(resolve, delay));
         } else {
