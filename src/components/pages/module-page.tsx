@@ -145,7 +145,7 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
     "Загрузка...",
   [userData, levelId, topicId]);
 
-  const resetInteractiveStates = () => {
+  const resetInteractiveStates = useCallback(() => {
     setActiveMatchingExercise(null);
     setGermanMatchItems([]);
     setRussianMatchItems([]);
@@ -164,13 +164,18 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
     setSelectedTrueFalseAnswer(null);
     setUserSequence([]);
     setAvailableSequenceItems([]);
-  };
+  }, [ // These are all stable setState functions
+    setActiveMatchingExercise, setGermanMatchItems, setRussianMatchItems, setSelectedGermanItemId, setIsMatchingChecked,
+    setActiveAudioQuizExercise, setCurrentAudioQuizItemIndex, setSelectedAudioQuizOption, setAudioQuizItemFeedback,
+    setActiveInteractiveExercise, setCurrentInteractiveQuestionIndex, setInteractiveExerciseFeedback, setSelectedMCQOption,
+    setSelectedTrueFalseAnswer, setUserSequence, setAvailableSequenceItems
+  ]);
 
   const fetchLesson = useCallback(async () => {
     setIsLoadingTask(true);
     setLessonContent(null); 
-    setCurrentTask(null); // Reset current task
-    setFeedback(null); // Reset feedback
+    setCurrentTask(null); 
+    setFeedback(null); 
     resetInteractiveStates();
     setNoContentForModule(false); 
 
@@ -187,12 +192,12 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
       // loadedLessonContent will remain null, handled further down
     }
 
-    setLessonContent(loadedLessonContent); // Update state for rendering
+    setLessonContent(loadedLessonContent); 
 
     let vocabularySourceUsed: 'ai_interactive' | 'ai_list' | 'fallback' | 'bank_only' | 'none' = 'none';
 
     if (loadedLessonContent) {
-      setNoContentForModule(false); // Assume content exists initially if lessonData is not null
+      setNoContentForModule(false); 
       if (moduleId === 'vocabulary') {
         const matchingExercise = loadedLessonContent.interactiveVocabularyExercises?.find(ex => ex.type === 'matching') as AIMatchingExercise | undefined;
         const audioQuiz = loadedLessonContent.interactiveVocabularyExercises?.find(ex => ex.type === 'audioQuiz') as AIAudioQuizExercise | undefined;
@@ -213,23 +218,42 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
           setTotalTasks(audioQuiz.items.length);
         } else if (loadedLessonContent.vocabulary && loadedLessonContent.vocabulary.length > 0) {
             vocabularySourceUsed = 'ai_list';
+            const aiWordsForCurrentSession: VocabularyWord[] = [];
             loadedLessonContent.vocabulary.forEach((vocabItem: AILessonVocabularyItem) => {
-                addWordToBank({ german: vocabItem.german, russian: vocabItem.russian, exampleSentence: vocabItem.exampleSentence, topic: topicId, level: levelId });
+                const wordForBank = { german: vocabItem.german, russian: vocabItem.russian, exampleSentence: vocabItem.exampleSentence, topic: topicId, level: levelId };
+                addWordToBank(wordForBank);
+                aiWordsForCurrentSession.push({
+                    ...wordForBank,
+                    id: `${vocabItem.german}-${topicId}-ai-temp-${Date.now()}${Math.random()}`,
+                    consecutiveCorrectAnswers: 0, errorCount: 0,
+                });
             });
-            const wordsToUse = getWordsForTopic(topicId);
-            setCurrentVocabulary(wordsToUse); 
-            const availableWordsCount = wordsToUse.length;
-            if (availableWordsCount === 0) { vocabularySourceUsed = 'none'; } 
-            else { setTotalTasks(availableWordsCount); if (wordsToUse[0]) setCurrentTask(wordsToUse[0].german); }
+            if (aiWordsForCurrentSession.length > 0) {
+                setCurrentVocabulary(aiWordsForCurrentSession); 
+                setTotalTasks(aiWordsForCurrentSession.length); 
+                setCurrentTask(aiWordsForCurrentSession[0].german);
+            } else { vocabularySourceUsed = 'none'; }
         } else {
-            vocabularySourceUsed = 'none'; // AI responded, but no vocab for this module type
+            vocabularySourceUsed = 'none';
         }
       } else if (moduleId === 'wordTest') {
           if (loadedLessonContent.vocabulary && loadedLessonContent.vocabulary.length > 0) {
             vocabularySourceUsed = 'ai_list'; 
+            const aiWordsForCurrentSession: VocabularyWord[] = [];
             loadedLessonContent.vocabulary.forEach((vocabItem: AILessonVocabularyItem) => {
-                addWordToBank({ german: vocabItem.german, russian: vocabItem.russian, exampleSentence: vocabItem.exampleSentence, topic: topicId, level: levelId });
+                const wordForBank = { german: vocabItem.german, russian: vocabItem.russian, exampleSentence: vocabItem.exampleSentence, topic: topicId, level: levelId };
+                addWordToBank(wordForBank);
+                aiWordsForCurrentSession.push({
+                    ...wordForBank,
+                    id: `${vocabItem.german}-${topicId}-ai-test-temp-${Date.now()}${Math.random()}`,
+                    consecutiveCorrectAnswers: 0, errorCount: 0,
+                });
             });
+             if (aiWordsForCurrentSession.length > 0) {
+                setCurrentVocabulary(aiWordsForCurrentSession); 
+                setTotalTasks(aiWordsForCurrentSession.length); 
+                setCurrentTask(aiWordsForCurrentSession[0].german);
+            } else { vocabularySourceUsed = 'none'; }
           } else {
             vocabularySourceUsed = 'none';
           }
@@ -273,7 +297,7 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
             setNoContentForModule(true);
         }
       }
-    } // End of if (loadedLessonContent)
+    } 
 
     if ((moduleId === 'vocabulary' || moduleId === 'wordTest') && vocabularySourceUsed === 'none') {
         const defaultTopicDef = DEFAULT_TOPICS[levelId]?.find(t => t.id === topicId);
@@ -283,17 +307,20 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
             vocabularySourceUsed = 'fallback';
             toast({ title: "AI не предоставил слов", description: `Используем базовый словарный запас для темы "${topicName}".`, variant: "default", duration: 6000 });
             
-            const tempFallbackWords: VocabularyWord[] = defaultTopicDef.fallbackVocabulary.map(item => {
-                addWordToBank({ german: item.german, russian: item.russian, exampleSentence: item.exampleSentence, topic: topicId, level: levelId });
-                return { 
-                    id: `${item.german}-${topicId}-fallback-${Date.now()}${Math.random()}`, 
-                    german: item.german, russian: item.russian, exampleSentence: item.exampleSentence,
-                    topic: topicId, level: levelId, consecutiveCorrectAnswers: 0, errorCount: 0,
-                };
+            const tempFallbackWordsForSession: VocabularyWord[] = [];
+            defaultTopicDef.fallbackVocabulary.forEach(item => {
+                const wordForBank = { german: item.german, russian: item.russian, exampleSentence: item.exampleSentence, topic: topicId, level: levelId };
+                addWordToBank(wordForBank); 
+                tempFallbackWordsForSession.push({ 
+                    ...wordForBank, 
+                    id: `${item.german}-${topicId}-fallback-temp-${Date.now()}${Math.random()}`, 
+                    consecutiveCorrectAnswers: 0, errorCount: 0,
+                });
             });
-            wordsToUseForModule = tempFallbackWords;
+            wordsToUseForModule = tempFallbackWordsForSession;
         } else {
-            wordsToUseForModule = getWordsForTopic(topicId);
+            // No AI, no fallback, try from bank as last resort
+            wordsToUseForModule = getWordsForTopic(topicId); // This call is fine here, not a dep of fetchLesson
             if (wordsToUseForModule.length > 0) {
                 vocabularySourceUsed = 'bank_only';
                 if (!loadedLessonContent) { 
@@ -308,18 +335,18 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
             if (wordsToUseForModule[0]) setCurrentTask(wordsToUseForModule[0].german);
             setNoContentForModule(false); 
         } else {
-            vocabularySourceUsed = 'none';
+            vocabularySourceUsed = 'none'; 
             setNoContentForModule(true);
         }
     }
     
-    if (noContentForModule) { // If any path above set noContentForModule
-        if (vocabularySourceUsed !== 'fallback' && vocabularySourceUsed !== 'bank_only') { // Avoid double toasting if fallback was used
+    if (noContentForModule) { 
+        if (vocabularySourceUsed !== 'fallback' && vocabularySourceUsed !== 'bank_only') { 
             if (!loadedLessonContent && (moduleId !== 'vocabulary' && moduleId !== 'wordTest')) {
                 toast({ title: "Ошибка загрузки урока", description: `Не удалось получить материалы для модуля "${MODULE_NAMES_RU[moduleId]}". Попробуйте позже.`, variant: "destructive", duration: 7000 });
             } else if ((moduleId === 'vocabulary' || moduleId === 'wordTest') && vocabularySourceUsed === 'none') {
                  toast({ title: "Нет слов для изучения", description: "AI не предоставил слова, и ваш локальный банк слов или резервный список для этой темы пусты.", variant: "default", duration: 7000 });
-            } else if (loadedLessonContent) { // AI responded, but no specific content for this module
+            } else if (loadedLessonContent) { 
                  toast({ title: `Нет контента для модуля ${MODULE_NAMES_RU[moduleId]}`, description: "AI не смог сгенерировать необходимые материалы для этого модуля.", variant: "default", duration: 7000 });
             }
         }
@@ -328,12 +355,8 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
     setIsLoadingTask(false);
   }, [
       levelId, topicId, moduleId, topicName, 
-      getTopicLessonContent, getWordsForTopic, addWordToBank, toast, 
-      setIsLoadingTask, setLessonContent, resetInteractiveStates, setNoContentForModule,
-      setCurrentVocabulary, setTotalTasks, setCurrentTask,
-      setActiveMatchingExercise, setGermanMatchItems, setRussianMatchItems,
-      setActiveAudioQuizExercise, setCurrentAudioQuizItemIndex,
-      setActiveInteractiveExercise, setCurrentInteractiveQuestionIndex, setUserSequence, setAvailableSequenceItems
+      getTopicLessonContent, addWordToBank, toast, resetInteractiveStates, getWordsForTopic, // getWordsForTopic is used inside, but not as a direct dep causing loops
+      // setState functions are not needed in useCallback deps as they are stable
   ]);
 
   useEffect(() => {
@@ -426,7 +449,7 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
 
   const handleMatchingCheck = () => {
     if (!activeMatchingExercise) return;
-    setIsLoadingTask(true); // Indicate loading/processing
+    setIsLoadingTask(true); 
     setIsMatchingChecked(true);
     let correctMatches = 0;
     const totalPairs = activeMatchingExercise.pairs.length;
@@ -1334,6 +1357,7 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
     
 
     
+
 
 
 
