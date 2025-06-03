@@ -58,8 +58,8 @@ const prompt = ai.definePrompt({
   `,
 });
 
-const MAX_RETRIES = 4; // Increased from 3
-const INITIAL_RETRY_DELAY_MS = 2500; // Increased from 2000ms
+const MAX_RETRIES = 3; 
+const INITIAL_RETRY_DELAY_MS = 2000; 
 
 const recommendAiLessonFlow = ai.defineFlow(
   {
@@ -73,14 +73,14 @@ const recommendAiLessonFlow = ai.defineFlow(
       try {
         const {output} = await prompt(input);
         if (!output) {
-          throw new Error('AI model returned an empty output.');
+          throw new Error('[recommendAiLessonFlow] AI model returned an empty output.');
         }
         return output;
       } catch (error: any) {
         retries++;
         if (retries >= MAX_RETRIES) {
-          console.error(`Failed to get AI recommendation after ${MAX_RETRIES} attempts. Last error:`, error);
-          throw error; // Re-throw the error if all retries fail
+          console.error(`[recommendAiLessonFlow] Failed after ${MAX_RETRIES} attempts. Last error:`, error);
+          throw error; 
         }
         
         const errorMessage = error.message ? error.message.toLowerCase() : '';
@@ -88,20 +88,18 @@ const recommendAiLessonFlow = ai.defineFlow(
           errorMessage.includes('503') ||
           errorMessage.includes('service unavailable') ||
           errorMessage.includes('model is overloaded') ||
-          errorMessage.includes('server error') || // More general server error check
-          errorMessage.includes('internal error') // Another general server error check
+          errorMessage.includes('server error') || 
+          errorMessage.includes('internal error') 
         ) {
-          const delay = INITIAL_RETRY_DELAY_MS * Math.pow(2, retries - 1); // Exponential backoff
-          console.warn(`AI recommendation attempt ${retries} failed with transient error. Retrying in ${delay / 1000}s... Error: ${error.message}`);
+          const delay = INITIAL_RETRY_DELAY_MS * Math.pow(2, retries - 1); 
+          console.warn(`[recommendAiLessonFlow] Attempt ${retries} failed with transient error. Retrying in ${delay / 1000}s... Error: ${error.message}`);
           await new Promise(resolve => setTimeout(resolve, delay));
         } else {
-          // If it's not a recognized transient error, re-throw immediately
-          console.error('AI recommendation failed with non-retryable error:', error);
+          console.error('[recommendAiLessonFlow] Failed with non-retryable error:', error);
           throw error;
         }
       }
     }
-    // This part should ideally not be reached if logic is correct, but as a fallback:
-    throw new Error('Failed to get AI recommendation after multiple retries, and loop exited unexpectedly.');
+    throw new Error('[recommendAiLessonFlow] Failed after multiple retries, and loop exited unexpectedly.');
   }
 );

@@ -104,13 +104,13 @@ const evaluateUserResponseFlow = ai.defineFlow(
       try {
         const {output} = await evaluateUserResponsePrompt(input);
         if (!output) {
-          throw new Error('AI model returned an empty output during response evaluation.');
+          throw new Error('[evaluateUserResponseFlow] AI model returned an empty output during response evaluation.');
         }
         return output;
       } catch (error: any) {
         retries++;
         if (retries >= MAX_RETRIES) {
-          console.error(`Failed to evaluate user response after ${MAX_RETRIES} attempts. Last error:`, error);
+          console.error(`[evaluateUserResponseFlow] Failed after ${MAX_RETRIES} attempts. Last error:`, error);
           throw error; 
         }
         
@@ -123,14 +123,14 @@ const evaluateUserResponseFlow = ai.defineFlow(
           errorMessage.includes('internal error') 
         ) {
           const delay = INITIAL_RETRY_DELAY_MS * Math.pow(2, retries - 1); 
-          console.warn(`Response evaluation attempt ${retries} failed with transient error. Retrying in ${delay / 1000}s... Error: ${error.message}`);
+          console.warn(`[evaluateUserResponseFlow] Attempt ${retries} failed with transient error. Retrying in ${delay / 1000}s... Error: ${error.message}`);
           await new Promise(resolve => setTimeout(resolve, delay));
         } else {
-          console.error('Response evaluation failed with non-retryable error:', error);
+          console.error('[evaluateUserResponseFlow] Failed with non-retryable error:', error);
           throw error;
         }
       }
     }
-    throw new Error('Failed to evaluate user response after multiple retries, and loop exited unexpectedly.');
+    throw new Error('[evaluateUserResponseFlow] Failed after multiple retries, and loop exited unexpectedly.');
   }
 );

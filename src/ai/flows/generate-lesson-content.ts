@@ -93,13 +93,13 @@ const generateLessonContentFlow = ai.defineFlow(
       try {
         const {output} = await lessonPrompt(input);
         if (!output) {
-          throw new Error('AI model returned an empty output during lesson generation.');
+          throw new Error('[generateLessonContentFlow] AI model returned an empty output during lesson generation.');
         }
         return output;
       } catch (error: any) {
         retries++;
         if (retries >= MAX_RETRIES) {
-          console.error(`Failed to generate lesson content after ${MAX_RETRIES} attempts. Last error:`, error);
+          console.error(`[generateLessonContentFlow] Failed after ${MAX_RETRIES} attempts. Last error:`, error);
           throw error;
         }
         
@@ -112,14 +112,14 @@ const generateLessonContentFlow = ai.defineFlow(
           errorMessage.includes('internal error')
         ) {
           const delay = INITIAL_RETRY_DELAY_MS * Math.pow(2, retries - 1); // Exponential backoff
-          console.warn(`Lesson generation attempt ${retries} failed with transient error. Retrying in ${delay / 1000}s... Error: ${error.message}`);
+          console.warn(`[generateLessonContentFlow] Attempt ${retries} failed with transient error. Retrying in ${delay / 1000}s... Error: ${error.message}`);
           await new Promise(resolve => setTimeout(resolve, delay));
         } else {
-          console.error('Lesson generation failed with non-retryable error:', error);
+          console.error('[generateLessonContentFlow] Failed with non-retryable error:', error);
           throw error;
         }
       }
     }
-    throw new Error('Failed to generate lesson content after multiple retries, and loop exited unexpectedly.');
+    throw new Error('[generateLessonContentFlow] Failed after multiple retries, and loop exited unexpectedly.');
   }
 );
