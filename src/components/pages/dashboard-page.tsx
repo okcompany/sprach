@@ -31,7 +31,7 @@ interface NextStepDetails {
 
 
 export function DashboardPage() {
-  const { userData, isLoading, getAIRecommendedLesson, isLevelCompleted, isTopicCompleted } = useUserData();
+  const { userData, isLoading, getAIRecommendedLesson, isLevelCompleted, isTopicCompleted, updateUserData } = useUserData();
   const [recommendedLesson, setRecommendedLesson] = useState<AIRecommendedLesson | null>(null);
   const [isRecommendationLoading, setIsRecommendationLoading] = useState(true);
   
@@ -70,7 +70,7 @@ export function DashboardPage() {
     const fetchRecommendation = async () => {
       if (userData) {
         setIsRecommendationLoading(true);
-        const lesson = await getAIRecommendedLesson();
+        const lesson = await getAIRecommendedLesson(); // This might update currentTopicId internally
         setRecommendedLesson(lesson);
         setIsRecommendationLoading(false);
       }
@@ -88,36 +88,38 @@ export function DashboardPage() {
     }
 
     // Process AI Recommendation
-    if (recommendedLesson) {
-      const currentLevelKey = userData.currentLevel;
-      const levelTopics = DEFAULT_TOPICS[currentLevelKey] || [];
-      const customLevelTopics = userData.customTopics.filter(ct => ct.id.startsWith(currentLevelKey + "_custom_"));
-      let foundAIRecoTopicId: string | null = null;
-
-      const defaultMatch = levelTopics.find(t => t.name === recommendedLesson.topic);
-      if (defaultMatch) {
-        foundAIRecoTopicId = defaultMatch.id;
-      } else {
-        const customMatch = customLevelTopics.find(t => t.name === recommendedLesson.topic);
-        if (customMatch) {
-          foundAIRecoTopicId = customMatch.id;
+    // currentTopicId should already be updated by getAIRecommendedLesson if recommendation is valid
+    if (recommendedLesson && userData.currentTopicId) {
+        const currentLevelKey = userData.currentLevel;
+        const levelTopics = DEFAULT_TOPICS[currentLevelKey] || [];
+        const customLevelTopics = userData.customTopics.filter(ct => ct.id.startsWith(currentLevelKey + "_custom_"));
+        
+        let foundAIRecoTopicId: string | null = null;
+        const defaultMatch = levelTopics.find(t => t.name === recommendedLesson.topic);
+        if (defaultMatch) {
+            foundAIRecoTopicId = defaultMatch.id;
+        } else {
+            const customMatch = customLevelTopics.find(t => t.name === recommendedLesson.topic);
+            if (customMatch) {
+                foundAIRecoTopicId = customMatch.id;
+            }
         }
-      }
-
-      if (foundAIRecoTopicId) {
-        setActionableAIReco({
-          topicId: foundAIRecoTopicId,
-          topicName: recommendedLesson.topic,
-          link: `/levels/${currentLevelSlug}/${foundAIRecoTopicId}`,
-          reasoning: recommendedLesson.reasoning,
-          modules: recommendedLesson.modules as ModuleType[],
-        });
-        setNextStepDetails(null); // AI reco takes precedence
-        return; 
-      }
+        // Check if the AI-recommended topic matches the currentTopicId in context
+        if (foundAIRecoTopicId && foundAIRecoTopicId === userData.currentTopicId) {
+            setActionableAIReco({
+                topicId: foundAIRecoTopicId,
+                topicName: recommendedLesson.topic,
+                link: `/levels/${currentLevelSlug}/${foundAIRecoTopicId}`,
+                reasoning: recommendedLesson.reasoning,
+                modules: recommendedLesson.modules as ModuleType[],
+            });
+            setNextStepDetails(null); // AI reco takes precedence
+            return;
+        }
     }
+    
 
-    // If no actionable AI recommendation, or recommendedLesson is null
+    // If no actionable AI recommendation, or recommendedLesson is null, or it doesn't match currentTopicId
     setActionableAIReco(null); // Ensure it's reset
 
     // Determine next step based on user progress
@@ -133,8 +135,9 @@ export function DashboardPage() {
       });
     } else if (isLevelCompleted(userData.currentLevel)) { 
       setNextStepDetails({
+        // No topicId for completed level card
         link: `/levels`,
-        cardIcon: PartyPopper, // Or CheckCircle
+        cardIcon: PartyPopper, 
         cardTitle: `Уровень ${userData.currentLevel} пройден!`,
         cardDescription: "Поздравляем! Вы успешно завершили текущий уровень.",
         buttonText: "Выбрать новый уровень",
@@ -142,6 +145,7 @@ export function DashboardPage() {
       });
     } else { 
       setNextStepDetails({
+        // No specific topicId if all topics are done but level not marked complete OR no topics exist
         link: `/levels/${currentLevelSlug}`,
         cardIcon: AlertTriangle,
         cardTitle: "Исследуйте уровень дальше",
@@ -153,7 +157,7 @@ export function DashboardPage() {
   }, [recommendedLesson, userData, isLoading, nextTopicId, currentLevelSlug, isLevelCompleted]);
 
 
-  if (isLoading || (!actionableAIReco && !nextStepDetails && !isRecommendationLoading) ) { // Added !isRecommendationLoading to prevent premature loader
+  if (isLoading || (!actionableAIReco && !nextStepDetails && !isRecommendationLoading) ) { 
     return <div className="text-center p-10">Загрузка данных пользователя...</div>;
   }
   
@@ -161,7 +165,6 @@ export function DashboardPage() {
     return <div className="text-center p-10">Не удалось загрузить данные. Пожалуйста, обновите страницу.</div>;
   }
   
-  // Calculate overall progress
   const calculateOverallProgress = () => {
     if (!userData) return 0;
     let totalTopics = 0;
@@ -223,6 +226,7 @@ export function DashboardPage() {
               Рекомендуемые модули: {actionableAIReco.modules.map(m => MODULE_NAMES_RU[m] || m).join(', ')}
             </p>
             <Button asChild>
+                {/* currentTopicId should be set by getAIRecommendedLesson context update */}
                 <Link href={actionableAIReco.link}>
                     Начать рекомендованный урок <ArrowRight className="ml-2 h-4 w-4" />
                 </Link>
@@ -242,7 +246,15 @@ export function DashboardPage() {
           </CardHeader>
           <CardContent>
             {nextStepDetails.topicName && <h3 className="text-xl font-semibold mb-2">{nextStepDetails.topicName}</h3>}
-             <Button asChild variant={nextStepDetails.topicName ? 'default' : 'outline'}>
+             <Button 
+                asChild 
+                variant={nextStepDetails.topicName ? 'default' : 'outline'}
+                onClick={() => {
+                  if (nextStepDetails.topicId) {
+                    updateUserData({ currentTopicId: nextStepDetails.topicId });
+                  }
+                }}
+              >
                 <Link href={nextStepDetails.link}>
                     {nextStepDetails.buttonText} <ArrowRight className="ml-2 h-4 w-4" />
                 </Link>
@@ -278,4 +290,3 @@ export function DashboardPage() {
     </div>
   );
 }
-

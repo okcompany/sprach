@@ -18,7 +18,7 @@ interface LevelTopicsPageProps {
 
 export function LevelTopicsPage({ levelId }: LevelTopicsPageProps) {
   const router = useRouter();
-  const { userData, isLoading, addCustomTopic, isTopicCompleted } = useUserData();
+  const { userData, isLoading, addCustomTopic, isTopicCompleted, updateUserData } = useUserData();
   const [customTopicName, setCustomTopicName] = useState('');
 
   if (isLoading) {
@@ -155,7 +155,7 @@ export function LevelTopicsPage({ levelId }: LevelTopicsPageProps) {
                 </p>
               </CardContent>
               <CardFooter>
-                <Button asChild className="w-full">
+                <Button asChild className="w-full" onClick={() => updateUserData({ currentTopicId: topic.id })}>
                   <Link href={`/levels/${levelId.toLowerCase()}/${topic.id}`}>
                     {buttonText}
                   </Link>
@@ -168,4 +168,3 @@ export function LevelTopicsPage({ levelId }: LevelTopicsPageProps) {
     </div>
   );
 }
-
