@@ -81,31 +81,22 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
       if (moduleId === 'vocabulary' || moduleId === 'wordTest') {
           let wordsToUse = getWordsForTopic(topicId);
           
-          if (wordsToUse.length === 0 && content.vocabulary.length > 0) {
+          if (content.vocabulary && content.vocabulary.length > 0) {
               content.vocabulary.forEach((vocabItem: AILessonVocabularyItem) => {
-                  addWordToBank({ 
-                      german: vocabItem.german, 
-                      russian: vocabItem.russian, 
-                      exampleSentence: vocabItem.exampleSentence, 
-                      topic: topicId, 
-                      level: levelId 
-                  });
+                  const existingWordInBankForTopic = wordsToUse.find(w => 
+                    w.german.toLowerCase() === vocabItem.german.toLowerCase()
+                  );
+                  if(!existingWordInBankForTopic) {
+                       addWordToBank({ 
+                        german: vocabItem.german, 
+                        russian: vocabItem.russian, 
+                        exampleSentence: vocabItem.exampleSentence, 
+                        topic: topicId, 
+                        level: levelId 
+                    });
+                  }
               });
-              wordsToUse = getWordsForTopic(topicId); 
-          } else if (wordsToUse.length > 0 && content.vocabulary.length > 0) {
-            content.vocabulary.forEach((vocabItem: AILessonVocabularyItem) => {
-                const existingWord = wordsToUse.find(w => w.german.toLowerCase() === vocabItem.german.toLowerCase());
-                if(!existingWord) {
-                     addWordToBank({ 
-                      german: vocabItem.german, 
-                      russian: vocabItem.russian, 
-                      exampleSentence: vocabItem.exampleSentence, 
-                      topic: topicId, 
-                      level: levelId 
-                  });
-                }
-            });
-            wordsToUse = getWordsForTopic(topicId);
+              wordsToUse = getWordsForTopic(topicId); // Re-fetch to include newly added words
           }
 
           setCurrentVocabulary(wordsToUse); 
@@ -129,11 +120,14 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
             setTotalTasks(1); 
           }
       } else if (moduleId === 'reading') {
-          if (content.readingQuestions && content.readingQuestions.length > 0) {
+          if (content.readingPassage && content.readingQuestions && content.readingQuestions.length > 0) {
             setTotalTasks(content.readingQuestions.length);
-            setCurrentTask(content.readingQuestions[0]); // First question is the current task
+            setCurrentTask(content.readingQuestions[0]); 
+          } else if (content.readingPassage) {
+            setCurrentTask("Какова главная идея этого текста?"); 
+            setTotalTasks(1);
           } else {
-            setCurrentTask(content.readingPassage); // Fallback if no questions: task is the passage
+            setCurrentTask("Нет данных для модуля чтения.");
             setTotalTasks(1);
           }
       } else if (moduleId === 'writing') {
@@ -250,7 +244,7 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
     } else if (moduleId === 'reading') {
         if (lessonContent.readingPassage && lessonContent.readingQuestions && lessonContent.readingQuestions[currentQuestionIndex]) {
             questionContext = `Текст для чтения: "${lessonContent.readingPassage}". Вопрос по тексту: "${lessonContent.readingQuestions[currentQuestionIndex]}"`;
-        } else if (lessonContent.readingPassage) { // Fallback if no specific questions, currentTask might be the passage or a default question
+        } else if (lessonContent.readingPassage) { 
              questionContext = `Текст для чтения: "${lessonContent.readingPassage}". Вопрос по тексту: "${currentTask}"`;
         } else {
             questionContext = "Ошибка: нет данных для упражнения по чтению.";
@@ -381,7 +375,7 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
             <Button onClick={() => speak(lessonContent.listeningExercise.script, 'de-DE')} className="mb-4">
               <Speaker className="mr-2 h-4 w-4" /> Прослушать текст
             </Button>
-            {currentListeningQuestion && ( // currentTask is the question for listening
+            {currentListeningQuestion && ( 
                  <p className="text-lg mb-2">Вопрос {currentQuestionIndex + 1}: {currentTask}</p>
             )}
             {!currentTask && tasksCompleted < totalTasks && <p className="text-muted-foreground">Загрузка вопроса...</p>}
@@ -390,8 +384,6 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
         );
       case 'reading':
         if (!lessonContent.readingPassage) return <p className="text-center p-4 text-muted-foreground">Загрузка текста для чтения...</p>;
-        // currentTask holds the current question for reading module
-        // currentQuestionIndex is the 0-based index of this question
         return (
           <div>
             <h3 className="text-xl font-semibold mb-2">Чтение:</h3>
@@ -401,7 +393,7 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
             )}
             {!currentTask && tasksCompleted < totalTasks && lessonContent.readingQuestions && lessonContent.readingQuestions.length > 0 && <p className="text-muted-foreground">Загрузка вопроса...</p>}
             {(!lessonContent.readingQuestions || lessonContent.readingQuestions.length === 0) && tasksCompleted < totalTasks && (
-                 <p className="text-lg mb-2">Вопрос: {currentTask}</p> // Fallback for single task/passage
+                 <p className="text-lg mb-2">Вопрос: {currentTask}</p> 
             )}
             {tasksCompleted >= totalTasks && <p className="text-muted-foreground">Все вопросы пройдены.</p>}
           </div>
@@ -449,7 +441,7 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
                 value={userResponse}
                 onChange={(e) => setUserResponse(e.target.value)}
                 className="mb-4 min-h-[100px]"
-                disabled={isLoadingTask || tasksCompleted >= totalTasks || (!currentTask && (moduleId === 'listening' || moduleId === 'reading' && lessonContent?.readingQuestions && lessonContent.readingQuestions.length > 0))}
+                disabled={isLoadingTask || tasksCompleted >= totalTasks || (!currentTask && (moduleId === 'listening' || (moduleId === 'reading' && lessonContent?.readingQuestions && lessonContent.readingQuestions.length > 0)))}
               />
             </>
           ) : (
@@ -536,5 +528,7 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
     
 
       
+
+    
 
     
