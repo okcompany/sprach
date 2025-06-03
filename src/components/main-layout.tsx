@@ -10,6 +10,7 @@ import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { useUserData } from '@/context/user-data-context';
 import { cn } from '@/lib/utils';
 import Image from 'next/image';
+import { Progress } from '@/components/ui/progress'; // Import Progress component
 
 interface NavItem {
   href: string;
@@ -26,7 +27,9 @@ const navItems: NavItem[] = [
 
 export function MainLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
-  const { userData, isLoading } = useUserData();
+  const { userData, isLoading, getCurrentLevelProgress } = useUserData();
+
+  const currentLevelProgress = userData ? getCurrentLevelProgress() : 0;
 
   const renderNavLinks = (isMobile = false) => (
     <nav className={cn("flex flex-col gap-2", isMobile ? "p-4" : "px-2 py-4")}>
@@ -68,7 +71,13 @@ export function MainLayout({ children }: { children: ReactNode }) {
           {renderNavLinks()}
         </div>
         <div className="mt-auto p-4 border-t border-sidebar-border">
-            <p className="text-xs text-sidebar-foreground/70">Уровень: {userData?.currentLevel}</p>
+            <p className="text-xs text-sidebar-foreground/70 mb-1">Уровень: {userData?.currentLevel}</p>
+            {userData && (
+              <>
+                <Progress value={currentLevelProgress} className="h-2 mb-1 bg-sidebar-accent/20 [&>div]:bg-sidebar-primary" />
+                <p className="text-xs text-sidebar-foreground/70">Прогресс: {currentLevelProgress}%</p>
+              </>
+            )}
         </div>
       </aside>
 
@@ -95,7 +104,13 @@ export function MainLayout({ children }: { children: ReactNode }) {
               </div>
               {renderNavLinks(true)}
               <div className="mt-auto p-4 border-t border-sidebar-border">
-                 <p className="text-xs text-sidebar-foreground/70">Уровень: {userData?.currentLevel}</p>
+                 <p className="text-xs text-sidebar-foreground/70 mb-1">Уровень: {userData?.currentLevel}</p>
+                 {userData && (
+                    <>
+                        <Progress value={currentLevelProgress} className="h-2 mb-1 bg-sidebar-accent/20 [&>div]:bg-sidebar-primary" />
+                        <p className="text-xs text-sidebar-foreground/70">Прогресс: {currentLevelProgress}%</p>
+                    </>
+                 )}
               </div>
             </SheetContent>
           </Sheet>

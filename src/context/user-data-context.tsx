@@ -1,4 +1,3 @@
-
 "use client";
 
 import type { ReactNode } from 'react';
@@ -13,7 +12,7 @@ const USER_DATA_KEY = 'sprachheld_userData';
 
 const initialUserData: UserData = {
   currentLevel: 'A0',
-  currentTopicId: undefined, // Явно добавлено для ясности
+  currentTopicId: undefined, 
   profile: {},
   progress: {},
   vocabularyBank: [],
@@ -40,6 +39,7 @@ interface UserDataContextType {
   getWordsForReview: () => VocabularyWord[];
   isTopicCompleted: (level: LanguageLevel, topicId: string) => boolean;
   isLevelCompleted: (level: LanguageLevel) => boolean;
+  getCurrentLevelProgress: () => number;
 }
 
 const UserDataContext = createContext<UserDataContextType | undefined>(undefined);
@@ -69,7 +69,7 @@ export const UserDataProvider = ({ children }: { children: ReactNode }) => {
             }
           });
         });
-        if (parsedData.currentTopicId === undefined) { // Гарантируем наличие currentTopicId
+        if (parsedData.currentTopicId === undefined) { 
             parsedData.currentTopicId = initialUserData.currentTopicId;
         }
         setUserData(parsedData);
@@ -110,7 +110,13 @@ export const UserDataProvider = ({ children }: { children: ReactNode }) => {
     setUserData(prev => {
         if (!prev) return null;
         const newSettings = updates.settings ? { ...prev.settings, ...updates.settings, lastActivityTimestamp: Date.now() } : { ...prev.settings, lastActivityTimestamp: Date.now() };
-        return { ...prev, ...updates, settings: newSettings };
+        
+        let newCurrentTopicId = prev.currentTopicId;
+        if ('currentTopicId' in updates) {
+          newCurrentTopicId = updates.currentTopicId;
+        }
+        
+        return { ...prev, ...updates, settings: newSettings, currentTopicId: newCurrentTopicId };
     });
   }, []);
   
@@ -127,7 +133,7 @@ export const UserDataProvider = ({ children }: { children: ReactNode }) => {
         };
       });
     });
-    const freshUserData = {...initialUserData, progress: defaultProgress, currentTopicId: undefined }; // Явный сброс currentTopicId
+    const freshUserData = {...initialUserData, progress: defaultProgress, currentTopicId: undefined }; 
     setUserData(freshUserData);
     localStorage.setItem(USER_DATA_KEY, JSON.stringify(freshUserData));
   }, []);
@@ -135,19 +141,15 @@ export const UserDataProvider = ({ children }: { children: ReactNode }) => {
   const isTopicCompleted = useCallback((level: LanguageLevel, topicId: string): boolean => {
     if (!userData?.progress?.[level]?.topics?.[topicId]) return false;
     const topic = userData.progress[level]!.topics[topicId];
-    // If already marked as completed in data, return true
+    
     if (topic.completed) return true;
 
-    // Otherwise, check if all modules are passed
     const allModulesPassed = ALL_MODULE_TYPES.every(moduleType => {
       const moduleProgress = topic.modules[moduleType];
       return moduleProgress && moduleProgress.score !== null && moduleProgress.score >= 70;
     });
     
-    // If all modules passed and topic not yet marked completed, update it
-    // This function should ideally be pure.
-    // The actual update of topic.completed status is now fully handled in updateModuleProgress.
-    return allModulesPassed; // Return based on actual module status
+    return allModulesPassed; 
   }, [userData]);
 
 
@@ -163,21 +165,16 @@ export const UserDataProvider = ({ children }: { children: ReactNode }) => {
     
     const allRequiredTopicIds = [...new Set([...defaultTopicIdsInLevel, ...customTopicIdsInLevel])];
 
-    if(allRequiredTopicIds.length === 0 && DEFAULT_TOPICS[level].length > 0) {
-        // This condition means default topics are defined for the level, but they are not found in allRequiredTopicIds
-        // or custom topics are not being properly identified.
-        // This might occur if customTopic.id structure doesn't match or default topics aren't in userData.progress yet.
-        // For a robust check, ensure topics in userData.progress[level].topics are used for the check.
+    if (allRequiredTopicIds.length === 0) {
+      // If a level has no topics (neither default nor custom associated with it in progress data)
+      // it cannot be "completed" by topic progression. Its `completed` flag would have to be set manually or by other logic.
+      // For safety, if no topics are defined/tracked, it's not "completed" unless explicitly flagged.
+      return levelData.completed; 
     }
-    // More robust check: use topics present in the user's progress data for that level
-    const topicsInUserData = Object.keys(userData.progress[level]?.topics || {});
-    if (topicsInUserData.length === 0 && DEFAULT_TOPICS[level].length > 0) return false; // No progress on any topic yet
-    if (topicsInUserData.length === 0 && customTopicsForLevel.length > 0 && defaultTopicIdsInLevel.length === 0) return false; // Only custom topics and no progress
 
-    const allTopicsToCheck = [...new Set([...defaultTopicIdsInLevel, ...customTopicIdsInLevel])];
-    if (allTopicsToCheck.length === 0) return false; // Cannot complete a level with no topics to complete
-
-    const allTopicsDone = allTopicsToCheck.every(topicId => isTopicCompleted(level, topicId));
+    const allTopicsDone = allRequiredTopicIds.every(topicId => 
+      userData.progress[level]!.topics[topicId] ? isTopicCompleted(level, topicId) : false
+    );
 
     if (allTopicsDone && !levelData.completed) {
          const newProgress = JSON.parse(JSON.stringify(userData.progress));
@@ -188,12 +185,45 @@ export const UserDataProvider = ({ children }: { children: ReactNode }) => {
          if (currentLevelIndex < ALL_LEVELS.length - 1) {
             newCurrentLevel = ALL_LEVELS[currentLevelIndex + 1];
          }
-        // Update state with all changes together
         setUserData(prev => prev ? ({ ...prev, progress: newProgress, currentLevel: newCurrentLevel, settings: { ...prev.settings, lastActivityTimestamp: Date.now() } }) : null);
         return true;
     }
     return levelData.completed;
   }, [userData, isTopicCompleted, setUserData]);
+
+  const getCurrentLevelProgress = useCallback((): number => {
+    if (!userData || !userData.currentLevel) return 0;
+    const level = userData.currentLevel;
+    const levelData = userData.progress[level];
+    if (!levelData) return 0;
+
+    const defaultTopicObjects = DEFAULT_TOPICS[level] || [];
+    const customTopicObjectsForLevel = userData.customTopics.filter(
+      (ct) => ct.id.startsWith(level + "_custom_")
+    );
+
+    const allTopicDefinitionsForLevel = [
+        ...defaultTopicObjects,
+        ...customTopicObjectsForLevel.map(ct => ({id: ct.id, name: ct.name})) // Ensure custom topics have same shape for id extraction
+    ];
+    
+    const allUniqueTopicIdsForLevel = [...new Set(allTopicDefinitionsForLevel.map(t => t.id))];
+
+
+    if (allUniqueTopicIdsForLevel.length === 0) {
+      return levelData.completed ? 100 : 0;
+    }
+
+    let completedTopicsCount = 0;
+    allUniqueTopicIdsForLevel.forEach(topicId => {
+      if (levelData.topics[topicId] && isTopicCompleted(level, topicId)) {
+        completedTopicsCount++;
+      }
+    });
+    
+    const progress = (completedTopicsCount / allUniqueTopicIdsForLevel.length) * 100;
+    return Math.round(progress);
+  }, [userData, isTopicCompleted]);
 
 
   const updateModuleProgress = useCallback((level: LanguageLevel, topicId: string, moduleId: ModuleType, score: number) => {
@@ -211,7 +241,7 @@ export const UserDataProvider = ({ children }: { children: ReactNode }) => {
           name: defaultTopicInfo?.name || customTopicInfo?.name || "Неизвестная тема", 
           modules: {}, 
           completed: false,
-          custom: !!customTopicInfo // Mark as custom if it's in customTopics array
+          custom: !!customTopicInfo 
         };
       }
       
@@ -233,21 +263,29 @@ export const UserDataProvider = ({ children }: { children: ReactNode }) => {
         return modProg && modProg.score !== null && modProg.score >= 70;
       });
 
-      if (allModulesPassed && !topic.completed) { // Check !topic.completed to avoid redundant writes
+      if (allModulesPassed && !topic.completed) { 
         updatedUserData.progress[level]!.topics[topicId].completed = true;
       }
 
       // Check for level completion after topic completion
       if (updatedUserData.progress[level]!.topics[topicId].completed) {
-          const levelData = updatedUserData.progress[level]!;
-          const defaultTopicIdsInLevel = DEFAULT_TOPICS[level].map(t => t.id);
-          const customTopicIdsInLevel = updatedUserData.customTopics.filter(ct => ct.id.startsWith(level + "_")).map(ct => ct.id);
-          const requiredTopicIds = [...new Set([...defaultTopicIdsInLevel, ...customTopicIdsInLevel])];
+          const currentLevelData = updatedUserData.progress[level]!;
+          const defaultTopicIdsForLevel = DEFAULT_TOPICS[level].map(t => t.id);
+          const customTopicIdsForLevel = updatedUserData.customTopics.filter(ct => ct.id.startsWith(level + "_")).map(ct => ct.id);
           
-          if (requiredTopicIds.length > 0) { // Only check level completion if there are topics defined
-            const allLevelTopicsCompleted = requiredTopicIds.every(tId => updatedUserData.progress[level]!.topics[tId]?.completed);
+          // Ensure we only consider topics that are actually defined for the level
+          const topicsInUserDataForLevel = Object.keys(updatedUserData.progress[level]?.topics || {});
+          
+          const allRelevantTopicIds = [...new Set([
+            ...defaultTopicIdsForLevel.filter(id => topicsInUserDataForLevel.includes(id)),
+            ...customTopicIdsForLevel.filter(id => topicsInUserDataForLevel.includes(id))
+          ])];
+
+
+          if (allRelevantTopicIds.length > 0) { 
+            const allLevelTopicsCompleted = allRelevantTopicIds.every(tId => updatedUserData.progress[level]!.topics[tId]?.completed);
             
-            if (allLevelTopicsCompleted && !levelData.completed) { 
+            if (allLevelTopicsCompleted && !currentLevelData.completed) { 
               updatedUserData.progress[level]!.completed = true;
               const currentLevelIndex = ALL_LEVELS.indexOf(level);
               if (currentLevelIndex < ALL_LEVELS.length - 1) {
@@ -259,7 +297,7 @@ export const UserDataProvider = ({ children }: { children: ReactNode }) => {
       
       return updatedUserData;
     });
-  }, [setUserData]); 
+  }, [setUserData, isTopicCompleted]); // Added isTopicCompleted dependency
 
   const addCustomTopic = useCallback(async (topicName: string) => {
     setUserData(prev => {
@@ -292,7 +330,6 @@ export const UserDataProvider = ({ children }: { children: ReactNode }) => {
   
   const getTopicLessonContent = useCallback(async (level: LanguageLevel, topicName: string): Promise<AILessonContent | null> => {
     try {
-      // Type assertion for lesson to match updated AILessonContent
       const lesson = await generateLessonContentAI({ level, topic: topicName }) as AILessonContent;
       return lesson;
     } catch (error) {
@@ -335,7 +372,6 @@ export const UserDataProvider = ({ children }: { children: ReactNode }) => {
       Object.entries(levelData.topics).forEach(([topicId, topicData]) => {
         const topicIdentifier = `${currentLevel}-${topicData.name || topicId}`;
         userProgressForAI[topicIdentifier] = 0;
-        // let totalScore = 0; // Not used
         let attemptedModules = 0;
         let modulesPassed = 0;
 
@@ -349,12 +385,11 @@ export const UserDataProvider = ({ children }: { children: ReactNode }) => {
                     weakAreas.push(`${moduleKey} in ${topicData.name || topicId}`);
                 }
             } else if (!moduleData) {
-                // Not attempted
                 weakAreas.push(`${moduleKey} in ${topicData.name || topicId} (not attempted)`);
             }
         });
-        if (attemptedModules > 0) {
-          userProgressForAI[topicIdentifier] = (modulesPassed / ALL_MODULE_TYPES.length) * 100; // Progress as % of all modules passed
+        if (ALL_MODULE_TYPES.length > 0) { // Avoid division by zero if ALL_MODULE_TYPES is empty
+          userProgressForAI[topicIdentifier] = (modulesPassed / ALL_MODULE_TYPES.length) * 100; 
         }
         
         if(!topicData.completed && attemptedModules < ALL_MODULE_TYPES.length){
@@ -395,6 +430,9 @@ export const UserDataProvider = ({ children }: { children: ReactNode }) => {
 
          if(foundRecommendedTopicId) {
             updateUserData({ currentTopicId: foundRecommendedTopicId });
+         } else {
+            // If AI recommended a topic name not found, we could clear currentTopicId or leave as is.
+            // For now, let's leave it. Or, try to find first non-completed topic as a fallback.
          }
       }
       return recommendation;
@@ -432,12 +470,8 @@ export const UserDataProvider = ({ children }: { children: ReactNode }) => {
       if (wordIndex === -1) return prev; 
       
       const newBank = [...prev.vocabularyBank];
-      const oldWord = prev.vocabularyBank[wordIndex];
-      
-      newBank[wordIndex] = {
-          ...updatedWord,
-          consecutiveCorrectAnswers: updatedWord.errorCount > (oldWord.errorCount || 0) ? 0 : updatedWord.consecutiveCorrectAnswers,
-      };
+      newBank[wordIndex] = updatedWord; // The logic for consecutiveCorrectAnswers vs errorCount should be in the caller or here if more complex.
+                                      // For now, directly using updatedWord.
       
       return { ...prev, vocabularyBank: newBank, settings: { ...prev.settings, lastActivityTimestamp: Date.now() } };
     });
@@ -450,8 +484,8 @@ export const UserDataProvider = ({ children }: { children: ReactNode }) => {
   const getWordsForReview = useCallback((): VocabularyWord[] => {
     if (!userData) return [];
     return userData.vocabularyBank.filter(word => {
-        const needsReviewByErrors = word.errorCount > 0;
-        const needsReviewByRepetition = word.consecutiveCorrectAnswers < 3;
+        const needsReviewByErrors = (word.errorCount || 0) > 0; // Ensure errorCount is defined
+        const needsReviewByRepetition = (word.consecutiveCorrectAnswers || 0) < 3; // Ensure consecutiveCorrectAnswers is defined
         return needsReviewByErrors || needsReviewByRepetition;
     }).sort((a, b) => (a.lastTestedDate && b.lastTestedDate) ? new Date(a.lastTestedDate).getTime() - new Date(b.lastTestedDate).getTime() : (a.lastTestedDate ? -1 : 1) ); 
   }, [userData]);
@@ -473,7 +507,8 @@ export const UserDataProvider = ({ children }: { children: ReactNode }) => {
         getWordsForTopic,
         getWordsForReview,
         isTopicCompleted,
-        isLevelCompleted
+        isLevelCompleted,
+        getCurrentLevelProgress
       }}>
       {children}
     </UserDataContext.Provider>
@@ -487,6 +522,3 @@ export const useUserData = () => {
   }
   return context;
 };
-
-
-    
