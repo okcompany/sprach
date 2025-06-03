@@ -1,4 +1,3 @@
-
 "use client";
 
 import Link from 'next/link';
@@ -173,5 +172,4 @@ export function LevelTopicsPage({ levelId }: LevelTopicsPageProps) {
       </div>
     </div>
   );
-
-    
+} // <-- Вот сюда добавлена недостающая скобка!
