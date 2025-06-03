@@ -115,17 +115,17 @@ This is a 'reading' module.
 - Provide 'grammarErrorTags' only if the user's answer itself contains significant grammatical errors that hinder understanding, and these errors are relevant to their learning level.
 {{/if}}
 {{#if isModuleWriting}}
-This is a 'writing' module.
-- When providing feedback in the 'writingDetails' object, ensure each field ('taskAchievement', 'coherenceAndCohesion', etc.) contains specific and DISTINCT information relevant ONLY to that criterion.
+This is a 'writing' module. For the writing module, all feedback in 'writingDetails' must be concise and directly related to the specific criterion. Avoid lengthy elaborations or general commentary outside of \`overallFeedback\`.
+- When providing feedback in the 'writingDetails' object, ensure each field ('taskAchievement', 'coherenceAndCohesion', etc.) contains specific, DISTINCT, and CONCISE information relevant ONLY to that criterion.
 - Evaluate the user's written text based on the following criteria, appropriate for their level ({{{userLevel}}}):
-  1.  'taskAchievement': Focus SOLELY on how well the user's text met the explicit requirements of the writing prompt '{{{questionContext}}}' (e.g., did they write about the topic, did they include specific information if asked, was it the right length for the level?). Do NOT include general praise or summaries here. Keep this section concise and to the point.
-  2.  'coherenceAndCohesion': Focus SOLELY on the text's logical structure, flow, and use of linking words. Keep this section concise.
-  3.  'lexicalResource' (Vocabulary): Focus SOLELY on vocabulary choice, range, and appropriateness for the level and topic. Keep this section concise.
-  4.  'grammaticalAccuracy': Focus SOLELY on grammatical correctness and range of structures used, appropriate for the level. Keep this section concise.
+  1.  'taskAchievement': Evaluate ONLY if the task was completed as per instructions (e.g., did they write about the topic, include specific information if asked, was it the right length for the level?). Do NOT include general praise or summaries here. Keep this section strictly analytical, factual, and concise.
+  2.  'coherenceAndCohesion': Evaluate ONLY the text's logical structure, flow, and use of linking words. No praise or generic comments. Keep this section concise.
+  3.  'lexicalResource' (Vocabulary): Evaluate ONLY vocabulary choice, range, and appropriateness for the level and topic. No praise or generic comments. Keep this section concise.
+  4.  'grammaticalAccuracy': Evaluate ONLY grammatical correctness and range of structures used, appropriate for the level. No praise or generic comments. Keep this section concise.
 - Provide detailed feedback in the 'writingDetails' object with these fields.
-- The 'writingDetails.overallFeedback' field should contain a BRIEF, holistic summary of overall performance, general encouragement, and 1-2 key suggestions for improvement or next steps. This is the main summary. THIS SUMMARY SHOULD BE THE VALUE for the main 'evaluation' field of the entire response.
+- The 'writingDetails.overallFeedback' field should contain a VERY BRIEF (1-2 sentences maximum) holistic summary of overall performance. If you wish to add a short motivational sentence, this is the *only* place for it, and it must be unique and not repeated. THIS SUMMARY SHOULD BE THE VALUE for the main 'evaluation' field of the entire response.
 - The 'writingDetails.suggestedImprovements' field can contain 1-3 *specific* examples from the user's text with suggested rewrites, if applicable. Focus on concrete examples.
-- AVOID generic, repetitive phrases across different fields within 'writingDetails'. The goal is to provide targeted, useful, and non-redundant feedback for each aspect.
+- CRITICAL: Do NOT use lengthy, repetitive motivational phrases such as 'Вместе мы - непобедимы! У вас все получится! Я всегда буду рядом...' or similar extended encouragements in any field. If any encouragement is given in \`overallFeedback\`, it must be extremely brief (a few words) and not repeated. The user needs specific, actionable feedback, not repeated motivational slogans.
 - Set 'isCorrect' to true if the text is generally understandable, adequately addresses the prompt for the user's level ({{{userLevel}}}), and doesn't contain an overwhelming number of errors that impede communication. Minor errors are acceptable for a 'true' evaluation, especially at lower levels.
 - If 'isCorrect' is false due to grammar, provide relevant 'grammarErrorTags'.
 - The 'suggestedCorrection' field can optionally contain a fully corrected version of the user's text if it's short and the corrections are significant, or a few key corrections otherwise.
