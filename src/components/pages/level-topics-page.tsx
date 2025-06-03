@@ -10,7 +10,7 @@ import { Progress } from '@/components/ui/progress';
 import { DEFAULT_TOPICS, type LanguageLevel, type TopicProgress, ALL_MODULE_TYPES, MODULE_NAMES_RU } from '@/types/german-learning';
 import { useUserData } from '@/context/user-data-context';
 import { useState } from 'react';
-import { CheckCircle, PlusCircle } from 'lucide-react';
+import { CheckCircle, PlusCircle, ArrowRight, PartyPopper } from 'lucide-react';
 
 interface LevelTopicsPageProps {
   levelId: LanguageLevel;
@@ -30,21 +30,21 @@ export function LevelTopicsPage({ levelId }: LevelTopicsPageProps) {
   }
   
   const levelProgressData = userData.progress[levelId];
+  const isCurrentLevelCompleted = levelProgressData?.completed || false;
   const defaultTopicsForLevel = DEFAULT_TOPICS[levelId] || [];
   
-  // Combine default topics with progress data
   const topicsWithProgress = defaultTopicsForLevel.map(defaultTopic => {
     const progress = levelProgressData?.topics[defaultTopic.id];
     return {
       ...defaultTopic,
-      ...progress, // This will overwrite id and name if they exist in progress, but they should match
+      ...progress,
       modules: progress?.modules || {},
       completed: progress?.completed || isTopicCompleted(levelId, defaultTopic.id),
     };
   });
 
   const customTopicsForLevel = userData.customTopics
-    .filter(topic => topic.id.startsWith(levelId + "_custom_")) // Assuming custom topic ID format
+    .filter(topic => topic.id.startsWith(levelId + "_custom_"))
     .map(customTopic => {
         const progress = levelProgressData?.topics[customTopic.id];
         return {
@@ -56,21 +56,15 @@ export function LevelTopicsPage({ levelId }: LevelTopicsPageProps) {
   
   const allTopics = [...topicsWithProgress, ...customTopicsForLevel];
 
-
   const handleAddCustomTopic = async () => {
     if (customTopicName.trim()) {
       await addCustomTopic(customTopicName.trim());
       setCustomTopicName('');
-      // No need to manually refresh, context update should trigger re-render
     }
   };
 
   const calculateTopicProgress = (topic: TopicProgress | (typeof defaultTopicsForLevel[0] & Partial<TopicProgress>)) => {
     if (!topic.modules) return 0;
-    const moduleScores = Object.values(topic.modules).map(m => m?.score ?? 0);
-    if (moduleScores.length === 0) return 0;
-    // A topic is complete if all modules are >= 70%
-    // For progress bar, let's show average score of attempted modules or number of completed modules
     const completedModules = Object.values(topic.modules).filter(m => m?.score !== null && m.score >=70).length;
     return (completedModules / ALL_MODULE_TYPES.length) * 100;
   };
@@ -83,6 +77,28 @@ export function LevelTopicsPage({ levelId }: LevelTopicsPageProps) {
       <h1 className="text-3xl font-headline font-bold mb-2 text-center">Темы уровня {levelId}</h1>
       <p className="text-muted-foreground text-center mb-8">Выберите тему для изучения или добавьте свою.</p>
       
+      {isCurrentLevelCompleted && (
+        <Card className="mb-8 shadow-lg bg-gradient-to-r from-green-500 to-emerald-600 text-white">
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <PartyPopper className="h-8 w-8" />
+              <CardTitle className="font-headline text-2xl">Уровень {levelId} пройден!</CardTitle>
+            </div>
+            <CardDescription className="text-emerald-100">Поздравляем! Вы успешно завершили все темы этого уровня.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <p className="mb-4">Вы готовы двигаться дальше. Перейдите к списку уровней, чтобы выбрать следующий или повторить пройденный материал.</p>
+          </CardContent>
+          <CardFooter>
+            <Button asChild variant="outline" className="bg-white text-emerald-600 hover:bg-emerald-50">
+              <Link href="/levels">
+                К списку уровней <ArrowRight className="ml-2 h-4 w-4" />
+              </Link>
+            </Button>
+          </CardFooter>
+        </Card>
+      )}
+
       <Card className="mb-8 shadow-md">
         <CardHeader>
           <CardTitle className="font-headline text-xl">Добавить свою тему</CardTitle>
@@ -102,7 +118,9 @@ export function LevelTopicsPage({ levelId }: LevelTopicsPageProps) {
         </CardContent>
       </Card>
 
-      {allTopics.length === 0 && <p className="text-center text-muted-foreground">Для этого уровня пока нет тем. Попробуйте добавить свою!</p>}
+      {allTopics.length === 0 && !isCurrentLevelCompleted && <p className="text-center text-muted-foreground">Для этого уровня пока нет тем. Попробуйте добавить свою!</p>}
+      {allTopics.length === 0 && isCurrentLevelCompleted && <p className="text-center text-muted-foreground">Все стандартные темы этого уровня пройдены. Вы можете добавить свои, если хотите!</p>}
+
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {allTopics.map((topic) => {
@@ -128,7 +146,7 @@ export function LevelTopicsPage({ levelId }: LevelTopicsPageProps) {
               </CardContent>
               <CardFooter>
                 <Button asChild className="w-full">
-                  <Link href={`/levels/${levelId.toLowerCase()}/${topic.id}`}>
+                  <Link href={`/levels/${levelId.toLowerCase()}/${topicId}`}>
                     {completed ? "Повторить тему" : "Начать тему"}
                   </Link>
                 </Button>
@@ -140,3 +158,4 @@ export function LevelTopicsPage({ levelId }: LevelTopicsPageProps) {
     </div>
   );
 }
+
