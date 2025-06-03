@@ -11,6 +11,7 @@ import type { VocabularyWord, LanguageLevel } from '@/types/german-learning';
 import { DEFAULT_TOPICS } from '@/types/german-learning';
 import { Speaker, CheckCircle, AlertCircle, RotateCcw, Lightbulb, Send, ArrowRight, BookCopy, Sparkles, Repeat as RepeatIcon, CheckCheck } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
+import { Badge } from '@/components/ui/badge';
 
 // Dummy TTS function - replace with actual implementation from module-page or central util
 const speak = (text: string, lang: 'ru-RU' | 'de-DE') => {
@@ -154,6 +155,8 @@ export function VocabularyPage() {
 
   const WordCardDisplay = ({ word }: { word: VocabularyWord }) => {
     const displayTopicName = getDisplayTopicName(word.level, word.topic);
+    const isMastered = (word.consecutiveCorrectAnswers || 0) >= 3;
+
     return (
       <Card className="mb-4 shadow-sm">
         <CardContent className="p-4">
@@ -184,8 +187,16 @@ export function VocabularyPage() {
                    <span>Ошибок: {word.errorCount || 0}</span>
               </div>
           </div>
-          {word.exampleSentence && <p className="text-sm mt-1 italic">Пример: {word.exampleSentence}</p>}
-           {(word.consecutiveCorrectAnswers || 0) < 3 && (
+          {isMastered && (
+            <div className="mt-3">
+              <Badge variant="outline" className="border-green-500/50 text-green-700 dark:text-green-400 dark:border-green-500/30 px-2.5 py-1 text-xs">
+                <CheckCircle className="h-3.5 w-3.5 mr-1.5" />
+                Освоено
+              </Badge>
+            </div>
+          )}
+          {word.exampleSentence && <p className="text-sm mt-2 italic">Пример: {word.exampleSentence}</p>}
+           {!isMastered && (
               <Button 
                   variant="outline" 
                   size="sm" 
