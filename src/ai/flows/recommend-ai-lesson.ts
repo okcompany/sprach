@@ -1,3 +1,4 @@
+
 // This is an AI-powered system for recommending personalized German lessons.
 'use server';
 
@@ -52,7 +53,7 @@ const prompt = ai.definePrompt({
   {
     "topic": "Die Familie",
     "modules": ["vocabulary", "grammar", "listening"],
-    "reasoning": "Based on your progress, you need to focus on vocabulary and grammar in the context of family. Listening module will help you reinforce new words. This topic was also among your preferred topics."
+    "reasoning": "Исходя из вашего прогресса, вам следует сосредоточиться на лексике и грамматике в контексте семьи. Модуль аудирования поможет закрепить новые слова. Эта тема также была среди ваших предпочтений."
   }
   `,
 });

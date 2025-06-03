@@ -7,7 +7,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useUserData } from '@/context/user-data-context';
-import type { VocabularyWord } from '@/types/german-learning';
+import type { VocabularyWord, LanguageLevel } from '@/types/german-learning';
+import { DEFAULT_TOPICS } from '@/types/german-learning';
 import { Speaker, CheckCircle, AlertCircle, RotateCcw, Lightbulb, Send, ArrowRight, BookCopy, Sparkles, Repeat as RepeatIcon, CheckCheck } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 
@@ -138,50 +139,68 @@ export function VocabularyPage() {
     });
   };
 
-  const WordCardDisplay = ({ word }: { word: VocabularyWord }) => (
-    <Card className="mb-4 shadow-sm">
-      <CardContent className="p-4">
-        <div className="flex justify-between items-start">
-          <div>
-            <div className="flex items-center">
-              <h3 className="text-xl font-semibold font-headline">{word.german}</h3>
-              <Button variant="ghost" size="icon" onClick={() => speak(word.german, 'de-DE')} className="ml-2">
-                <Speaker className="h-5 w-5" />
+  const getDisplayTopicName = (level: LanguageLevel, topicId: string): string => {
+    if (!userData) return topicId; 
+
+    const progressTopicName = userData.progress[level]?.topics[topicId]?.name;
+    if (progressTopicName) return progressTopicName;
+
+    const defaultTopic = DEFAULT_TOPICS[level]?.find(t => t.id === topicId);
+    if (defaultTopic) return defaultTopic.name;
+
+    const customTopic = userData.customTopics.find(t => t.id === topicId);
+    if (customTopic) return customTopic.name;
+    
+    return topicId; 
+  };
+
+  const WordCardDisplay = ({ word }: { word: VocabularyWord }) => {
+    const displayTopicName = getDisplayTopicName(word.level, word.topic);
+    return (
+      <Card className="mb-4 shadow-sm">
+        <CardContent className="p-4">
+          <div className="flex justify-between items-start">
+            <div>
+              <div className="flex items-center">
+                <h3 className="text-xl font-semibold font-headline">{word.german}</h3>
+                <Button variant="ghost" size="icon" onClick={() => speak(word.german, 'de-DE')} className="ml-2">
+                  <Speaker className="h-5 w-5" />
+                </Button>
+              </div>
+              <p className="text-muted-foreground">{word.russian}</p>
+            </div>
+            <div className="text-xs text-right text-muted-foreground">
+              <p>Уровень: {word.level}</p>
+              <p className="truncate max-w-[150px]" title={displayTopicName}>
+                Тема: {displayTopicName}
+              </p>
+            </div>
+          </div>
+          <div className="mt-2 flex items-center justify-between text-xs">
+              <div className="flex items-center gap-2">
+                  <CheckCircle className={`h-4 w-4 ${ (word.consecutiveCorrectAnswers || 0) > 0 ? 'text-green-500' : 'text-muted'}`} />
+                  <span>Верно подряд: {word.consecutiveCorrectAnswers || 0}</span>
+              </div>
+               <div className="flex items-center gap-2">
+                  <AlertCircle className={`h-4 w-4 ${(word.errorCount || 0) > 0 ? 'text-red-500' : 'text-muted'}`} />
+                   <span>Ошибок: {word.errorCount || 0}</span>
+              </div>
+          </div>
+          {word.exampleSentence && <p className="text-sm mt-1 italic">Пример: {word.exampleSentence}</p>}
+           {(word.consecutiveCorrectAnswers || 0) < 3 && (
+              <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => handleMarkAsMastered(word.id)} 
+                  className="mt-3 text-xs"
+              >
+                  <CheckCheck className="mr-1.5 h-3.5 w-3.5" /> Отметить как выученное
               </Button>
-            </div>
-            <p className="text-muted-foreground">{word.russian}</p>
-          </div>
-          <div className="text-xs text-right text-muted-foreground">
-            <p>Уровень: {word.level}</p>
-            <p className="truncate max-w-[150px]" title={userData?.progress[word.level]?.topics[word.topic]?.name || word.topic}>
-              Тема: {userData?.progress[word.level]?.topics[word.topic]?.name || word.topic}
-            </p>
-          </div>
-        </div>
-        <div className="mt-2 flex items-center justify-between text-xs">
-            <div className="flex items-center gap-2">
-                <CheckCircle className={`h-4 w-4 ${ (word.consecutiveCorrectAnswers || 0) > 0 ? 'text-green-500' : 'text-muted'}`} />
-                <span>Верно подряд: {word.consecutiveCorrectAnswers || 0}</span>
-            </div>
-             <div className="flex items-center gap-2">
-                <AlertCircle className={`h-4 w-4 ${(word.errorCount || 0) > 0 ? 'text-red-500' : 'text-muted'}`} />
-                 <span>Ошибок: {word.errorCount || 0}</span>
-            </div>
-        </div>
-        {word.exampleSentence && <p className="text-sm mt-1 italic">Пример: {word.exampleSentence}</p>}
-         {(word.consecutiveCorrectAnswers || 0) < 3 && (
-            <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={() => handleMarkAsMastered(word.id)} 
-                className="mt-3 text-xs"
-            >
-                <CheckCheck className="mr-1.5 h-3.5 w-3.5" /> Отметить как выученное
-            </Button>
-        )}
-      </CardContent>
-    </Card>
-  );
+          )}
+        </CardContent>
+      </Card>
+    );
+  }
 
   if (isLoading) {
     return <div className="text-center p-10">Загрузка словаря...</div>;
@@ -295,7 +314,7 @@ export function VocabularyPage() {
         
         <TabsContent value="currentTopic">
           <Card>
-            <CardHeader><CardTitle>Слова текущей темы</CardTitle><CardDescription>Слова, связанные с активной темой ({userData?.progress[userData?.currentLevel || 'A0']?.topics[userData?.currentTopicId || ""]?.name || "не выбрана"})</CardDescription></CardHeader>
+            <CardHeader><CardTitle>Слова текущей темы</CardTitle><CardDescription>Слова, связанные с активной темой ({getDisplayTopicName(userData?.currentLevel || 'A0', userData?.currentTopicId || "")})</CardDescription></CardHeader>
             <CardContent>
               {filteredWords(wordsForCurrentTopic).length === 0 && <p className="text-muted-foreground text-center py-4">Нет слов для текущей темы или по вашему запросу.</p>}
               {filteredWords(wordsForCurrentTopic).map(word => <WordCardDisplay key={word.id} word={word} />)}
