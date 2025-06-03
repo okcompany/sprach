@@ -1,7 +1,8 @@
 
 "use client";
 
-import { useRouter } from 'next/navigation';
+import { useRouter, useParams } from 'next/navigation'; // useParams can be used if props are not sufficient
+import Link from 'next/link';
 import { useEffect, useState, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -10,8 +11,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { useToast } from "@/hooks/use-toast";
 import { useUserData } from '@/context/user-data-context';
 import type { LanguageLevel, ModuleType, AILessonContent, AIEvaluationResult, VocabularyWord, MODULE_NAMES_RU as ModuleNamesRuType } from '@/types/german-learning';
-import { MODULE_NAMES_RU, DEFAULT_TOPICS } from '@/types/german-learning';
-import { Speaker, RotateCcw, CheckCircle, AlertTriangle } from 'lucide-react';
+import { MODULE_NAMES_RU, DEFAULT_TOPICS, ALL_MODULE_TYPES } from '@/types/german-learning';
+import { Speaker, RotateCcw, CheckCircle, AlertTriangle, ArrowRight } from 'lucide-react';
 
 // Dummy TTS function - replace with actual implementation
 const speak = (text: string, lang: 'ru-RU' | 'de-DE') => {
@@ -24,11 +25,16 @@ const speak = (text: string, lang: 'ru-RU' | 'de-DE') => {
   }
 };
 
+interface ModulePageProps {
+  levelId: LanguageLevel;
+  topicId: string;
+  moduleId: ModuleType;
+}
 
 export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
   const router = useRouter();
   const { toast } = useToast();
-  const { userData, getTopicLessonContent, evaluateUserResponse, updateModuleProgress, addWordToBank, updateWordInBank, getWordsForTopic } = useUserData();
+  const { userData, getTopicLessonContent, evaluateUserResponse, updateModuleProgress, addWordToBank, updateWordInBank, getWordsForTopic, isTopicCompleted } = useUserData();
   
   const [lessonContent, setLessonContent] = useState<AILessonContent | null>(null);
   const [currentTask, setCurrentTask] = useState<string | null>(null);
@@ -49,7 +55,7 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
 
   const fetchLesson = useCallback(async () => {
     setIsLoadingTask(true);
-    setLessonContent(null); // Reset lesson content to ensure fresh load
+    setLessonContent(null); 
     setCurrentTask(null);
     setFeedback(null);
 
@@ -64,16 +70,16 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
                   const russianTranslation = `Перевод ${germanWord}`; 
                   addWordToBank({ german: germanWord, russian: russianTranslation, topic: topicId, level: levelId });
               });
-              wordsToUse = getWordsForTopic(topicId); // Re-fetch after adding
+              wordsToUse = getWordsForTopic(topicId); 
           }
           setCurrentVocabulary(wordsToUse);
-          setTotalTasks(wordsToUse.length > 0 ? wordsToUse.length : (content.vocabulary.length > 0 ? content.vocabulary.length : 1)); // Avoid 0 total tasks
+          setTotalTasks(wordsToUse.length > 0 ? wordsToUse.length : (content.vocabulary.length > 0 ? content.vocabulary.length : 1));
           if (wordsToUse.length > 0) setCurrentTask(wordsToUse[0].german);
           else if (content.vocabulary.length > 0) setCurrentTask(content.vocabulary[0]);
 
       } else if (moduleId === 'grammar') {
           setCurrentTask(content.grammarExplanation); 
-          setTotalTasks(1); // Typically grammar is one large task or a few focused ones
+          setTotalTasks(1); 
       } else if (moduleId === 'listening') {
           setCurrentTask(content.listeningExercise);
           setTotalTasks(1);
@@ -85,7 +91,7 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
           setTotalTasks(1);
       }
     } else {
-        setTotalTasks(1); // Fallback if content is null
+        setTotalTasks(1); 
     }
     setIsLoadingTask(false);
   }, [levelId, topicName, moduleId, getTopicLessonContent, getWordsForTopic, addWordToBank, topicId]);
@@ -102,7 +108,7 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
     setTasksCompleted(0);
     setModuleScore(0);
     setUserResponse('');
-    fetchLesson(); // This will re-fetch content
+    fetchLesson(); 
   };
 
   const handleSubmit = async () => {
@@ -120,9 +126,9 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
     } else if (moduleId === 'grammar') {
         questionContext = `Задание по грамматике (на основе объяснения): ${lessonContent.grammarExplanation}. Задание: ${lessonContent.writingPrompt || "Напишите предложение, используя это правило."}`;
     } else if (moduleId === 'listening') {
-        questionContext = `Прослушайте и ответьте на вопросы (текст для прослушивания: ${lessonContent.listeningExercise}). Вопрос: (Вам нужно сформулировать вопрос на основе прослушанного текста или дать задание, например, кратко изложить суть).`;
+        questionContext = `Прослушайте и ответьте на вопросы (текст для прослушивания: ${lessonContent.listeningExercise}). Вопрос: (Сформулируйте основной смысл услышанного).`;
     } else if (moduleId === 'reading') {
-        questionContext = `Прочитайте текст и ответьте на вопросы (текст: ${lessonContent.readingPassage}). Вопрос: (Вам нужно сформулировать вопрос на основе прочитанного текста или дать задание).`;
+        questionContext = `Прочитайте текст и ответьте на вопросы (текст: ${lessonContent.readingPassage}). Вопрос: (Какова главная идея этого текста?).`;
     } else if (moduleId === 'writing') {
         questionContext = `Напишите текст на тему: ${lessonContent.writingPrompt}`;
     }
@@ -131,10 +137,9 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
     setFeedback(evaluation);
     setIsLoadingTask(false);
     
-
     let scoreIncrement = 0;
     if (evaluation?.isCorrect) {
-      scoreIncrement = (100 / (totalTasks || 1)); // Avoid division by zero
+      scoreIncrement = (100 / (totalTasks || 1)); 
       setModuleScore(prev => prev + scoreIncrement);
       toast({ title: "Правильно!", description: "Отличная работа!", variant: "default" });
       if (moduleId === 'vocabulary' || moduleId === 'wordTest') {
@@ -152,7 +157,7 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
         }
       }
     }
-    setUserResponse(''); // Clear input after submission
+    setUserResponse(''); 
 
     const newTasksCompleted = tasksCompleted + 1;
     setTasksCompleted(newTasksCompleted);
@@ -168,22 +173,17 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
         toast({ title: "Модуль завершен", description: `Ваш результат: ${finalScore}%. Попробуйте еще раз для улучшения.`, variant: "destructive", duration: 5000 });
       }
     } else {
-      // Next task logic
       if ((moduleId === 'vocabulary' || moduleId === 'wordTest')) {
           if (currentVocabulary.length > newTasksCompleted) {
             setCurrentTask(currentVocabulary[newTasksCompleted].german);
           } else if (lessonContent.vocabulary.length > newTasksCompleted) {
              setCurrentTask(lessonContent.vocabulary[newTasksCompleted]);
           } else {
-             // Should not happen if totalTasks is set correctly
-             setIsModuleFinished(true); // No more tasks
+             setIsModuleFinished(true); 
              setFinalModuleScore(Math.round(moduleScore));
              updateModuleProgress(levelId, topicId, moduleId, Math.round(moduleScore));
              toast({title: "Неожиданное завершение модуля", description: "Кажется, задания закончились раньше."});
           }
-      } else {
-        // For other modules, usually one big task, so this branch might not be hit often if totalTasks is 1.
-        // If it's multi-task, AI needs to provide sub-tasks. For now, we assume totalTasks handles this.
       }
     }
   };
@@ -253,6 +253,10 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
   const moduleTitle = MODULE_NAMES_RU[moduleId as keyof typeof ModuleNamesRuType] || "Модуль";
   const progressPercent = totalTasks > 0 ? (tasksCompleted / totalTasks) * 100 : 0;
 
+  const currentModuleIndexInAll = ALL_MODULE_TYPES.indexOf(moduleId);
+  const isLastModuleType = currentModuleIndexInAll === ALL_MODULE_TYPES.length - 1;
+  const nextModuleType = isLastModuleType ? null : ALL_MODULE_TYPES[currentModuleIndexInAll + 1];
+
   return (
     <div className="container mx-auto py-8">
       <Button variant="outline" onClick={() => router.back()} className="mb-6">
@@ -288,16 +292,39 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
                 <>
                   <CheckCircle className="h-16 w-16 text-green-500 mx-auto mb-4" />
                   <h3 className="text-2xl font-semibold mb-2">Модуль пройден успешно!</h3>
-                  <p className="text-muted-foreground">Ваш результат: {finalModuleScore}%</p>
+                  <p className="text-muted-foreground mb-4">Ваш результат: {finalModuleScore}%</p>
+                  <div className="flex flex-col sm:flex-row gap-2 justify-center">
+                    {nextModuleType ? (
+                      <Button asChild size="lg">
+                        <Link href={`/levels/${levelId.toLowerCase()}/${topicId}/${nextModuleType}`}>
+                          Следующий модуль <ArrowRight className="ml-2 h-5 w-5" />
+                        </Link>
+                      </Button>
+                    ) : (
+                      <Button asChild size="lg">
+                        <Link href={`/levels/${levelId.toLowerCase()}/${topicId}`}>
+                          Завершить тему (к модулям) <ArrowRight className="ml-2 h-5 w-5" />
+                        </Link>
+                      </Button>
+                    )}
+                     <Button variant="outline" size="lg" onClick={() => router.push(`/levels/${levelId.toLowerCase()}/${topicId}`)}>
+                        К списку модулей
+                    </Button>
+                  </div>
                 </>
               ) : (
                 <>
                   <AlertTriangle className="h-16 w-16 text-destructive mx-auto mb-4" />
                   <h3 className="text-2xl font-semibold mb-2">Нужно еще немного постараться!</h3>
                   <p className="text-muted-foreground mb-4">Ваш результат: {finalModuleScore}%. Вы можете попробовать пройти модуль снова.</p>
-                  <Button onClick={handleRetryModule} size="lg">
-                    <RotateCcw className="mr-2 h-5 w-5" /> Попробовать модуль снова
-                  </Button>
+                  <div className="flex flex-col sm:flex-row gap-2 justify-center">
+                    <Button onClick={handleRetryModule} size="lg">
+                        <RotateCcw className="mr-2 h-5 w-5" /> Попробовать модуль снова
+                    </Button>
+                    <Button variant="outline" size="lg" onClick={() => router.push(`/levels/${levelId.toLowerCase()}/${topicId}`)}>
+                        К списку модулей
+                    </Button>
+                  </div>
                 </>
               )}
             </div>
@@ -332,3 +359,5 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
     </div>
   );
 }
+
+    
