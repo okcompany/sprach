@@ -39,9 +39,9 @@ const AIMatchingPairSchema = z.object({
 const AIMatchingExerciseSchema = z.object({
   type: z.enum(["matching"]).describe("Тип: сопоставление."),
   instructions: z.string().describe("Инструкции для упражнения, например, 'Сопоставьте слова.'"),
-  pairs: z.array(AIMatchingPairSchema).describe("Пары слов (5-8)."),
-  germanDistractors: z.array(z.string()).optional().describe("Необязательные немецкие отвлекающие слова (1-2)."),
-  russianDistractors: z.array(z.string()).optional().describe("Необязательные русские отвлекающие слова (1-2)."),
+  pairs: z.array(AIMatchingPairSchema).describe("Пары слов (10-16)."),
+  germanDistractors: z.array(z.string()).optional().describe("Необязательные немецкие отвлекающие слова (1-3)."),
+  russianDistractors: z.array(z.string()).optional().describe("Необязательные русские отвлекающие слова (1-3)."),
 });
 
 const AIAudioQuizItemSchema = z.object({
@@ -54,7 +54,7 @@ const AIAudioQuizItemSchema = z.object({
 const AIAudioQuizExerciseSchema = z.object({
   type: z.enum(["audioQuiz"]).describe("Тип: аудио-квиз."),
   instructions: z.string().describe("Инструкции для упражнения, например, 'Прослушайте и выберите.'"),
-  items: z.array(AIAudioQuizItemSchema).describe("Аудио-задания (3-5)."),
+  items: z.array(AIAudioQuizItemSchema).describe("Аудио-задания (6-10)."),
 });
 
 // --- Zod Schemas for Grammar Exercises ---
@@ -67,7 +67,7 @@ const FillInTheBlanksQuestionSchema = z.object({
 const FillInTheBlanksExerciseSchema = z.object({
   type: z.enum(["fillInTheBlanks"]).describe("Тип: заполнение пропусков."),
   instructions: z.string().describe("Инструкции для упражнения на русском, например, 'Заполните пропуски.'"),
-  questions: z.array(FillInTheBlanksQuestionSchema).describe("Вопросы на заполнение пропусков (2-4)."),
+  questions: z.array(FillInTheBlanksQuestionSchema).describe("Вопросы на заполнение пропусков (4-8)."),
 });
 
 const MultipleChoiceQuestionSchema = z.object({
@@ -80,7 +80,7 @@ const MultipleChoiceQuestionSchema = z.object({
 const MultipleChoiceExerciseSchema = z.object({
   type: z.enum(["multipleChoice"]).describe("Тип: множественный выбор."),
   instructions: z.string().describe("Инструкции для упражнения на русском, например, 'Выберите правильный вариант.'"),
-  questions: z.array(MultipleChoiceQuestionSchema).describe("Вопросы с множественным выбором (2-4)."),
+  questions: z.array(MultipleChoiceQuestionSchema).describe("Вопросы с множественным выбором (4-8)."),
 });
 
 const SentenceConstructionTaskSchema = z.object({
@@ -92,13 +92,13 @@ const SentenceConstructionTaskSchema = z.object({
 const SentenceConstructionExerciseSchema = z.object({
   type: z.enum(["sentenceConstruction"]).describe("Тип: составление предложений."),
   instructions: z.string().describe("Инструкции для упражнения на русском, например, 'Составьте предложения из данных слов.'"),
-  tasks: z.array(SentenceConstructionTaskSchema).describe("Задания на составление предложений (2-3)."),
+  tasks: z.array(SentenceConstructionTaskSchema).describe("Задания на составление предложений (4-6)."),
 });
 
 // --- Zod Schemas for Listening ---
 const ListeningExerciseSchema = z.object({
   script: z.string().describe("Скрипт для аудирования на немецком, соответствующий уровню."),
-  questions: z.array(z.string()).describe("Открытые вопросы на понимание на русском (2-4)."),
+  questions: z.array(z.string()).describe("Открытые вопросы на понимание на русском (4-8)."),
 });
 
 // --- Zod Schemas for Interactive Listening/Reading Exercises (Common Structures) ---
@@ -112,7 +112,7 @@ const AIComprehensionMultipleChoiceQuestionSchema = z.object({
 const AIComprehensionMultipleChoiceExerciseSchema = z.object({
   type: z.enum(["comprehensionMultipleChoice"]).describe("Тип: MCQ на понимание."),
   instructions: z.string().describe("Инструкции для упражнения на русском, например, 'Прочитайте/прослушайте и выберите правильный вариант.'"),
-  questions: z.array(AIComprehensionMultipleChoiceQuestionSchema).describe("Вопросы (2-3)."),
+  questions: z.array(AIComprehensionMultipleChoiceQuestionSchema).describe("Вопросы (4-6)."),
 });
 
 const AITrueFalseStatementSchema = z.object({
@@ -124,42 +124,42 @@ const AITrueFalseStatementSchema = z.object({
 const AITrueFalseExerciseSchema = z.object({
   type: z.enum(["trueFalse"]).describe("Тип: верно/неверно."),
   instructions: z.string().describe("Инструкции для упражнения на русском, например, 'Определите, верны ли утверждения.'"),
-  statements: z.array(AITrueFalseStatementSchema).describe("Утверждения (3-5)."),
+  statements: z.array(AITrueFalseStatementSchema).describe("Утверждения (6-10)."),
 });
 
 const AISequencingExerciseSchema = z.object({
   type: z.enum(["sequencing"]).describe("Тип: упорядочивание."),
   instructions: z.string().describe("Инструкции для упражнения на русском, например, 'Расположите события в правильном порядке.'"),
-  shuffledItems: z.array(z.string()).describe("Перемешанные элементы для упорядочивания (на немецком) (4-6)."),
-  correctOrder: z.array(z.string()).describe("Элементы в правильной последовательности (на немецком) (4-6)."),
+  shuffledItems: z.array(z.string()).describe("Перемешанные элементы для упорядочивания (на немецком) (8-12)."),
+  correctOrder: z.array(z.string()).describe("Элементы в правильной последовательности (на немецком) (8-12)."),
 });
 
 // --- Define Zod schema for the MAIN output ---
 const GenerateLessonOutputSchema = z.object({
   lessonTitle: z.string().describe('Сгенерированный заголовок урока на русском или немецком.'),
-  vocabulary: z.array(VocabularyItemSchema).describe('Ключевые словарные единицы (7-10). Фразы/идиомы для уровня/темы.'),
+  vocabulary: z.array(VocabularyItemSchema).describe('Ключевые словарные единицы (14-20). Фразы/идиомы для уровня/темы.'),
   grammarExplanation: z.string().describe('Подробное объяснение грамматики на русском. Фокус на глаголах для A0-B2.'),
 
-  grammarFillInTheBlanks: FillInTheBlanksExerciseSchema.optional().describe('Необязательное ОДНО упражнение "Заполните пропуски" по грамматике (2-4 вопроса).'),
-  grammarMultipleChoice: MultipleChoiceExerciseSchema.optional().describe('Необязательное ОДНО упражнение "Множественный выбор" по грамматике (2-4 вопроса).'),
-  grammarSentenceConstruction: SentenceConstructionExerciseSchema.optional().describe('Необязательное ОДНО упражнение "Составление предложений" по грамматике (2-3 задания).'),
+  grammarFillInTheBlanks: FillInTheBlanksExerciseSchema.optional().describe('Необязательное ОДНО упражнение "Заполните пропуски" по грамматике (4-8 вопроса).'),
+  grammarMultipleChoice: MultipleChoiceExerciseSchema.optional().describe('Необязательное ОДНО упражнение "Множественный выбор" по грамматике (4-8 вопроса).'),
+  grammarSentenceConstruction: SentenceConstructionExerciseSchema.optional().describe('Необязательное ОДНО упражнение "Составление предложений" по грамматике (4-6 задания).'),
 
-  listeningExercise: ListeningExerciseSchema.describe('Аудирование (скрипт, 2-4 открытых вопроса на русском).'),
+  listeningExercise: ListeningExerciseSchema.describe('Аудирование (скрипт, 4-8 открытых вопроса на русском).'),
   readingPassage: z.string().describe('Короткий текст для чтения на немецком, соответствующий уровню.'),
-  readingQuestions: z.array(z.string()).describe("Открытые вопросы на понимание прочитанного (на русском) (2-4)."),
+  readingQuestions: z.array(z.string()).describe("Открытые вопросы на понимание прочитанного (на русском) (4-8)."),
 
   writingPrompt: z.string().describe('Общее письменное задание на русском или немецком для уровня/темы. Укажите язык ответа.'),
 
-  interactiveMatchingExercise: AIMatchingExerciseSchema.optional().describe("Необязательное ОДНО упражнение на сопоставление слов (5-8 пар)."),
-  interactiveAudioQuizExercise: AIAudioQuizExerciseSchema.optional().describe("Необязательное ОДНО упражнение аудио-квиз по лексике (3-5 заданий)."),
+  interactiveMatchingExercise: AIMatchingExerciseSchema.optional().describe("Необязательное ОДНО упражнение на сопоставление слов (10-16 пар)."),
+  interactiveAudioQuizExercise: AIAudioQuizExerciseSchema.optional().describe("Необязательное ОДНО упражнение аудио-квиз по лексике (6-10 заданий)."),
 
-  interactiveListeningMCQ: AIComprehensionMultipleChoiceExerciseSchema.optional().describe("Необязательное ОДНО MCQ упражнение по аудированию для основного скрипта (2-3 вопроса на русском)."),
-  interactiveListeningTrueFalse: AITrueFalseExerciseSchema.optional().describe("Необязательное ОДНО True/False упражнение по аудированию для основного скрипта (3-5 утверждений на русском)."),
-  interactiveListeningSequencing: AISequencingExerciseSchema.optional().describe("Необязательное ОДНО упражнение на упорядочивание по аудированию для основного скрипта (4-6 элементов)."),
+  interactiveListeningMCQ: AIComprehensionMultipleChoiceExerciseSchema.optional().describe("Необязательное ОДНО MCQ упражнение по аудированию для основного скрипта (4-6 вопроса на русском)."),
+  interactiveListeningTrueFalse: AITrueFalseExerciseSchema.optional().describe("Необязательное ОДНО True/False упражнение по аудированию для основного скрипта (6-10 утверждений на русском)."),
+  interactiveListeningSequencing: AISequencingExerciseSchema.optional().describe("Необязательное ОДНО упражнение на упорядочивание по аудированию для основного скрипта (8-12 элементов)."),
 
-  interactiveReadingMCQ: AIComprehensionMultipleChoiceExerciseSchema.optional().describe("Необязательное ОДНО MCQ упражнение по чтению для основного текста (2-3 вопроса на русском)."),
-  interactiveReadingTrueFalse: AITrueFalseExerciseSchema.optional().describe("Необязательное ОДНО True/False упражнение по чтению для основного текста (3-5 утверждений на русском)."),
-  interactiveReadingSequencing: AISequencingExerciseSchema.optional().describe("Необязательное ОДНО упражнение на упорядочивание по чтению для основного текста (4-6 элементов)."),
+  interactiveReadingMCQ: AIComprehensionMultipleChoiceExerciseSchema.optional().describe("Необязательное ОДНО MCQ упражнение по чтению для основного текста (4-6 вопроса на русском)."),
+  interactiveReadingTrueFalse: AITrueFalseExerciseSchema.optional().describe("Необязательное ОДНО True/False упражнение по чтению для основного текста (6-10 утверждений на русском)."),
+  interactiveReadingSequencing: AISequencingExerciseSchema.optional().describe("Необязательное ОДНО упражнение на упорядочивание по чтению для основного текста (8-12 элементов)."),
 });
 
 export type GenerateLessonOutput = z.infer<typeof GenerateLessonOutputSchema>;
@@ -183,13 +183,13 @@ const lessonPrompt = ai.definePrompt({
 
   The lesson MUST include the following core components:
   - "lessonTitle": A suitable title (in Russian).
-  - "vocabulary": An array of 7-10 key vocabulary items (German word, Russian translation, and strongly prefer an exampleSentence in German). Include common conversational phrases and idioms relevant to the topic and level.
+  - "vocabulary": An array of 14-20 key vocabulary items (German word, Russian translation, and strongly prefer an exampleSentence in German). Include common conversational phrases and idioms relevant to the topic and level.
   - "grammarExplanation": A detailed explanation (in Russian) of a grammar point relevant to the level and topic. For levels A0-B2, systematically try to include grammar topics related to verbs (tenses, modals, reflexives, common strong/irregular verbs, word order with verbs, etc.).
   - "listeningExercise": An object with "script" and "questions".
     - "script": The script for listening must be a coherent text in the format of a **monologue or a story** from the first or third person, appropriate for the level {{{level}}}. Please **completely avoid dialogues** between characters.
-    - "questions": An array of 2-4 open-ended comprehension questions about the script. These questions MUST ALWAYS be in RUSSIAN. For each question, explicitly state if the answer should be in Russian or German.
+    - "questions": An array of 4-8 open-ended comprehension questions about the script. These questions MUST ALWAYS be in RUSSIAN. For each question, explicitly state if the answer should be in Russian or German.
   - "readingPassage": A short reading passage in German related to the topic, appropriate for the level.
-  - "readingQuestions": An array of 2-4 open-ended comprehension questions about the reading passage. These questions MUST ALWAYS be in RUSSIAN. For each question, explicitly state if the answer should be in Russian or German.
+  - "readingQuestions": An array of 4-8 open-ended comprehension questions about the reading passage. These questions MUST ALWAYS be in RUSSIAN. For each question, explicitly state if the answer should be in Russian or German.
   - "writingPrompt": A general writing prompt (in Russian) for the learner. Clearly specify the language in which the user should write.
 
   Additionally, you MAY provide OPTIONAL structured and interactive exercises as described below.
@@ -197,23 +197,23 @@ const lessonPrompt = ai.definePrompt({
 
   1. OPTIONAL Grammar Exercise:
      If you can create a relevant exercise for the "grammarExplanation", provide AT MOST ONE of the following fields:
-     - "grammarFillInTheBlanks": Provide "instructions" (in Russian, e.g., "Заполните пропуски.") and a "questions" array (2-4 questions). Each question object needs: "promptText" (German sentence with blanks, optional hints for blanks (in German) can be in ()), "correctAnswers" (array of German strings), "explanation" (optional, in Russian).
-     - "grammarMultipleChoice": Provide "instructions" (in Russian, e.g., "Выберите правильный вариант.") and a "questions" array (2-4 questions). Each question object needs: "questionText" (German question/sentence), "options" (2-4 German strings), "correctAnswer" (German string), "explanation" (optional, in Russian).
-     - "grammarSentenceConstruction": Provide "instructions" (in Russian, e.g., "Составьте предложения из слов.") and a "tasks" array (2-3 tasks). Each task object needs: "words" (array of German strings to arrange), "possibleCorrectSentences" (array of German strings), "explanation" (optional, in Russian).
+     - "grammarFillInTheBlanks": Provide "instructions" (in Russian, e.g., "Заполните пропуски.") and a "questions" array (4-8 questions). Each question object needs: "promptText" (German sentence with blanks, optional hints for blanks (in German) can be in ()), "correctAnswers" (array of German strings), "explanation" (optional, in Russian).
+     - "grammarMultipleChoice": Provide "instructions" (in Russian, e.g., "Выберите правильный вариант.") and a "questions" array (4-8 questions). Each question object needs: "questionText" (German question/sentence), "options" (2-4 German strings), "correctAnswer" (German string), "explanation" (optional, in Russian).
+     - "grammarSentenceConstruction": Provide "instructions" (in Russian, e.g., "Составьте предложения из слов.") and a "tasks" array (4-6 tasks). Each task object needs: "words" (array of German strings to arrange), "possibleCorrectSentences" (array of German strings), "explanation" (optional, in Russian).
 
   2. OPTIONAL Interactive Vocabulary Exercises: Provide AT MOST ONE of the following fields:
-     - "interactiveMatchingExercise": Provide "instructions" (in Russian), "pairs" (array of {german, russian} - 5-8 pairs), "germanDistractors" (optional, 1-2 strings), "russianDistractors" (optional, 1-2 strings).
-     - "interactiveAudioQuizExercise": Provide "instructions" (in Russian), "items" (array of 3-5 items). Each item: "germanPhraseToSpeak", "options" (3-4 Russian translations), "correctAnswer" (string), "explanation" (optional, in Russian).
+     - "interactiveMatchingExercise": Provide "instructions" (in Russian), "pairs" (array of {german, russian} - 10-16 pairs), "germanDistractors" (optional, 1-3 strings), "russianDistractors" (optional, 1-3 strings).
+     - "interactiveAudioQuizExercise": Provide "instructions" (in Russian), "items" (array of 6-10 items). Each item: "germanPhraseToSpeak", "options" (3-4 Russian translations), "correctAnswer" (string), "explanation" (optional, in Russian).
 
   3. OPTIONAL Interactive Listening Exercises: Provide AT MOST ONE of the following fields. This exercise should be based on the main "listeningExercise.script". Instructions and questions/statements MUST be in RUSSIAN. For each question/statement, ensure the expected answer language is clear from the context or explicitly stated.
-     - "interactiveListeningMCQ": (Based on "listeningExercise.script") Provide "instructions", "questions" (array of 2-3). Each question: "questionText" (Russian), "options" (strings), "correctAnswer" (string), "explanation" (optional, in Russian).
-     - "interactiveListeningTrueFalse": (Based on "listeningExercise.script") Provide "instructions", "statements" (array of 3-5). Each statement: "statement" (Russian), "isTrue" (boolean), "explanation" (optional, in Russian).
-     - "interactiveListeningSequencing": (Based on "listeningExercise.script") Provide "instructions", "shuffledItems" (array of 4-6 German strings from the script, out of order), "correctOrder" (array of same strings in correct order).
+     - "interactiveListeningMCQ": (Based on "listeningExercise.script") Provide "instructions", "questions" (array of 4-6). Each question: "questionText" (Russian), "options" (strings), "correctAnswer" (string), "explanation" (optional, in Russian).
+     - "interactiveListeningTrueFalse": (Based on "listeningExercise.script") Provide "instructions", "statements" (array of 6-10). Each statement: "statement" (Russian), "isTrue" (boolean), "explanation" (optional, in Russian).
+     - "interactiveListeningSequencing": (Based on "listeningExercise.script") Provide "instructions", "shuffledItems" (array of 8-12 German strings from the script, out of order), "correctOrder" (array of same strings in correct order).
 
   4. OPTIONAL Interactive Reading Exercises: Provide AT MOST ONE of the following fields. This exercise should be based on the main "readingPassage". Instructions and questions/statements MUST be in RUSSIAN. For each question/statement, ensure the expected answer language is clear from the context or explicitly stated.
-     - "interactiveReadingMCQ": (Based on "readingPassage") Provide "instructions", "questions" (array of 2-3). Each question: "questionText" (Russian), "options" (strings), "correctAnswer" (string), "explanation" (optional, in Russian).
-     - "interactiveReadingTrueFalse": (Based on "readingPassage") Provide "instructions", "statements" (array of 3-5). Each statement: "statement" (Russian), "isTrue" (boolean), "explanation" (optional, in Russian).
-     - "interactiveReadingSequencing": (Based on "readingPassage") Provide "instructions", "shuffledItems" (array of 4-6 German strings/sentences from the passage, out of order), "correctOrder" (array of same strings in correct order).
+     - "interactiveReadingMCQ": (Based on "readingPassage") Provide "instructions", "questions" (array of 4-6). Each question: "questionText" (Russian), "options" (strings), "correctAnswer" (string), "explanation" (optional, in Russian).
+     - "interactiveReadingTrueFalse": (Based on "readingPassage") Provide "instructions", "statements" (array of 6-10). Each statement: "statement" (Russian), "isTrue" (boolean), "explanation" (optional, in Russian).
+     - "interactiveReadingSequencing": (Based on "readingPassage") Provide "instructions", "shuffledItems" (array of 8-12 German strings/sentences from the passage, out of order), "correctOrder" (array of same strings in correct order).
 
   Ensure that ALL content, including all parts of interactive exercises, is appropriate for the specified level: {{{level}}}.
   Provide rich and varied content. For vocabulary, always try to include example sentences and conversational phrases. For grammar, try to include an exercise if suitable, focusing on core concepts like verb usage.
