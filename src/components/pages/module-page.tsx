@@ -120,7 +120,6 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
           if (availableWordsCount > 0) {
             setCurrentTask(effectiveVocabularyList[0].german);
           } else {
-            // No words available for vocabulary or wordTest module
             updateModuleProgress(levelId, topicId, moduleId, 0);
             setFinalModuleScore(0);
             setIsModuleFinished(true);
@@ -131,7 +130,7 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
               variant: "default",
               duration: 5000,
             });
-            return; // Exit early
+            return; 
           }
 
       } else if (moduleId === 'grammar') {
@@ -163,8 +162,6 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
     } else {
         setTotalTasks(1); 
         if (moduleId === 'vocabulary' || moduleId === 'wordTest') {
-            // Content is null, and it's a vocab/wordTest module
-            // Check if there are any words from bank
              const wordsFromBank = getWordsForTopic(topicId);
              setCurrentVocabulary(wordsFromBank);
              const availableWordsCount = wordsFromBank.length;
@@ -222,22 +219,19 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
           const topicIsNowFullyCompleted = isTopicCompleted(levelId, topicId);
 
           if (topicIsNowFullyCompleted) {
-            // Check if the current level itself has been updated due to this completion
             if (userData.currentLevel !== levelId && ALL_LEVELS.indexOf(userData.currentLevel) > ALL_LEVELS.indexOf(levelId)) {
-                // User has leveled up
                 setTopicContinuationLink(`/levels/${userData.currentLevel.toLowerCase()}`);
                 setTopicContinuationText("К следующему уровню");
-            } else if (isLevelCompleted(levelId)) { // Current level is completed
+            } else if (isLevelCompleted(levelId)) { 
                 const originalLvlIdx = ALL_LEVELS.indexOf(levelId);
-                if (levelId === ALL_LEVELS[ALL_LEVELS.length - 1]) { // Max level completed
+                if (levelId === ALL_LEVELS[ALL_LEVELS.length - 1]) { 
                     setTopicContinuationLink(`/levels`);
                     setTopicContinuationText("Все уровни пройдены!");
-                } else { // Not max level, offer next level
+                } else { 
                     setTopicContinuationLink(`/levels/${ALL_LEVELS[originalLvlIdx + 1].toLowerCase()}`);
                     setTopicContinuationText("Перейти к следующему уровню");
                 }
             } else { 
-              // Level not completed, try to find next topic in this level
               const currentLvlData = userData.progress[levelId];
               const defaultTopics = DEFAULT_TOPICS[levelId] || [];
               const customLevelTopics = userData.customTopics?.filter(ct => ct.id.startsWith(levelId + "_")) || [];
@@ -261,13 +255,11 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
                 setTopicContinuationLink(`/levels/${levelId.toLowerCase()}/${nextIncompleteTopicFoundId}`);
                 setTopicContinuationText("Следующая тема");
               } else {
-                // No more incomplete topics in this level, or no topics configured
                 setTopicContinuationLink(`/levels/${levelId.toLowerCase()}`);
                 setTopicContinuationText("К темам уровня"); 
               }
             }
           } else { 
-            // Topic not fully completed, but this module is. Go to topic modules.
             setTopicContinuationLink(`/levels/${levelId.toLowerCase()}/${topicId}`);
             setTopicContinuationText("К модулям темы");
           }
@@ -291,7 +283,7 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
   };
 
   const handleSubmit = async () => {
-    if (!currentTask || !lessonContent || isModuleFinished) return;
+    if (!currentTask || isModuleFinished) return; // Simplified guard, lessonContent check moved
     setIsLoadingTask(true);
     setFeedback(null);
 
@@ -301,32 +293,52 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
 
     if (moduleId === 'vocabulary' || moduleId === 'wordTest') {
         const wordFromBank = currentVocabulary.find(v => v.german === currentTask);
-        const wordFromLesson = lessonContent.vocabulary.find(v => v.german === currentTask);
+        const wordFromLesson = lessonContent?.vocabulary.find(v => v.german === currentTask);
         const wordData = wordFromBank || wordFromLesson;
 
-        questionContext = `Слово: "${currentTask}"${wordData?.exampleSentence ? ` (Пример: ${wordData.exampleSentence})` : ''}`;
-        if (moduleId === 'vocabulary') { 
-            questionContext += `. Ожидаемый перевод: ${wordData?.russian || 'не указан'}`;
+        if (!wordData) { // Should be caught by renderModuleContent, but as a safeguard
+             toast({ title: "Ошибка данных слова", description: "Не удалось получить данные для оценки.", variant: "destructive" });
+             setIsLoadingTask(false);
+             return;
         }
-        expectedAnswerForAI = wordData?.russian || '';
+
+        questionContext = `Слово: "${currentTask}"${wordData.exampleSentence ? ` (Пример: ${wordData.exampleSentence})` : ''}`;
+        if (moduleId === 'vocabulary') { 
+            questionContext += `. Ожидаемый перевод: ${wordData.russian || 'не указан'}`;
+        }
+        expectedAnswerForAI = wordData.russian || '';
     } else if (moduleId === 'grammar') {
+        if (!lessonContent?.grammarExplanation) {
+             toast({ title: "Ошибка данных урока", description: "Нет объяснения грамматики.", variant: "destructive" });
+             setIsLoadingTask(false);
+             return;
+        }
         questionContext = `Задание по грамматике (на основе объяснения): ${lessonContent.grammarExplanation}. Задание: ${lessonContent.writingPrompt || "Напишите предложение, используя это правило."}`;
         grammarRulesForAI = lessonContent.grammarExplanation;
     } else if (moduleId === 'listening') {
-        if (lessonContent.listeningExercise && lessonContent.listeningExercise.questions && lessonContent.listeningExercise.questions[currentQuestionIndex]) {
+        if (lessonContent?.listeningExercise && lessonContent.listeningExercise.questions && lessonContent.listeningExercise.questions[currentQuestionIndex]) {
             questionContext = `Скрипт: "${lessonContent.listeningExercise.script}". Вопрос: "${lessonContent.listeningExercise.questions[currentQuestionIndex]}"`;
         } else {
-            questionContext = "Ошибка: нет данных для упражнения по аудированию.";
+            toast({ title: "Ошибка данных урока", description: "Нет данных для аудирования.", variant: "destructive" });
+            setIsLoadingTask(false);
+            return;
         }
     } else if (moduleId === 'reading') {
-        if (lessonContent.readingPassage && lessonContent.readingQuestions && lessonContent.readingQuestions[currentQuestionIndex]) {
+        if (lessonContent?.readingPassage && lessonContent.readingQuestions && lessonContent.readingQuestions[currentQuestionIndex]) {
             questionContext = `Текст для чтения: "${lessonContent.readingPassage}". Вопрос по тексту: "${lessonContent.readingQuestions[currentQuestionIndex]}"`;
-        } else if (lessonContent.readingPassage) { 
+        } else if (lessonContent?.readingPassage) { 
              questionContext = `Текст для чтения: "${lessonContent.readingPassage}". Вопрос по тексту: "${currentTask}"`;
         } else {
-            questionContext = "Ошибка: нет данных для упражнения по чтению.";
+            toast({ title: "Ошибка данных урока", description: "Нет данных для чтения.", variant: "destructive" });
+            setIsLoadingTask(false);
+            return;
         }
     } else if (moduleId === 'writing') {
+        if (!lessonContent?.writingPrompt) {
+            toast({ title: "Ошибка данных урока", description: "Нет задания для письма.", variant: "destructive" });
+            setIsLoadingTask(false);
+            return;
+        }
         questionContext = `Напишите текст на тему: ${lessonContent.writingPrompt}`;
     }
     
@@ -352,7 +364,7 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
       setModuleScore(prev => prev + scoreIncrement);
       toast({ title: "Правильно!", description: "Отличная работа!", variant: "default" });
       if (moduleId === 'vocabulary' || moduleId === 'wordTest') {
-        const wordData = currentVocabulary.find(v => v.german === currentTask);
+        const wordData = currentVocabulary.find(v => v.german === currentTask); // Rely on currentVocabulary as source of truth for bank
         if (wordData) {
             updateWordInBank({...wordData, consecutiveCorrectAnswers: (wordData.consecutiveCorrectAnswers || 0) + 1, lastTestedDate: new Date().toISOString() });
         }
@@ -395,8 +407,8 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
           }
       } else if (moduleId === 'listening' || moduleId === 'reading') {
         const questionsList = moduleId === 'listening'
-            ? lessonContent.listeningExercise?.questions
-            : lessonContent.readingQuestions;
+            ? lessonContent?.listeningExercise?.questions
+            : lessonContent?.readingQuestions;
         
         if (questionsList && questionsList.length > newTasksCompleted) {
             setCurrentQuestionIndex(newTasksCompleted);
@@ -413,7 +425,6 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
   };
 
   const renderModuleContent = () => {
-    // Skeleton loading is handled above this function call if isLoadingTask && !lessonContent
     if (!lessonContent && (moduleId !== 'vocabulary' && moduleId !== 'wordTest')) {
         return <p className="text-center p-4 text-muted-foreground">Не удалось загрузить содержание модуля. Попробуйте обновить страницу или вернуться назад.</p>;
     }
@@ -429,7 +440,19 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
         const wordFromBank = currentVocabulary.find(v => v.german === currentTask);
         const wordFromLesson = lessonContent?.vocabulary.find(v => v.german === currentTask);
         const currentWordData = wordFromBank || wordFromLesson;
-        const displayExpectedAnswer = moduleId === 'vocabulary' ? (currentWordData?.russian || '...') : '???';
+
+        if (!currentWordData) {
+          console.error("ModulePage: currentWordData is undefined for currentTask:", currentTask, "Investigate. LessonContent present:", !!lessonContent, "CurrentVocabulary length:", currentVocabulary.length);
+          toast({ 
+            title: "Ошибка отображения слова", 
+            description: `Не удалось найти данные для слова "${currentTask}". Пожалуйста, попробуйте обновить страницу или сообщите об ошибке.`, 
+            variant: "destructive",
+            duration: 7000 
+          });
+          return <p className="text-center p-4 text-muted-foreground">Ошибка: не удалось загрузить данные для слова "{currentTask}".</p>;
+        }
+        
+        const displayExpectedAnswer = moduleId === 'vocabulary' ? (currentWordData.russian || '...') : '???';
 
         return (
           <div>
@@ -440,7 +463,7 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
                     <Speaker className="h-6 w-6" />
                 </Button>
             </div>
-            {currentWordData?.exampleSentence && <p className="text-sm italic text-muted-foreground mb-2">Пример: {currentWordData.exampleSentence}</p>}
+            {currentWordData.exampleSentence && <p className="text-sm italic text-muted-foreground mb-2">Пример: {currentWordData.exampleSentence}</p>}
             <p className="text-md text-muted-foreground mt-1">
               Введите перевод на русский 
               {moduleId === 'vocabulary' ? ` (ожидается: ${displayExpectedAnswer})` : ':'}
@@ -448,7 +471,7 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
           </div>
         );
       case 'grammar':
-        if (!currentTask || !lessonContent?.grammarExplanation) return <p className="text-center p-4 text-muted-foreground">Загрузка грамматики...</p>;
+        if (!lessonContent?.grammarExplanation) return <p className="text-center p-4 text-muted-foreground">Загрузка грамматики...</p>;
         return (
           <div>
             <h3 className="text-xl font-semibold mb-2">Грамматическое правило:</h3>
@@ -493,7 +516,7 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
           </div>
         );
       case 'writing':
-        if (!currentTask || !lessonContent?.writingPrompt) return <p className="text-center p-4 text-muted-foreground">Загрузка задания для письма...</p>;
+        if (!lessonContent?.writingPrompt) return <p className="text-center p-4 text-muted-foreground">Загрузка задания для письма...</p>;
         return (
           <div>
             <h3 className="text-xl font-semibold mb-2">Письмо:</h3>
@@ -512,12 +535,12 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
   if (isLoadingTask && !lessonContent && !( (moduleId === 'vocabulary' || moduleId === 'wordTest') && currentVocabulary.length > 0 )  ) {
     return (
       <div className="container mx-auto py-8">
-        <Skeleton className="h-9 w-32 mb-6" /> {/* Back button skeleton */}
+        <Skeleton className="h-9 w-32 mb-6" /> 
         <Card className="shadow-xl">
           <CardHeader>
-            <Skeleton className="h-8 w-3/4 mb-2" /> {/* Title skeleton */}
-            <Skeleton className="h-4 w-1/2 mb-2" /> {/* Description skeleton */}
-            <Skeleton className="h-2 w-full" /> {/* Progress bar skeleton */}
+            <Skeleton className="h-8 w-3/4 mb-2" /> 
+            <Skeleton className="h-4 w-1/2 mb-2" /> 
+            <Skeleton className="h-2 w-full" /> 
           </CardHeader>
           <CardContent>
             <div className="mb-6 min-h-[100px] space-y-3">
@@ -526,10 +549,10 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
               <Skeleton className="h-4 w-full" />
               <Skeleton className="h-4 w-3/4" />
             </div>
-            <Skeleton className="h-24 w-full mb-4" /> {/* Textarea skeleton */}
+            <Skeleton className="h-24 w-full mb-4" /> 
           </CardContent>
           <CardFooter>
-            <Skeleton className="h-12 w-full" /> {/* Button skeleton */}
+            <Skeleton className="h-12 w-full" /> 
           </CardFooter>
         </Card>
       </div>
