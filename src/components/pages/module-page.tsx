@@ -13,6 +13,8 @@ import { useUserData } from '@/context/user-data-context';
 import type { LanguageLevel, ModuleType, AILessonContent, AIEvaluationResult, VocabularyWord, AILessonVocabularyItem } from '@/types/german-learning';
 import { MODULE_NAMES_RU, DEFAULT_TOPICS, ALL_MODULE_TYPES, ALL_LEVELS } from '@/types/german-learning';
 import { Speaker, RotateCcw, CheckCircle, AlertTriangle, ArrowRight } from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
+
 
 // Dummy TTS function - replace with actual implementation
 const speak = (text: string, lang: 'ru-RU' | 'de-DE') => {
@@ -50,7 +52,7 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
   const [currentTask, setCurrentTask] = useState<string | null>(null);
   const [userResponse, setUserResponse] = useState('');
   const [feedback, setFeedback] = useState<AIEvaluationResult | null>(null);
-  const [isLoadingTask, setIsLoadingTask] = useState(false);
+  const [isLoadingTask, setIsLoadingTask] = useState(true); // Start true for initial load
   const [moduleScore, setModuleScore] = useState(0);
   const [tasksCompleted, setTasksCompleted] = useState(0);
   const [totalTasks, setTotalTasks] = useState(5); 
@@ -147,13 +149,13 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
     }
   }, [fetchLesson, topicName]);
   
-  useEffect(() => {
+ useEffect(() => {
     setNextSequentialUncompletedModule(null);
     setTopicContinuationLink(null);
     setTopicContinuationText('');
 
     if (isModuleFinished && finalModuleScore !== null && userData) {
-      if (finalModuleScore >= 70) { // Module Passed Successfully
+      if (finalModuleScore >= 70) { 
         let foundNextUncompletedModuleInTopic = false;
         const currentModuleIndex = ALL_MODULE_TYPES.indexOf(moduleId);
 
@@ -173,51 +175,48 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
           const topicIsNowFullyCompleted = isTopicCompleted(levelId, topicId);
 
           if (topicIsNowFullyCompleted) {
-            const currentLvlData = userData.progress[levelId];
-            const defaultTopics = DEFAULT_TOPICS[levelId] || [];
-            const customLevelTopics = userData.customTopics?.filter(ct => ct.id.startsWith(levelId + "_")) || [];
-            const allConfiguredTopicsForLevel = [
-              ...defaultTopics.map(t => ({ id: t.id, name: t.name })),
-              ...customLevelTopics.map(t => ({ id: t.id, name: t.name }))
-            ];
-            
-            const currentTopicOrderIndex = allConfiguredTopicsForLevel.findIndex(t => t.id === topicId);
-            let nextIncompleteTopicFoundId: string | null = null;
+             // Check if level was advanced due to this topic completion
+            if (userData.currentLevel !== levelId && ALL_LEVELS.indexOf(userData.currentLevel) > ALL_LEVELS.indexOf(levelId)) {
+                setTopicContinuationLink(`/levels/${userData.currentLevel.toLowerCase()}`);
+                setTopicContinuationText("К следующему уровню");
+            } else if (isLevelCompleted(levelId)) { // Level is complete, but currentLevel might not have changed (e.g. C2)
+                const originalLvlIdx = ALL_LEVELS.indexOf(levelId);
+                if (levelId === ALL_LEVELS[ALL_LEVELS.length - 1]) { // Max level completed
+                    setTopicContinuationLink(`/levels`);
+                    setTopicContinuationText("Все уровни пройдены!");
+                } else { // Not max level, offer next level
+                    setTopicContinuationLink(`/levels/${ALL_LEVELS[originalLvlIdx + 1].toLowerCase()}`);
+                    setTopicContinuationText("Перейти к следующему уровню");
+                }
+            } else { // Topic complete, but level not yet complete (other topics remain)
+              const currentLvlData = userData.progress[levelId];
+              const defaultTopics = DEFAULT_TOPICS[levelId] || [];
+              const customLevelTopics = userData.customTopics?.filter(ct => ct.id.startsWith(levelId + "_")) || [];
+              const allConfiguredTopicsForLevel = [
+                ...defaultTopics.map(t => ({ id: t.id, name: t.name })),
+                ...customLevelTopics.map(t => ({ id: t.id, name: t.name }))
+              ];
+              const currentTopicOrderIndex = allConfiguredTopicsForLevel.findIndex(t => t.id === topicId);
+              let nextIncompleteTopicFoundId: string | null = null;
 
-            if (currentTopicOrderIndex !== -1) {
-              for (let i = currentTopicOrderIndex + 1; i < allConfiguredTopicsForLevel.length; i++) {
-                const potentialNextTopic = allConfiguredTopicsForLevel[i];
-                if (currentLvlData?.topics[potentialNextTopic.id] && !isTopicCompleted(levelId, potentialNextTopic.id)) {
-                  nextIncompleteTopicFoundId = potentialNextTopic.id;
-                  break;
+              if (currentTopicOrderIndex !== -1) {
+                for (let i = currentTopicOrderIndex + 1; i < allConfiguredTopicsForLevel.length; i++) {
+                  const potentialNextTopic = allConfiguredTopicsForLevel[i];
+                  if (currentLvlData?.topics[potentialNextTopic.id] && !isTopicCompleted(levelId, potentialNextTopic.id)) {
+                    nextIncompleteTopicFoundId = potentialNextTopic.id;
+                    break;
+                  }
                 }
               }
-            }
-
-            if (nextIncompleteTopicFoundId) {
-              setTopicContinuationLink(`/levels/${levelId.toLowerCase()}/${nextIncompleteTopicFoundId}`);
-              setTopicContinuationText("Следующая тема");
-            } else { 
-              const levelIsNowFullyCompleted = isLevelCompleted(levelId);
-              const originalLvlIdx = ALL_LEVELS.indexOf(levelId);
-
-              if (levelIsNowFullyCompleted) {
-                if (userData.currentLevel !== levelId && ALL_LEVELS.indexOf(userData.currentLevel) > originalLvlIdx) {
-                    setTopicContinuationLink(`/levels/${userData.currentLevel.toLowerCase()}`);
-                    setTopicContinuationText("К следующему уровню");
-                } else if (levelId === ALL_LEVELS[ALL_LEVELS.length - 1]) {
-                  setTopicContinuationLink(`/levels`);
-                  setTopicContinuationText("Все уровни пройдены!");
-                } else { 
-                  setTopicContinuationLink(`/levels/${ALL_LEVELS[originalLvlIdx + 1].toLowerCase()}`);
-                  setTopicContinuationText("Перейти к следующему уровню");
-                }
+              if (nextIncompleteTopicFoundId) {
+                setTopicContinuationLink(`/levels/${levelId.toLowerCase()}/${nextIncompleteTopicFoundId}`);
+                setTopicContinuationText("Следующая тема");
               } else {
                 setTopicContinuationLink(`/levels/${levelId.toLowerCase()}`);
-                setTopicContinuationText("К темам уровня");
+                setTopicContinuationText("К темам уровня (все пройдено)"); // Fallback if level complete logic is complex
               }
             }
-          } else {
+          } else { // Topic not fully complete (implies logic error or this module was not the last uncompleted one)
             setTopicContinuationLink(`/levels/${levelId.toLowerCase()}/${topicId}`);
             setTopicContinuationText("К модулям темы");
           }
@@ -247,6 +246,7 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
 
     let questionContext = '';
     let expectedAnswerForAI = ''; 
+    let grammarRulesForAI: string | undefined = undefined;
 
     if (moduleId === 'vocabulary' || moduleId === 'wordTest') {
         const wordFromBank = currentVocabulary.find(v => v.german === currentTask);
@@ -260,6 +260,7 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
         expectedAnswerForAI = wordData?.russian || '';
     } else if (moduleId === 'grammar') {
         questionContext = `Задание по грамматике (на основе объяснения): ${lessonContent.grammarExplanation}. Задание: ${lessonContent.writingPrompt || "Напишите предложение, используя это правило."}`;
+        grammarRulesForAI = lessonContent.grammarExplanation;
     } else if (moduleId === 'listening') {
         if (lessonContent.listeningExercise && lessonContent.listeningExercise.questions && lessonContent.listeningExercise.questions[currentQuestionIndex]) {
             questionContext = `Скрипт: "${lessonContent.listeningExercise.script}". Вопрос: "${lessonContent.listeningExercise.questions[currentQuestionIndex]}"`;
@@ -278,7 +279,7 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
         questionContext = `Напишите текст на тему: ${lessonContent.writingPrompt}`;
     }
     
-    const evaluation = await evaluateUserResponse(moduleId, userResponse, questionContext, expectedAnswerForAI);
+    const evaluation = await evaluateUserResponse(moduleId, userResponse, questionContext, expectedAnswerForAI, grammarRulesForAI);
     setFeedback(evaluation);
     setIsLoadingTask(false);
     
@@ -349,7 +350,7 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
   };
 
   const renderModuleContent = () => {
-    if (isLoadingTask && !lessonContent) return <div className="text-center p-4"><Progress value={50} className="w-1/2 mx-auto" /> <p className="mt-2">Загрузка урока...</p></div>;
+    // Skeleton loading is handled above this function call if isLoadingTask && !lessonContent
     if (!lessonContent) return <p className="text-center p-4 text-muted-foreground">Не удалось загрузить содержание модуля. Попробуйте обновить страницу или вернуться назад.</p>;
 
 
@@ -439,6 +440,33 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
   const moduleTitle = MODULE_NAMES_RU[moduleId] || "Модуль";
   const progressPercent = totalTasks > 0 ? (tasksCompleted / totalTasks) * 100 : 0;
   const placeholderText = moduleId === 'wordTest' ? "Введите перевод на русский..." : "Ваш ответ...";
+
+  if (isLoadingTask && !lessonContent) {
+    return (
+      <div className="container mx-auto py-8">
+        <Skeleton className="h-9 w-32 mb-6" /> {/* Back button skeleton */}
+        <Card className="shadow-xl">
+          <CardHeader>
+            <Skeleton className="h-8 w-3/4 mb-2" /> {/* Title skeleton */}
+            <Skeleton className="h-4 w-1/2 mb-2" /> {/* Description skeleton */}
+            <Skeleton className="h-2 w-full" /> {/* Progress bar skeleton */}
+          </CardHeader>
+          <CardContent>
+            <div className="mb-6 min-h-[100px] space-y-3">
+              <Skeleton className="h-6 w-1/3" />
+              <Skeleton className="h-10 w-1/2" />
+              <Skeleton className="h-4 w-full" />
+              <Skeleton className="h-4 w-3/4" />
+            </div>
+            <Skeleton className="h-24 w-full mb-4" /> {/* Textarea skeleton */}
+          </CardContent>
+          <CardFooter>
+            <Skeleton className="h-12 w-full" /> {/* Button skeleton */}
+          </CardFooter>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="container mx-auto py-8">
@@ -546,14 +574,4 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
     </div>
   );
 }
-    
-
-      
-
-    
-
-    
-
-    
-
     
