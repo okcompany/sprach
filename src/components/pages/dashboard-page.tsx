@@ -8,13 +8,15 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter }
 import { Progress } from '@/components/ui/progress';
 import { useUserData } from '@/context/user-data-context';
 import type { AIRecommendedLesson, LanguageLevel, ModuleType } from '@/types/german-learning';
-import { MODULE_NAMES_RU } from '@/types/german-learning';
-import { Sparkles, BookOpen, ArrowRight, AlertTriangle } from 'lucide-react';
+import { MODULE_NAMES_RU, DEFAULT_TOPICS } from '@/types/german-learning';
+import { Sparkles, BookOpen, ArrowRight, AlertTriangle, CheckCircle } from 'lucide-react';
 
 export function DashboardPage() {
   const { userData, isLoading, getAIRecommendedLesson, isLevelCompleted, isTopicCompleted } = useUserData();
   const [recommendedLesson, setRecommendedLesson] = useState<AIRecommendedLesson | null>(null);
   const [isRecommendationLoading, setIsRecommendationLoading] = useState(true);
+  const [recommendedTopicActionLink, setRecommendedTopicActionLink] = useState<string>('');
+
 
   useEffect(() => {
     const fetchRecommendation = async () => {
@@ -55,16 +57,60 @@ export function DashboardPage() {
   
   // Find the first non-completed topic in the current level
   let nextTopicId: string | null = null;
-  const currentLevelTopics = userData.progress[userData.currentLevel]?.topics;
-  if (currentLevelTopics) {
-    const topicOrder = Object.keys(currentLevelTopics); // Or sort them if there's a defined order
-    for (const topicId of topicOrder) {
-      if (!isTopicCompleted(userData.currentLevel, topicId)) {
+  const currentLevelData = userData.progress[userData.currentLevel];
+  if (currentLevelData) {
+    // Combine default and custom topics for the current level to find the next one
+    const defaultTopicsForLevel = DEFAULT_TOPICS[userData.currentLevel] || [];
+    const customTopicsForLevel = userData.customTopics.filter(ct => ct.id.startsWith(userData.currentLevel + "_custom_"));
+    // Assuming a certain order or just taking them as they are stored
+    const allTopicsOrder = [
+        ...defaultTopicsForLevel.map(t => t.id),
+        ...customTopicsForLevel.map(t => t.id)
+    ];
+
+    for (const topicId of allTopicsOrder) {
+      if (currentLevelData.topics[topicId] && !isTopicCompleted(userData.currentLevel, topicId)) {
         nextTopicId = topicId;
         break;
       }
     }
   }
+  
+  useEffect(() => {
+    if (recommendedLesson && userData) {
+        const currentLevelKey = userData.currentLevel;
+        const levelTopics = DEFAULT_TOPICS[currentLevelKey] || [];
+        const customLevelTopics = userData.customTopics.filter(ct => ct.id.startsWith(currentLevelKey + "_custom_"));
+
+        let foundTopicId: string | null = null;
+
+        // Check default topics
+        const defaultMatch = levelTopics.find(t => t.name === recommendedLesson.topic);
+        if (defaultMatch) {
+            foundTopicId = defaultMatch.id;
+        }
+
+        // If not found in default, check custom topics
+        if (!foundTopicId) {
+            const customMatch = customLevelTopics.find(t => t.name === recommendedLesson.topic);
+            if (customMatch) {
+                foundTopicId = customMatch.id;
+            }
+        }
+
+        if (foundTopicId) {
+            setRecommendedTopicActionLink(`/levels/${currentLevelSlug}/${foundTopicId}`);
+        } else if (nextTopicId) {
+            setRecommendedTopicActionLink(`/levels/${currentLevelSlug}/${nextTopicId}`);
+        } else {
+            setRecommendedTopicActionLink(`/levels/${currentLevelSlug}`);
+        }
+    } else if (nextTopicId) {
+         setRecommendedTopicActionLink(`/levels/${currentLevelSlug}/${nextTopicId}`);
+    } else {
+         setRecommendedTopicActionLink(`/levels/${currentLevelSlug}`);
+    }
+  }, [recommendedLesson, userData, nextTopicId, currentLevelSlug]);
 
 
   return (
@@ -113,12 +159,8 @@ export function DashboardPage() {
             <p className="text-muted-foreground mb-3">
               Рекомендуемые модули: {recommendedLesson.modules.map(m => MODULE_NAMES_RU[m as ModuleType] || m).join(', ')}
             </p>
-            {/* Note: AI might recommend a topic not yet in user's progress. Link construction needs care. */}
-            {/* For now, assuming recommended topic is one of the existing ones. */}
-            {/* A more robust solution would be to create the topic if it doesn't exist or find its slug. */}
-            {/* This simple link assumes a topic with this exact name exists in the current level. */}
-            <Button asChild>
-                <Link href={nextTopicId ? `/levels/${currentLevelSlug}/${nextTopicId}` : `/levels/${currentLevelSlug}`}>
+            <Button asChild disabled={!recommendedTopicActionLink}>
+                <Link href={recommendedTopicActionLink || '#'}>
                     Начать рекомендованный урок <ArrowRight className="ml-2 h-4 w-4" />
                 </Link>
             </Button>
@@ -140,8 +182,8 @@ export function DashboardPage() {
             <p className="text-muted-foreground mb-3">
               Продолжайте улучшать свои навыки немецкого языка.
             </p>
-             <Button asChild>
-                <Link href={`/levels/${currentLevelSlug}/${nextTopicId}`}>
+             <Button asChild disabled={!recommendedTopicActionLink}>
+                <Link href={recommendedTopicActionLink || '#'}>
                     Продолжить обучение <ArrowRight className="ml-2 h-4 w-4" />
                 </Link>
             </Button>
@@ -221,3 +263,5 @@ export function DashboardPage() {
     </div>
   );
 }
+
+    
