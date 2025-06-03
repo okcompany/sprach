@@ -1,4 +1,3 @@
-
 // This is an AI-powered system for recommending personalized German lessons.
 'use server';
 
@@ -41,9 +40,11 @@ const prompt = ai.definePrompt({
   User Level: {{{userLevel}}}
   User Progress: {{#each userProgress}}{{{@key}}}: {{{this}}}% {{/each}}
   Weaker Areas: {{#each weakAreas}}{{{this}}} {{/each}}
-  Preferred Topics: {{#if preferredTopics}}{{#each preferredTopics}}{{{this}}} {{/each}}{{else}}None{{/if}}
+  Preferred Topics: {{#if preferredTopics}}{{#each preferredTopics}}{{{this}}}{{#unless @last}}, {{/unless}}{{/each}}{{else}}None specified{{/if}}
 
-  Based on this information, recommend a topic and a set of learning modules (vocabulary, grammar, listening, reading, writing) that would be most beneficial for the user. Explain your reasoning for the recommendation.
+  Based on this information, recommend a topic and a set of learning modules (vocabulary, grammar, listening, reading, writing) that would be most beneficial for the user.
+  If the user has specified preferred topics, try to recommend a lesson from one of those topics if it's appropriate for their level and progress. If none of the preferred topics are suitable, choose another relevant topic.
+  Explain your reasoning for the recommendation.
 
   Respond in Russian.
 
@@ -51,7 +52,7 @@ const prompt = ai.definePrompt({
   {
     "topic": "Die Familie",
     "modules": ["vocabulary", "grammar", "listening"],
-    "reasoning": "Based on your progress, you need to focus on vocabulary and grammar in the context of family. Listening module will help you reinforce new words."
+    "reasoning": "Based on your progress, you need to focus on vocabulary and grammar in the context of family. Listening module will help you reinforce new words. This topic was also among your preferred topics."
   }
   `,
 });
@@ -103,4 +104,3 @@ const recommendAiLessonFlow = ai.defineFlow(
     throw new Error('Failed to get AI recommendation after multiple retries, and loop exited unexpectedly.');
   }
 );
-

@@ -1,3 +1,4 @@
+
 "use client";
 
 import type { ReactNode } from 'react';
@@ -13,7 +14,9 @@ const USER_DATA_KEY = 'sprachheld_userData';
 const initialUserData: UserData = {
   currentLevel: 'A0',
   currentTopicId: undefined, 
-  profile: {},
+  profile: {
+    preferredTopics: [],
+  },
   progress: {},
   vocabularyBank: [],
   settings: {
@@ -72,6 +75,12 @@ export const UserDataProvider = ({ children }: { children: ReactNode }) => {
         if (parsedData.currentTopicId === undefined) { 
             parsedData.currentTopicId = initialUserData.currentTopicId;
         }
+        if (!parsedData.profile) { // Ensure profile exists
+            parsedData.profile = initialUserData.profile;
+        }
+        if (!parsedData.profile.preferredTopics) { // Ensure preferredTopics exists
+            parsedData.profile.preferredTopics = [];
+        }
         setUserData(parsedData);
       } else {
         // Initialize progress for all levels and default topics
@@ -110,13 +119,14 @@ export const UserDataProvider = ({ children }: { children: ReactNode }) => {
     setUserData(prev => {
         if (!prev) return null;
         const newSettings = updates.settings ? { ...prev.settings, ...updates.settings, lastActivityTimestamp: Date.now() } : { ...prev.settings, lastActivityTimestamp: Date.now() };
+        const newProfile = updates.profile ? { ...prev.profile, ...updates.profile } : prev.profile;
         
         let newCurrentTopicId = prev.currentTopicId;
         if ('currentTopicId' in updates) {
           newCurrentTopicId = updates.currentTopicId;
         }
         
-        return { ...prev, ...updates, settings: newSettings, currentTopicId: newCurrentTopicId };
+        return { ...prev, ...updates, settings: newSettings, profile: newProfile, currentTopicId: newCurrentTopicId };
     });
   }, []);
   
@@ -405,7 +415,7 @@ export const UserDataProvider = ({ children }: { children: ReactNode }) => {
         userLevel: userData.currentLevel,
         userProgress: userProgressForAI,
         weakAreas: weakAreas.slice(0, 15), 
-        preferredTopics: userData.profile.preferredTopics,
+        preferredTopics: userData.profile.preferredTopics || [],
       });
        if (recommendation && userData) {
          const recommendedTopicName = recommendation.topic;
