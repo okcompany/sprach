@@ -17,185 +17,181 @@ import {z} from 'genkit';
 
 // Define Zod schema for the input
 const GenerateLessonInputSchema = z.object({
-  level: z.enum(['A0', 'A1', 'A2', 'B1', 'B2', 'C1', 'C2']).describe('The learner\'s current German proficiency level (A0-C2).'),
-  topic: z.string().describe('The topic for the lesson (e.g., "Travel", "Food", "Technology").'),
+  level: z.enum(['A0', 'A1', 'A2', 'B1', 'B2', 'C1', 'C2']).describe('Learner proficiency (A0-C2).'),
+  topic: z.string().describe('Lesson topic (e.g., "Travel", "Food").'),
 });
 
 export type GenerateLessonInput = z.infer<typeof GenerateLessonInputSchema>;
 
 // --- Zod Schemas for Vocabulary ---
 const VocabularyItemSchema = z.object({
-  german: z.string().describe('The German word or phrase.'),
-  russian: z.string().describe('The Russian translation of the word or phrase.'),
-  exampleSentence: z.string().optional().describe('An optional example sentence in German using the word/phrase, appropriate for the user\'s level. This should always be provided if possible.'),
+  german: z.string().describe('German word/phrase.'),
+  russian: z.string().describe('Russian translation.'),
+  exampleSentence: z.string().optional().describe('Optional German example sentence for user level.'),
 });
 
 // --- Zod Schemas for Interactive Vocabulary Exercises ---
 const AIMatchingPairSchema = z.object({
-  german: z.string().describe("Немецкое слово или фраза."),
-  russian: z.string().describe("Соответствующее русское слово или фраза."),
+  german: z.string().describe("German word."),
+  russian: z.string().describe("Matching Russian word."),
 });
 
 const AIMatchingExerciseSchema = z.object({
-  type: z.enum(["matching"]).describe("Тип упражнения: сопоставление."),
-  instructions: z.string().describe("Инструкции для упражнения, например, 'Сопоставьте немецкие слова с их русскими переводами.'"),
-  pairs: z.array(AIMatchingPairSchema).min(3).max(8).describe("Массив из 3-8 пар слов для сопоставления."),
-  germanDistractors: z.array(z.string()).optional().describe("Опциональный массив немецких слов-дистракторов (1-3) для усложнения."),
-  russianDistractors: z.array(z.string()).optional().describe("Опциональный массив русских слов-дистракторов (1-3) для усложнения."),
+  type: z.enum(["matching"]).describe("Exercise type: matching."),
+  instructions: z.string().describe("Instructions, e.g., 'Match German to Russian.'"),
+  pairs: z.array(AIMatchingPairSchema).min(3).max(8).describe("3-8 word pairs."),
+  germanDistractors: z.array(z.string()).optional().describe("Optional German distractors (1-3)."),
+  russianDistractors: z.array(z.string()).optional().describe("Optional Russian distractors (1-3)."),
 });
 
 const AIAudioQuizItemSchema = z.object({
-  germanPhraseToSpeak: z.string().describe("Немецкая фраза, которую пользователь должен прослушать. Она должна быть относительно короткой и ясной для уровня."),
-  options: z.array(z.string()).min(3).max(4).describe("Массив из 3-4 вариантов ответа на русском языке (переводы)."),
-  correctAnswer: z.string().describe("Правильный русский перевод из списка 'options'."),
-  explanation: z.string().optional().describe("Краткое пояснение, если необходимо (например, если есть похожие варианты)."),
+  germanPhraseToSpeak: z.string().describe("Short German phrase for audio quiz."),
+  options: z.array(z.string()).min(3).max(4).describe("3-4 Russian translation options."),
+  correctAnswer: z.string().describe("Correct Russian translation from 'options'."),
+  explanation: z.string().optional().describe("Brief explanation if needed."),
 });
 
 const AIAudioQuizExerciseSchema = z.object({
-  type: z.enum(["audioQuiz"]).describe("Тип упражнения: аудио-квиз."),
-  instructions: z.string().describe("Инструкции для упражнения, например, 'Прослушайте фразу и выберите правильный перевод.'"),
-  items: z.array(AIAudioQuizItemSchema).min(2).max(5).describe("Массив из 2-5 аудио-заданий."),
+  type: z.enum(["audioQuiz"]).describe("Exercise type: audio quiz."),
+  instructions: z.string().describe("Instructions, e.g., 'Listen and choose translation.'"),
+  items: z.array(AIAudioQuizItemSchema).min(2).max(5).describe("2-5 audio quiz items."),
 });
 
 const AIVocabularyInteractiveExerciseSchema = z.discriminatedUnion("type", [
   AIMatchingExerciseSchema,
   AIAudioQuizExerciseSchema,
-]).describe("Интерактивное упражнение для модуля лексики.");
+]).describe("Interactive vocabulary exercise.");
 
 
 // --- Zod Schemas for Grammar Exercises ---
 const FillInTheBlanksQuestionSchema = z.object({
-  promptText: z.string().describe("The sentence or text with one or more blanks, clearly indicating where the user should fill in. Include hints in parentheses if helpful, e.g., 'Ich ______ (gehen) gern.' or 'Der Tisch ist ____ (groß)."),
-  correctAnswers: z.array(z.string()).min(1).describe("An array of acceptable correct answers for the blank(s)."),
-  explanation: z.string().optional().describe("A brief explanation why these answers are correct, if necessary."),
+  promptText: z.string().describe("Sentence with blanks. Hints in ( )."),
+  correctAnswers: z.array(z.string()).min(1).describe("Array of correct answers for blank(s)."),
+  explanation: z.string().optional().describe("Brief explanation (optional)."),
 });
 
 const FillInTheBlanksExerciseSchema = z.object({
   type: z.enum(["fillInTheBlanks"]),
-  instructions: z.string().describe("General instructions for this set of fill-in-the-blanks questions, e.g., 'Fill in the correct form of the verb/adjective.'"),
-  questions: z.array(FillInTheBlanksQuestionSchema).min(1).max(3).describe("An array of 1 to 3 fill-in-the-blanks questions."),
+  instructions: z.string().describe("Instructions, e.g., 'Fill in correct form.'"),
+  questions: z.array(FillInTheBlanksQuestionSchema).min(1).max(3).describe("1-3 fill-in-the-blanks questions."),
 });
 
 const MultipleChoiceQuestionSchema = z.object({
-  questionText: z.string().describe("The question or sentence with a blank that the user needs to complete by choosing an option."),
-  options: z.array(z.string()).min(2).max(4).describe("An array of 2 to 4 options for the user to choose from."),
-  correctAnswer: z.string().describe("The exact text of the correct option from the 'options' array."),
-  explanation: z.string().optional().describe("A brief explanation why this option is correct, if necessary."),
+  questionText: z.string().describe("Question or sentence with a blank."),
+  options: z.array(z.string()).min(2).max(4).describe("2-4 options to choose from."),
+  correctAnswer: z.string().describe("The correct option text."),
+  explanation: z.string().optional().describe("Brief explanation (optional)."),
 });
 
 const MultipleChoiceExerciseSchema = z.object({
   type: z.enum(["multipleChoice"]),
-  instructions: z.string().describe("General instructions for this set of multiple-choice questions, e.g., 'Choose the correct option to complete the sentence.'"),
-  questions: z.array(MultipleChoiceQuestionSchema).min(1).max(3).describe("An array of 1 to 3 multiple-choice questions."),
+  instructions: z.string().describe("Instructions, e.g., 'Choose correct option.'"),
+  questions: z.array(MultipleChoiceQuestionSchema).min(1).max(3).describe("1-3 multiple-choice questions."),
 });
 
 const SentenceConstructionTaskSchema = z.object({
-  words: z.array(z.string()).min(3).describe("An array of words (and punctuation, if any) that the user needs to arrange into a correct sentence."),
-  possibleCorrectSentences: z.array(z.string()).min(1).describe("An array of one or more possible correct sentences that can be formed from the given words."),
-  explanation: z.string().optional().describe("A brief explanation of the key grammar rule(s) applied, e.g., 'Verb in second position for main clauses.'"),
+  words: z.array(z.string()).min(3).describe("Array of words to arrange into a sentence."),
+  possibleCorrectSentences: z.array(z.string()).min(1).describe("One or more possible correct sentences."),
+  explanation: z.string().optional().describe("Brief grammar rule explanation (optional)."),
 });
 
 const SentenceConstructionExerciseSchema = z.object({
   type: z.enum(["sentenceConstruction"]),
-  instructions: z.string().describe("General instructions for this set of sentence construction tasks, e.g., 'Form correct sentences using the given words.'"),
-  tasks: z.array(SentenceConstructionTaskSchema).min(1).max(3).describe("An array of 1 to 3 sentence construction tasks."),
+  instructions: z.string().describe("Instructions, e.g., 'Form correct sentences.'"),
+  tasks: z.array(SentenceConstructionTaskSchema).min(1).max(3).describe("1-3 sentence construction tasks."),
 });
 
 const AIGrammarExerciseSchema = z.discriminatedUnion("type", [
   FillInTheBlanksExerciseSchema,
   MultipleChoiceExerciseSchema,
   SentenceConstructionExerciseSchema,
-]).describe("Структурированное упражнение для грамматического модуля.");
+]).describe("Structured grammar exercise.");
 
 // --- Zod Schemas for Listening ---
 const ListeningExerciseSchema = z.object({
-  script: z.string().describe("The script for the listening exercise, appropriate for the user's level."),
-  questions: z.array(z.string()).min(1).max(3).describe("An array of 1 to 3 specific open-ended comprehension questions about the script, appropriate for the user's level."),
+  script: z.string().describe("Listening exercise script for user's level."),
+  questions: z.array(z.string()).min(1).max(3).describe("1-3 open-ended comprehension questions about script."),
 });
 
 // --- Zod Schemas for Interactive Listening/Reading Exercises (Common Structures) ---
 const AIComprehensionMultipleChoiceQuestionSchema = z.object({
-  questionText: z.string().describe("Вопрос на понимание текста/скрипта."),
-  options: z.array(z.string()).min(2).max(4).describe("Массив из 2-4 вариантов ответа."),
-  correctAnswer: z.string().describe("Текст правильного варианта ответа."),
-  explanation: z.string().optional().describe("Краткое объяснение, почему этот ответ верный."),
+  questionText: z.string().describe("Comprehension question for text/script."),
+  options: z.array(z.string()).min(2).max(4).describe("2-4 answer options."),
+  correctAnswer: z.string().describe("Correct answer text."),
+  explanation: z.string().optional().describe("Brief explanation (optional)."),
 });
 
 const AIComprehensionMultipleChoiceExerciseSchema = z.object({
-  type: z.enum(["comprehensionMultipleChoice"]).describe("Тип: множественный выбор на понимание."),
-  instructions: z.string().describe("Инструкции, например, 'Прочитайте/прослушайте и выберите правильный ответ.'"),
-  questions: z.array(AIComprehensionMultipleChoiceQuestionSchema).min(1).max(3).describe("Массив из 1-3 вопросов."),
+  type: z.enum(["comprehensionMultipleChoice"]).describe("Type: multiple choice comprehension."),
+  instructions: z.string().describe("Instructions, e.g., 'Read/listen and choose.'"),
+  questions: z.array(AIComprehensionMultipleChoiceQuestionSchema).min(1).max(3).describe("1-3 questions."),
 });
 
 const AITrueFalseStatementSchema = z.object({
-  statement: z.string().describe("Утверждение по тексту/скрипту."),
-  isTrue: z.boolean().describe("Верно ли утверждение (true/false)."),
-  explanation: z.string().optional().describe("Краткое объяснение, почему утверждение верное или неверное, если необходимо."),
+  statement: z.string().describe("Statement about text/script."),
+  isTrue: z.boolean().describe("Is statement true? (true/false)."),
+  explanation: z.string().optional().describe("Brief explanation (optional)."),
 });
 
 const AITrueFalseExerciseSchema = z.object({
-  type: z.enum(["trueFalse"]).describe("Тип: верно/неверно."),
-  instructions: z.string().describe("Инструкции, например, 'Определите, верны ли следующие утверждения.'"),
-  statements: z.array(AITrueFalseStatementSchema).min(2).max(5).describe("Массив из 2-5 утверждений."),
+  type: z.enum(["trueFalse"]).describe("Type: true/false."),
+  instructions: z.string().describe("Instructions, e.g., 'Are statements true or false?'"),
+  statements: z.array(AITrueFalseStatementSchema).min(2).max(5).describe("2-5 statements."),
 });
 
 const AISequencingExerciseSchema = z.object({
-  type: z.enum(["sequencing"]).describe("Тип: упорядочивание событий/пунктов."),
-  instructions: z.string().describe("Инструкции, например, 'Расположите события в правильном порядке согласно тексту/аудио.'"),
-  // Items are provided by AI in a shuffled manner, user has to reorder.
-  shuffledItems: z.array(z.string()).min(3).max(6).describe("Элементы (события, шаги, пункты из текста/аудио) в случайном порядке, которые пользователь должен упорядочить."),
-  correctOrder: z.array(z.string()).min(3).max(6).describe("Те же элементы, что и в 'shuffledItems', но в правильной последовательности согласно тексту/аудиоскрипту."),
+  type: z.enum(["sequencing"]).describe("Type: sequencing events/points."),
+  instructions: z.string().describe("Instructions, e.g., 'Order events correctly.'"),
+  shuffledItems: z.array(z.string()).min(3).max(6).describe("Shuffled items (events, steps) for user to order."),
+  correctOrder: z.array(z.string()).min(3).max(6).describe("Same items in correct sequence."),
 });
 
 const AIListeningInteractiveExerciseSchema = z.discriminatedUnion("type", [
   AIComprehensionMultipleChoiceExerciseSchema,
   AITrueFalseExerciseSchema,
   AISequencingExerciseSchema,
-]).describe("Интерактивное упражнение для модуля аудирования, основанное на основном скрипте аудирования.");
+]).describe("Interactive listening exercise (based on main script).");
 
 const AIReadingInteractiveExerciseSchema = z.discriminatedUnion("type", [
   AIComprehensionMultipleChoiceExerciseSchema,
   AITrueFalseExerciseSchema,
   AISequencingExerciseSchema,
-]).describe("Интерактивное упражнение для модуля чтения, основанное на основном тексте для чтения.");
+]).describe("Interactive reading exercise (based on main passage).");
 
 
 // --- Zod Schemas for Interactive Writing Exercises ---
 const AIStructuredWritingExerciseSchema = z.object({
-  type: z.enum(["structuredWriting"]).describe("Тип: структурированное письменное задание."),
-  instructions: z.string().describe("Общие инструкции для задания."),
-  promptDetails: z.string().describe("Детали задания, например, 'Напишите email другу, приглашая его на день рождения. Укажите когда и где.' или 'Опишите эту историю, используя следующие слова: ...'"),
-  templateOutline: z.array(z.string()).optional().describe("Опциональный шаблон/структура, которую пользователь должен заполнить или которой следовать (например, ['Anrede:', 'Einleitung:', 'Hauptteil:', 'Schluss:', 'Gruß:'])."),
-  requiredVocabulary: z.array(z.string()).optional().describe("Опциональный список слов или фраз, которые пользователь должен постараться использовать в своем тексте."),
-  aiGeneratedStoryToDescribe: z.string().optional().describe("Если задание - описать историю, здесь будет сама история (короткий текст), сгенерированная ИИ."),
+  type: z.enum(["structuredWriting"]).describe("Type: structured writing task."),
+  instructions: z.string().describe("General task instructions."),
+  promptDetails: z.string().describe("Task details, e.g., 'Write an email...' or 'Describe this story...'"),
+  templateOutline: z.array(z.string()).optional().describe("Optional template/structure (e.g., ['Salutation:', 'Body:', 'Closing:'])."),
+  requiredVocabulary: z.array(z.string()).optional().describe("Optional vocabulary list to use."),
+  aiGeneratedStoryToDescribe: z.string().optional().describe("Optional AI-generated story text if task is to describe it."),
 });
 
 const AIWritingInteractiveExerciseSchema = z.discriminatedUnion("type", [
   AIStructuredWritingExerciseSchema,
-]).describe("Интерактивное упражнение для модуля письма.");
+]).describe("Interactive writing exercise.");
 
 
 // --- Define Zod schema for the MAIN output ---
 const GenerateLessonOutputSchema = z.object({
-  lessonTitle: z.string().describe('The title of the generated lesson.'),
-  vocabulary: z.array(VocabularyItemSchema).min(5).describe('An array of at least 5 key vocabulary items for the lesson, each including the German word/phrase, its Russian translation, and an example sentence (if possible). Ensure this vocabulary list is based on common German language textbooks for the specified level and topic. Include common conversational phrases and idioms relevant to the topic and level.'),
-  grammarExplanation: z.string().describe('A detailed explanation of a relevant grammar point, appropriate for the user\'s level. Systematically include topics related to verbs (tenses, modals, reflexives etc.) especially for A0-B2 levels.'),
+  lessonTitle: z.string().describe('Generated lesson title.'),
+  vocabulary: z.array(VocabularyItemSchema).min(5).describe('At least 5 key vocabulary items (German, Russian, optional example). Common phrases/idioms for level/topic.'),
+  grammarExplanation: z.string().describe('Detailed grammar explanation for user level. Focus on verbs for A0-B2.'),
   grammarExercises: z.array(AIGrammarExerciseSchema)
-    .min(1).max(3).optional().describe('An optional array of 1 to 3 structured grammar exercises related to the grammar point. If provided, it should contain at least one exercise. AI should try to provide these if applicable and diverse. Ensure exercises help practice verb conjugations and other core grammar concepts.'),
+    .min(1).max(3).optional().describe('Optional 1-3 diverse structured grammar exercises. Practice verb conjugations etc.'),
   
-  // Standard Listening and Reading
-  listeningExercise: ListeningExerciseSchema.describe('A listening comprehension exercise including a script and specific open-ended questions.'),
-  readingPassage: z.string().describe('A short reading passage related to the topic, appropriate for the user\'s level.'),
-  readingQuestions: z.array(z.string()).min(1).max(3).describe("An array of 1 to 3 specific open-ended comprehension questions about the reading passage, appropriate for the user's level."),
+  listeningExercise: ListeningExerciseSchema.describe('Listening comprehension (script, open questions).'),
+  readingPassage: z.string().describe('Short reading passage for user level.'),
+  readingQuestions: z.array(z.string()).min(1).max(3).describe("1-3 open-ended comprehension questions for passage."),
   
-  // Standard Writing
-  writingPrompt: z.string().describe('A writing prompt for the learner to practice their writing skills, appropriate for the user\'s level, usually related to the grammar or topic. This can be a general prompt.'),
+  writingPrompt: z.string().describe('General writing prompt for user level, related to grammar/topic.'),
 
-  // NEW OPTIONAL INTERACTIVE EXERCISES
-  interactiveVocabularyExercises: z.array(AIVocabularyInteractiveExerciseSchema).optional().describe("Опциональный массив (1-2) интерактивных упражнений для закрепления лексики (сопоставление, аудио-квиз)."),
-  interactiveListeningExercises: z.array(AIListeningInteractiveExerciseSchema).optional().describe("Опциональный массив (1-2) интерактивных упражнений на понимание основного скрипта аудирования (множественный выбор, верно/неверно, упорядочивание)."),
-  interactiveReadingExercises: z.array(AIReadingInteractiveExerciseSchema).optional().describe("Опциональный массив (1-2) интерактивных упражнений на понимание основного текста для чтения (множественный выбор, верно/неверно, упорядочивание)."),
-  interactiveWritingExercises: z.array(AIWritingInteractiveExerciseSchema).optional().describe("Опциональный массив (1) более структурированных письменных заданий (например, email по шаблону, описание истории). Это может дополнять или заменять общий 'writingPrompt', если предоставлено."),
+  interactiveVocabularyExercises: z.array(AIVocabularyInteractiveExerciseSchema).optional().describe("Optional 1-2 interactive vocab exercises (matching, audio quiz)."),
+  interactiveListeningExercises: z.array(AIListeningInteractiveExerciseSchema).optional().describe("Optional 1-2 interactive listening exercises (MCQ, T/F, sequence) based on main script."),
+  interactiveReadingExercises: z.array(AIReadingInteractiveExerciseSchema).optional().describe("Optional 1-2 interactive reading exercises (MCQ, T/F, sequence) based on main passage."),
+  interactiveWritingExercises: z.array(AIWritingInteractiveExerciseSchema).optional().describe("Optional 1 structured writing task (e.g., email by template). Can replace general 'writingPrompt'."),
 });
 
 export type GenerateLessonOutput = z.infer<typeof GenerateLessonOutputSchema>;
@@ -304,16 +300,23 @@ const generateLessonContentFlow = ai.defineFlow(
         
         const errorMessage = error.message ? error.message.toLowerCase() : '';
         if (
-          errorMessage.includes('503') ||
-          errorMessage.includes('service unavailable') ||
-          errorMessage.includes('model is overloaded') ||
-          errorMessage.includes('server error') ||
-          errorMessage.includes('internal error')
+          errorMessage.includes('503') || // Standard service unavailable
+          errorMessage.includes('service unavailable') || // More explicit
+          errorMessage.includes('model is overloaded') || // Specific to AI models
+          errorMessage.includes('server error') || // General server-side issue
+          errorMessage.includes('internal error') || // General internal issue
+          (error.status === 400 && errorMessage.includes('constraint that has too many states')) // Specific schema error NOT to retry indefinitely
         ) {
+            // For "too many states" (400), we don't want to retry repeatedly like a 503. 
+            // This error indicates a problem with the schema itself.
+            // However, the loop structure handles MAX_RETRIES for all listed conditions.
+            // If it's the schema error, it will fail MAX_RETRIES and then throw, which is appropriate.
+            // If it's a transient 503, it will retry.
           const delay = INITIAL_RETRY_DELAY_MS * Math.pow(2, retries - 1);
-          console.warn(`[generateLessonContentFlow] Attempt ${retries} failed with transient error for topic "${input.topic}" at level ${input.level}. Retrying in ${delay / 1000}s...`);
+          console.warn(`[generateLessonContentFlow] Attempt ${retries} failed for topic "${input.topic}" at level ${input.level} (Error: ${error.message ? error.message.split('\n')[0] : 'Unknown'}). Retrying in ${delay / 1000}s...`);
           await new Promise(resolve => setTimeout(resolve, delay));
         } else {
+          // Non-retryable errors (or errors not explicitly listed for retry)
           console.error(`[generateLessonContentFlow] Failed with non-retryable error for topic "${input.topic}" at level ${input.level}. Input:`, JSON.stringify(input, null, 2), "Error:", error.message ? error.message : error);
           throw error;
         }
