@@ -26,9 +26,10 @@ import type {
   AIComprehensionMQ_Question,
   AITrueFalseExercise,
   AITrueFalseStatement,
+  AISequencingExercise, // Added
 } from '@/types/german-learning';
 import { MODULE_NAMES_RU, DEFAULT_TOPICS, ALL_MODULE_TYPES, ALL_LEVELS } from '@/types/german-learning';
-import { Speaker, RotateCcw, CheckCircle, AlertTriangle, ArrowRight, Shuffle, ThumbsUp, ThumbsDown } from 'lucide-react';
+import { Speaker, RotateCcw, CheckCircle, AlertTriangle, ArrowRight, Shuffle, ThumbsUp, ThumbsDown, ListOrdered, Trash2 } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 
@@ -118,13 +119,17 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
   // State for Interactive Listening/Reading Exercises
   const [activeInteractiveExercise, setActiveInteractiveExercise] = useState<AIListeningInteractiveExercise | AIReadingInteractiveExercise | null>(null);
   const [currentInteractiveQuestionIndex, setCurrentInteractiveQuestionIndex] = useState(0);
-  const [interactiveExerciseFeedback, setInteractiveExerciseFeedback] = useState<{ message: string; isCorrect: boolean; correctAnswerText?: string, explanation?: string } | null>(null);
+  const [interactiveExerciseFeedback, setInteractiveExerciseFeedback] = useState<{ message: string; isCorrect: boolean; correctAnswerText?: string, explanation?: string, correctSequence?: string[] } | null>(null);
   
   // MCQ Specific State
   const [selectedMCQOption, setSelectedMCQOption] = useState<string | null>(null);
 
   // True/False Specific State
   const [selectedTrueFalseAnswer, setSelectedTrueFalseAnswer] = useState<boolean | null>(null);
+
+  // Sequencing Specific State
+  const [userSequence, setUserSequence] = useState<string[]>([]);
+  const [availableSequenceItems, setAvailableSequenceItems] = useState<string[]>([]);
 
 
   const topicName = useMemo(() => 
@@ -151,6 +156,8 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
     setInteractiveExerciseFeedback(null);
     setSelectedMCQOption(null);
     setSelectedTrueFalseAnswer(null);
+    setUserSequence([]);
+    setAvailableSequenceItems([]);
   };
 
   const fetchLesson = useCallback(async () => {
@@ -208,6 +215,8 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
         const interactiveExercises = moduleId === 'listening' ? content.interactiveListeningExercises : content.interactiveReadingExercises;
         const mcqExercise = interactiveExercises?.find(ex => ex.type === 'comprehensionMultipleChoice') as AIComprehensionMultipleChoiceExercise | undefined;
         const trueFalseExercise = interactiveExercises?.find(ex => ex.type === 'trueFalse') as AITrueFalseExercise | undefined;
+        const sequencingExercise = interactiveExercises?.find(ex => ex.type === 'sequencing') as AISequencingExercise | undefined;
+
 
         if (mcqExercise) {
             setActiveInteractiveExercise(mcqExercise);
@@ -215,6 +224,11 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
         } else if (trueFalseExercise) {
             setActiveInteractiveExercise(trueFalseExercise);
             setTotalTasks(trueFalseExercise.statements.length);
+        } else if (sequencingExercise) {
+            setActiveInteractiveExercise(sequencingExercise);
+            setAvailableSequenceItems(shuffleArray([...sequencingExercise.shuffledItems])); // Shuffle for display
+            setUserSequence([]);
+            setTotalTasks(1); // Sequencing is one task
         } else { // Fallback to open-ended questions
             const questionsList = moduleId === 'listening' ? content.listeningExercise?.questions : content.readingQuestions;
             const baseText = moduleId === 'listening' ? content.listeningExercise?.script : content.readingPassage;
@@ -352,12 +366,58 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
     }
   };
   
-  // --- Common Handler for Next Interactive Item (MCQ, True/False, later Sequencing) ---
+  // --- Sequencing Handlers (Listening/Reading) ---
+  const handleSelectSequenceItem = (itemText: string) => {
+    if (interactiveExerciseFeedback) return;
+    setUserSequence(prev => [...prev, itemText]);
+    setAvailableSequenceItems(prev => prev.filter(item => item !== itemText));
+  };
+
+  const handleRemoveFromSequence = (itemText: string, index: number) => {
+    if (interactiveExerciseFeedback) return;
+    setUserSequence(prev => prev.filter((_, i) => i !== index));
+    setAvailableSequenceItems(prev => [...prev, itemText].sort(() => Math.random() - 0.5)); // Add back and shuffle
+  };
+  
+  const handleResetSequence = () => {
+    if (interactiveExerciseFeedback) return; // Don't reset if already checked and feedback is shown
+    if (activeInteractiveExercise && activeInteractiveExercise.type === 'sequencing') {
+      setUserSequence([]);
+      setAvailableSequenceItems(shuffleArray([...activeInteractiveExercise.shuffledItems]));
+    }
+  };
+
+  const handleCheckSequence = () => {
+    if (!activeInteractiveExercise || activeInteractiveExercise.type !== 'sequencing' || interactiveExerciseFeedback) return;
+    const correctOrder = activeInteractiveExercise.correctOrder;
+    const isCorrect = userSequence.length === correctOrder.length && userSequence.every((item, index) => item === correctOrder[index]);
+    
+    let scoreIncrement = 0;
+    if (isCorrect) {
+      scoreIncrement = 100; // Full score for correct sequence
+      setModuleScore(prev => prev + scoreIncrement); // Assuming sequencing is the only task
+      setInteractiveExerciseFeedback({ message: "Правильно! Последовательность верная.", isCorrect: true });
+    } else {
+      setInteractiveExerciseFeedback({ 
+        message: "Неверно. Порядок неправильный.", 
+        isCorrect: false, 
+        correctSequence: correctOrder 
+      });
+    }
+    
+    const finalScore = Math.round(scoreIncrement); // Score is either 100 or 0 for this task
+    updateModuleProgress(levelId, topicId, moduleId, finalScore);
+    setFinalModuleScore(finalScore);
+    setIsModuleFinished(true);
+    setTasksCompleted(1); // Mark this single task as completed
+    toast({ title: "Упражнение на упорядочивание завершено!", description: `Ваш результат: ${finalScore}%`, duration: 5000 });
+  };
+
+  // --- Common Handler for Next Interactive Item (MCQ, True/False) ---
   const handleNextInteractiveItem = () => {
     setInteractiveExerciseFeedback(null);
-    setSelectedMCQOption(null); // Reset MCQ specific state
-    setSelectedTrueFalseAnswer(null); // Reset True/False specific state
-    // Add resets for other interactive types here in the future
+    setSelectedMCQOption(null); 
+    setSelectedTrueFalseAnswer(null); 
 
     const newTasksCompleted = tasksCompleted + 1;
     setTasksCompleted(newTasksCompleted);
@@ -453,7 +513,9 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
         return (
             <div>
                 <h3 className="text-xl font-semibold mb-2">{activeInteractiveExercise.instructions}</h3>
-                <p className="text-center text-muted-foreground mb-4">Задание {currentInteractiveQuestionIndex + 1} из {totalTasks}</p>
+                 <p className="text-center text-muted-foreground mb-4">
+                    {activeInteractiveExercise.type === 'sequencing' ? `Упорядочите ${activeInteractiveExercise.shuffledItems.length} элементов.` : `Задание ${currentInteractiveQuestionIndex + 1} из ${totalTasks}`}
+                 </p>
                 
                 {baseText && (
                     <Card className="mb-6 bg-muted/30">
@@ -512,7 +574,7 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
                                     <ThumbsUp className="mr-2 h-5 w-5"/> Верно
                                 </Button>
                                 <Button
-                                    variant={selectedTrueFalseAnswer === false ? "destructive" : "outline"}
+                                    variant={selectedTrueFalseAnswer === false ? (interactiveExerciseFeedback && !interactiveExerciseFeedback.isCorrect ? "destructive" : "default") : "outline"}
                                     className="p-4 h-auto text-base min-w-[120px]"
                                     onClick={() => handleSelectTrueFalseAnswer(false)}
                                     disabled={!!interactiveExerciseFeedback}
@@ -524,7 +586,51 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
                     );
                 })()}
                 
-                {/* TODO: Sequencing Rendering will go here */}
+                {/* Sequencing Rendering */}
+                {activeInteractiveExercise.type === 'sequencing' && (() => {
+                    return (
+                        <div className="space-y-6 mb-6">
+                            <div>
+                                <h4 className="font-medium text-md mb-2">Доступные элементы для порядка:</h4>
+                                {availableSequenceItems.length === 0 && !interactiveExerciseFeedback && <p className="text-sm text-muted-foreground">Все элементы добавлены в вашу последовательность.</p>}
+                                <div className="flex flex-wrap gap-2">
+                                    {availableSequenceItems.map((item, index) => (
+                                        <Button 
+                                            key={`avail-${index}`} 
+                                            variant="outline"
+                                            onClick={() => handleSelectSequenceItem(item)}
+                                            disabled={!!interactiveExerciseFeedback}
+                                            className="text-sm"
+                                        >
+                                            {item}
+                                        </Button>
+                                    ))}
+                                </div>
+                            </div>
+                            <div>
+                                <div className="flex justify-between items-center mb-2">
+                                    <h4 className="font-medium text-md">Ваша последовательность:</h4>
+                                    <Button variant="ghost" size="sm" onClick={handleResetSequence} disabled={!!interactiveExerciseFeedback || userSequence.length === 0}>
+                                        <RotateCcw className="mr-1 h-3 w-3" /> Сбросить
+                                    </Button>
+                                </div>
+                                {userSequence.length === 0 && <p className="text-sm text-muted-foreground">Начните выбирать элементы из списка выше.</p>}
+                                <ol className="list-decimal list-inside space-y-2 pl-2">
+                                    {userSequence.map((item, index) => (
+                                        <li key={`user-${index}`} className="text-sm p-2 border rounded-md bg-muted/20 flex justify-between items-center">
+                                            <span>{item}</span>
+                                            {!interactiveExerciseFeedback && (
+                                                <Button variant="ghost" size="icon" onClick={() => handleRemoveFromSequence(item, index)} className="h-6 w-6">
+                                                    <Trash2 className="h-4 w-4 text-destructive/70"/>
+                                                </Button>
+                                            )}
+                                        </li>
+                                    ))}
+                                </ol>
+                            </div>
+                        </div>
+                    );
+                })()}
 
                 {interactiveExerciseFeedback && (
                     <Card className={`mb-4 ${interactiveExerciseFeedback.isCorrect ? 'border-green-500 bg-green-50 dark:bg-green-900/20' : 'border-red-500 bg-red-50 dark:bg-red-900/20'}`}>
@@ -533,6 +639,14 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
                                 {interactiveExerciseFeedback.message}
                             </p>
                             {interactiveExerciseFeedback.explanation && <p className="text-sm mt-1 text-muted-foreground">Пояснение: {interactiveExerciseFeedback.explanation}</p>}
+                            {interactiveExerciseFeedback.correctSequence && !interactiveExerciseFeedback.isCorrect && (
+                                <div className="mt-2">
+                                    <p className="text-sm font-medium text-muted-foreground">Правильная последовательность:</p>
+                                    <ol className="list-decimal list-inside text-sm text-muted-foreground">
+                                        {interactiveExerciseFeedback.correctSequence.map((item, idx) => <li key={`corr-${idx}`}>{item}</li>)}
+                                    </ol>
+                                </div>
+                            )}
                         </CardContent>
                     </Card>
                 )}
@@ -568,12 +682,20 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
       </Button>
       <Card className="shadow-xl">
         <CardHeader>
-          <CardTitle className="font-headline text-2xl">{moduleTitle}: {topicName}</CardTitle>
+          <CardTitle className="font-headline text-2xl flex items-center">
+            {activeInteractiveExercise?.type === 'sequencing' && <ListOrdered className="mr-2 h-6 w-6 text-primary"/>}
+            {activeInteractiveExercise?.type === 'comprehensionMultipleChoice' && <CheckCircle className="mr-2 h-6 w-6 text-primary"/>}
+            {activeInteractiveExercise?.type === 'trueFalse' && <ThumbsUp className="mr-2 h-6 w-6 text-primary"/>}
+            {activeAudioQuizExercise && <Speaker className="mr-2 h-6 w-6 text-primary"/>}
+            {activeMatchingExercise && <Shuffle className="mr-2 h-6 w-6 text-primary"/>}
+            {moduleTitle}: {topicName}
+          </CardTitle>
           {!isModuleFinished ? (
             <CardDescription>Уровень {levelId}. 
             {activeMatchingExercise ? " Упражнение на сопоставление." : 
              activeAudioQuizExercise ? `Аудио-квиз: Задание ${currentAudioQuizItemIndex + 1} из ${totalTasks}.` :
-             activeInteractiveExercise ? `Интерактивное упражнение: Задание ${currentInteractiveQuestionIndex + 1} из ${totalTasks}.` :
+             activeInteractiveExercise && activeInteractiveExercise.type !== 'sequencing' ? `Интерактивное упражнение: Задание ${currentInteractiveQuestionIndex + 1} из ${totalTasks}.` :
+             activeInteractiveExercise && activeInteractiveExercise.type === 'sequencing' ? `Интерактивное упражнение: Упорядочите элементы.` :
              `Задание ${tasksCompleted + 1} из ${totalTasks}.`}
             </CardDescription>
           ) : (
@@ -594,12 +716,71 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
                   disabled={isLoadingTask || tasksCompleted >= totalTasks || (!currentTask && (moduleId === 'listening' || (moduleId === 'reading' && lessonContent?.readingQuestions && lessonContent.readingQuestions.length > 0)))}
                 />
               )}
+              {feedback && feedback.grammarErrorTags && feedback.grammarErrorTags.length > 0 && (
+                <div className="mt-2 p-3 border border-orange-300 bg-orange-50 rounded-md">
+                  <p className="text-sm font-medium text-orange-700">Обратите внимание на следующие грамматические моменты:</p>
+                  <ul className="list-disc list-inside text-xs text-orange-600">
+                    {feedback.grammarErrorTags.map(tag => <li key={tag}>{tag.replace(/_/g, ' ')}</li>)}
+                  </ul>
+                </div>
+              )}
             </>
           ) : ( 
-            <div className="text-center p-6"> {/* ... Module Finished UI ... */} </div>
+            <div className="text-center p-6"> 
+              <CheckCircle className="h-16 w-16 text-green-500 mx-auto mb-4" />
+              <h3 className="text-2xl font-semibold mb-2">Модуль завершен!</h3>
+              <p className="text-lg text-muted-foreground mb-1">Ваш результат: <span className={`font-bold ${finalModuleScore !== null && finalModuleScore >= 70 ? 'text-green-600' : 'text-red-600'}`}>{finalModuleScore}%</span></p>
+              {finalModuleScore !== null && finalModuleScore < 70 && (
+                <p className="text-sm text-muted-foreground mb-4">Нужно немного подтянуть! Попробуйте еще раз.</p>
+              )}
+               {interactiveExerciseFeedback?.correctSequence && !interactiveExerciseFeedback.isCorrect && activeInteractiveExercise?.type === 'sequencing' && (
+                <div className="mt-4 p-3 border border-blue-300 bg-blue-50 rounded-md text-left">
+                    <p className="text-sm font-medium text-blue-700">Правильная последовательность была:</p>
+                    <ol className="list-decimal list-inside text-xs text-blue-600">
+                        {interactiveExerciseFeedback.correctSequence.map((item, idx) => <li key={`fb-corr-${idx}`}>{item}</li>)}
+                    </ol>
+                </div>
+                )}
+              <div className="mt-6 flex gap-3 justify-center">
+                <Button onClick={handleRetryModule} variant="outline">
+                  <RotateCcw className="mr-2 h-4 w-4" /> Повторить модуль
+                </Button>
+                {topicContinuationLink && (
+                    <Button asChild>
+                        <Link href={topicContinuationLink}>
+                        {topicContinuationText} <ArrowRight className="ml-2 h-4 w-4" />
+                        </Link>
+                    </Button>
+                )}
+                {!topicContinuationLink && (
+                     <Button asChild>
+                        <Link href={`/levels/${levelId.toLowerCase()}/${topicId}`}>
+                            К другим модулям темы <ArrowRight className="ml-2 h-4 w-4" />
+                        </Link>
+                    </Button>
+                )}
+              </div>
+            </div>
           )}
           {feedback && !isModuleFinished && !activeMatchingExercise && !activeAudioQuizExercise && !activeInteractiveExercise && ( 
-            <Card className={`mb-4 ${feedback.isCorrect ? 'border-green-500' : 'border-red-500'}`}> {/* ... Feedback UI ... */} </Card>
+            <Card className={`mb-4 ${feedback.isCorrect ? 'border-green-500' : 'border-red-500'}`}> 
+             <CardContent className="p-4">
+                <p className={`font-semibold ${feedback.isCorrect ? 'text-green-700 dark:text-green-400' : 'text-red-700 dark:text-red-400'}`}>
+                  {feedback.evaluation}
+                </p>
+                {!feedback.isCorrect && feedback.suggestedCorrection && (
+                  <p className="text-sm mt-1 text-muted-foreground">Предлагаемая коррекция: {feedback.suggestedCorrection}</p>
+                )}
+                 {feedback.grammarErrorTags && feedback.grammarErrorTags.length > 0 && (
+                    <div className="mt-2">
+                    <p className="text-xs font-medium text-orange-600">Замеченные грамматические моменты:</p>
+                    <ul className="list-disc list-inside text-xs text-orange-500">
+                        {feedback.grammarErrorTags.map(tag => <li key={tag}>{tag.replace(/_/g, ' ')}</li>)}
+                    </ul>
+                    </div>
+                )}
+              </CardContent>
+            </Card>
           )}
         </CardContent>
         {!isModuleFinished && (
@@ -623,7 +804,9 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
                         <Button onClick={handleSubmitMCQAnswer} className="w-full" size="lg" disabled={!selectedMCQOption}>Проверить ответ</Button>
                     ) : activeInteractiveExercise.type === 'trueFalse' ? (
                         <Button onClick={handleSubmitTrueFalseAnswer} className="w-full" size="lg" disabled={selectedTrueFalseAnswer === null}>Проверить ответ</Button>
-                    ) : null // Placeholder for future sequencing button
+                    ) : activeInteractiveExercise.type === 'sequencing' ? (
+                        <Button onClick={handleCheckSequence} className="w-full" size="lg" disabled={userSequence.length !== activeInteractiveExercise.shuffledItems.length}>Проверить последовательность</Button>
+                    ) : null 
                 ) : (
                      <Button onClick={handleNextInteractiveItem} className="w-full" size="lg">Следующее задание</Button>
                 )
