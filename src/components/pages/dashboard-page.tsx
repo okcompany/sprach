@@ -199,14 +199,14 @@ export function DashboardPage() {
       <Card className="mb-8 shadow-lg bg-gradient-to-r from-primary to-blue-700 text-primary-foreground">
         <CardHeader>
           <CardTitle className="font-headline text-3xl">Добро пожаловать в Sprachheld!</CardTitle>
-          <CardDescription className="text-blue-100">Ваш ИИ-помощник в изучении немецкого языка.</CardDescription>
+          <CardDescription className="text-primary-foreground/80">Ваш ИИ-помощник в изучении немецкого языка.</CardDescription>
         </CardHeader>
         <CardContent>
           <p className="mb-1">Текущий уровень: <span className="font-semibold">{userData?.currentLevel}</span></p>
-          <div className="w-full bg-blue-200/30 rounded-full h-2.5 mb-4">
+          <div className="w-full bg-primary-foreground/20 rounded-full h-2.5 mb-4">
             <div className="bg-accent h-2.5 rounded-full" style={{ width: `${overallProgress}%` }}></div>
           </div>
-          <p className="text-sm text-blue-100">Общий прогресс: {overallProgress}%</p>
+          <p className="text-sm text-primary-foreground/80">Общий прогресс: {overallProgress}%</p>
         </CardContent>
       </Card>
 
