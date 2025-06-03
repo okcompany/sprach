@@ -314,8 +314,6 @@ export const UserDataProvider = ({ children }: { children: ReactNode }) => {
               tId => updatedUserData.progress[level]!.topics[tId]?.completed === true
           );
       } else if (allDefinedTopicIdsForLevel.length === 0) {
-          // A level with no topics is considered "not completed" unless explicitly marked.
-          // For auto-advancement, we'd usually expect topics.
           allLevelTopicsTrulyCompleted = false;
       }
 
@@ -327,7 +325,6 @@ export const UserDataProvider = ({ children }: { children: ReactNode }) => {
               updatedUserData.currentLevel = ALL_LEVELS[currentLevelIndex + 1];
               updatedUserData.currentTopicId = undefined; 
           } else if (level === updatedUserData.currentLevel && currentLevelIndex === ALL_LEVELS.length - 1) { 
-              // Last level completed
               updatedUserData.currentTopicId = undefined;
           }
       } else {
@@ -511,8 +508,13 @@ export const UserDataProvider = ({ children }: { children: ReactNode }) => {
         preferredTopics: userData.profile.preferredTopics || [],
       });
       return recommendation;
-    } catch (error) {
-      console.error("Error getting AI recommended lesson:", error);
+    } catch (error: any) {
+      const errorMessage = error && error.message ? String(error.message).toLowerCase() : "";
+      if (errorMessage.includes('503') || errorMessage.includes('overloaded') || errorMessage.includes('service unavailable') || errorMessage.includes('server error') || errorMessage.includes('internal error')) {
+        console.warn(`[UserDataContext] AI Recommendation service temporarily unavailable or failed after retries (handled): ${error.message}`);
+      } else {
+        console.error("[UserDataContext] Error getting AI recommended lesson:", error);
+      }
       return null;
     }
   }, [userData, isTopicCompleted]); 
@@ -617,6 +619,8 @@ export const useUserData = () => {
   return context;
 };
 
+
+    
 
     
 
