@@ -39,14 +39,14 @@ const AIMatchingPairSchema = z.object({
 const AIMatchingExerciseSchema = z.object({
   type: z.enum(["matching"]).describe("Type: matching."),
   instructions: z.string().describe("Instructions, e.g., 'Match words.'"),
-  pairs: z.array(AIMatchingPairSchema).min(3).max(6).describe("3-6 pairs."),
+  pairs: z.array(AIMatchingPairSchema).describe("Pairs of words."), // Removed .min(3).max(6)
   germanDistractors: z.array(z.string()).optional().describe("Opt. German distractors (1-2)."),
   russianDistractors: z.array(z.string()).optional().describe("Opt. Russian distractors (1-2)."),
 });
 
 const AIAudioQuizItemSchema = z.object({
   germanPhraseToSpeak: z.string().describe("Short German phrase for audio."),
-  options: z.array(z.string()).min(3).max(4).describe("3-4 Russian options."),
+  options: z.array(z.string()).describe("3-4 Russian options."), // Removed .min(3).max(4)
   correctAnswer: z.string().describe("Correct Russian option."),
   explanation: z.string().optional().describe("Brief explanation opt."),
 });
@@ -54,7 +54,7 @@ const AIAudioQuizItemSchema = z.object({
 const AIAudioQuizExerciseSchema = z.object({
   type: z.enum(["audioQuiz"]).describe("Type: audio quiz."),
   instructions: z.string().describe("Instructions, e.g., 'Listen & choose.'"),
-  items: z.array(AIAudioQuizItemSchema).min(2).max(4).describe("2-4 audio items."),
+  items: z.array(AIAudioQuizItemSchema).describe("Audio items."), // Removed .min(2).max(4)
 });
 
 // --- Zod Schemas for Grammar Exercises ---
@@ -67,12 +67,12 @@ const FillInTheBlanksQuestionSchema = z.object({
 const FillInTheBlanksExerciseSchema = z.object({
   type: z.enum(["fillInTheBlanks"]),
   instructions: z.string().describe("Instructions, e.g., 'Fill blanks.'"),
-  questions: z.array(FillInTheBlanksQuestionSchema).min(1).max(2).describe("1-2 fill-blank questions."),
+  questions: z.array(FillInTheBlanksQuestionSchema).describe("Fill-blank questions."), // Removed .min(1).max(2)
 });
 
 const MultipleChoiceQuestionSchema = z.object({
   questionText: z.string().describe("Question/sentence w/ blank."),
-  options: z.array(z.string()).min(2).max(4).describe("2-4 choices."),
+  options: z.array(z.string()).min(2).describe("2-4 choices."), // Removed .max(4)
   correctAnswer: z.string().describe("Correct option."),
   explanation: z.string().optional().describe("Explanation opt."),
 });
@@ -80,7 +80,7 @@ const MultipleChoiceQuestionSchema = z.object({
 const MultipleChoiceExerciseSchema = z.object({
   type: z.enum(["multipleChoice"]),
   instructions: z.string().describe("Instructions, e.g., 'Choose option.'"),
-  questions: z.array(MultipleChoiceQuestionSchema).min(1).max(2).describe("1-2 MCQ questions."),
+  questions: z.array(MultipleChoiceQuestionSchema).describe("MCQ questions."), // Removed .min(1).max(2)
 });
 
 const SentenceConstructionTaskSchema = z.object({
@@ -92,25 +92,26 @@ const SentenceConstructionTaskSchema = z.object({
 const SentenceConstructionExerciseSchema = z.object({
   type: z.enum(["sentenceConstruction"]),
   instructions: z.string().describe("Instructions, e.g., 'Form sentences.'"),
-  tasks: z.array(SentenceConstructionTaskSchema).min(1).max(2).describe("1-2 sentence tasks."),
+  tasks: z.array(SentenceConstructionTaskSchema).describe("Sentence tasks."), // Removed .min(1).max(2)
 });
 
-const AIGrammarExerciseSchema = z.discriminatedUnion("type", [
-  FillInTheBlanksExerciseSchema,
-  MultipleChoiceExerciseSchema,
-  SentenceConstructionExerciseSchema,
-]).describe("Structured grammar exercise.");
+// This discriminatedUnion is NO LONGER USED directly in GenerateLessonOutputSchema
+// const AIGrammarExerciseSchema = z.discriminatedUnion("type", [
+//   FillInTheBlanksExerciseSchema,
+//   MultipleChoiceExerciseSchema,
+//   SentenceConstructionExerciseSchema,
+// ]).describe("Structured grammar exercise.");
 
 // --- Zod Schemas for Listening ---
 const ListeningExerciseSchema = z.object({
   script: z.string().describe("Listening script for level."),
-  questions: z.array(z.string()).min(1).max(2).describe("1-2 open comprehension questions."),
+  questions: z.array(z.string()).describe("Open comprehension questions."), // Removed .min(1).max(2)
 });
 
 // --- Zod Schemas for Interactive Listening/Reading Exercises (Common Structures) ---
 const AIComprehensionMultipleChoiceQuestionSchema = z.object({
   questionText: z.string().describe("Comprehension question."),
-  options: z.array(z.string()).min(2).max(4).describe("2-4 answer options."),
+  options: z.array(z.string()).min(2).describe("2-4 answer options."), // Removed .max(4)
   correctAnswer: z.string().describe("Correct answer."),
   explanation: z.string().optional().describe("Explanation opt."),
 });
@@ -118,7 +119,7 @@ const AIComprehensionMultipleChoiceQuestionSchema = z.object({
 const AIComprehensionMultipleChoiceExerciseSchema = z.object({
   type: z.enum(["comprehensionMultipleChoice"]).describe("Type: MCQ comprehension."),
   instructions: z.string().describe("Instructions, e.g., 'Read/listen & choose.'"),
-  questions: z.array(AIComprehensionMultipleChoiceQuestionSchema).min(1).max(2).describe("1-2 questions."),
+  questions: z.array(AIComprehensionMultipleChoiceQuestionSchema).describe("Questions."), // Removed .min(1).max(2)
 });
 
 const AITrueFalseStatementSchema = z.object({
@@ -130,26 +131,30 @@ const AITrueFalseStatementSchema = z.object({
 const AITrueFalseExerciseSchema = z.object({
   type: z.enum(["trueFalse"]).describe("Type: true/false."),
   instructions: z.string().describe("Instructions, e.g., 'T/F statements?'"),
-  statements: z.array(AITrueFalseStatementSchema).min(2).max(4).describe("2-4 statements."),
+  statements: z.array(AITrueFalseStatementSchema).describe("Statements."), // Removed .min(2).max(4)
 });
 
 const AISequencingExerciseSchema = z.object({
   type: z.enum(["sequencing"]).describe("Type: sequencing."),
   instructions: z.string().describe("Instructions, e.g., 'Order events.'"),
-  shuffledItems: z.array(z.string()).min(3).max(5).describe("Shuffled items to order."),
-  correctOrder: z.array(z.string()).min(3).max(5).describe("Items in correct sequence."),
+  shuffledItems: z.array(z.string()).describe("Shuffled items to order."), // Removed .min(3).max(5)
+  correctOrder: z.array(z.string()).describe("Items in correct sequence."), // Removed .min(3).max(5)
 });
 
 // --- Define Zod schema for the MAIN output ---
 const GenerateLessonOutputSchema = z.object({
   lessonTitle: z.string().describe('Generated lesson title.'),
-  vocabulary: z.array(VocabularyItemSchema).min(5).describe('Min 5 key vocab items (German, Russian, opt. example). Phrases/idioms for level/topic.'),
+  vocabulary: z.array(VocabularyItemSchema).describe('Key vocab items. Phrases/idioms for level/topic.'), // Removed .min(5)
   grammarExplanation: z.string().describe('Detailed grammar explanation. Focus on verbs A0-B2.'),
-  grammarExercise: AIGrammarExerciseSchema.optional().describe('Opt. ONE diverse structured grammar exercise. Practice verbs etc.'),
+  
+  // Grammar exercises split into individual optional fields
+  grammarFillInTheBlanks: FillInTheBlanksExerciseSchema.optional().describe('Opt. ONE Fill-in-the-blanks grammar exercise.'),
+  grammarMultipleChoice: MultipleChoiceExerciseSchema.optional().describe('Opt. ONE Multiple-choice grammar exercise.'),
+  grammarSentenceConstruction: SentenceConstructionExerciseSchema.optional().describe('Opt. ONE Sentence construction grammar exercise.'),
   
   listeningExercise: ListeningExerciseSchema.describe('Listening (script, open questions).'),
   readingPassage: z.string().describe('Short reading passage for level.'),
-  readingQuestions: z.array(z.string()).min(1).max(2).describe("1-2 open reading questions."),
+  readingQuestions: z.array(z.string()).describe("Open reading questions."), // Removed .min(1).max(2)
   
   writingPrompt: z.string().describe('General writing prompt for level/topic.'),
 
@@ -166,9 +171,6 @@ const GenerateLessonOutputSchema = z.object({
   interactiveReadingMCQ: AIComprehensionMultipleChoiceExerciseSchema.optional().describe("Opt. ONE MCQ reading exercise for main passage."),
   interactiveReadingTrueFalse: AITrueFalseExerciseSchema.optional().describe("Opt. ONE True/False reading exercise for main passage."),
   interactiveReadingSequencing: AISequencingExerciseSchema.optional().describe("Opt. ONE sequencing reading exercise for main passage."),
-
-  // Interactive Writing is temporarily removed to reduce schema complexity.
-  // interactiveWritingExercise: AIWritingInteractiveExerciseSchema.optional().describe("Opt. ONE structured writing task (e.g., email). Can replace 'writingPrompt'."),
 });
 
 export type GenerateLessonOutput = z.infer<typeof GenerateLessonOutputSchema>;
@@ -197,38 +199,27 @@ const lessonPrompt = ai.definePrompt({
   - "writingPrompt": A general writing prompt for the learner.
 
   Additionally, you MAY provide OPTIONAL structured and interactive exercises as described below.
-  For each interactive section (vocabulary, listening, reading), you may provide AT MOST ONE type of exercise if appropriate for the topic and level. These exercises should complement the core components.
+  For each interactive section (vocabulary, grammar, listening, reading), you may provide AT MOST ONE type of exercise if appropriate for the topic and level. These exercises should complement the core components.
 
-  1. OPTIONAL "grammarExercise":
-     If you can create a relevant exercise for the "grammarExplanation", provide ONE structured grammar exercise. The exercise object must have a "type" field ("fillInTheBlanks", "multipleChoice", or "sentenceConstruction").
-     - If "type" is "fillInTheBlanks":
-       Provide "instructions" (e.g., "Fill in the correct form.") and a "questions" array (1-2 questions). Each question object needs: "promptText", "correctAnswers" (array of strings), "explanation" (optional).
-     - If "type" is "multipleChoice":
-       Provide "instructions" (e.g., "Choose the correct option.") and a "questions" array (1-2 questions). Each question object needs: "questionText", "options" (2-4 strings), "correctAnswer" (string), "explanation" (optional).
-     - If "type" is "sentenceConstruction":
-       Provide "instructions" (e.g., "Form correct sentences.") and a "tasks" array (1-2 tasks). Each task object needs: "words" (array of strings to arrange), "possibleCorrectSentences" (array of strings), "explanation" (optional).
+  1. OPTIONAL Grammar Exercise:
+     If you can create a relevant exercise for the "grammarExplanation", provide AT MOST ONE of the following:
+     - "grammarFillInTheBlanks": Provide "instructions" (e.g., "Fill blanks.") and a "questions" array (1-2 questions). Each question object needs: "promptText", "correctAnswers" (array of strings), "explanation" (optional).
+     - "grammarMultipleChoice": Provide "instructions" (e.g., "Choose option.") and a "questions" array (1-2 questions). Each question object needs: "questionText", "options" (2-4 strings), "correctAnswer" (string), "explanation" (optional).
+     - "grammarSentenceConstruction": Provide "instructions" (e.g., "Form sentences.") and a "tasks" array (1-2 tasks). Each task object needs: "words" (array of strings to arrange), "possibleCorrectSentences" (array of strings), "explanation" (optional).
 
   2. OPTIONAL Interactive Vocabulary Exercises: Provide AT MOST ONE of the following:
-     - "interactiveMatchingExercise":
-       Provide "instructions", "pairs" (array of {german, russian}, 3-6 pairs), "germanDistractors" (optional, 1-2 strings), "russianDistractors" (optional, 1-2 strings).
-     - "interactiveAudioQuizExercise":
-       Provide "instructions", "items" (array of 2-4 items). Each item: "germanPhraseToSpeak", "options" (3-4 Russian translations), "correctAnswer" (string), "explanation" (optional).
+     - "interactiveMatchingExercise": Provide "instructions", "pairs" (array of {german, russian}, 3-6 pairs), "germanDistractors" (optional, 1-2 strings), "russianDistractors" (optional, 1-2 strings).
+     - "interactiveAudioQuizExercise": Provide "instructions", "items" (array of 2-4 items). Each item: "germanPhraseToSpeak", "options" (3-4 Russian translations), "correctAnswer" (string), "explanation" (optional).
 
   3. OPTIONAL Interactive Listening Exercises: Provide AT MOST ONE of the following. This exercise should be based on the main "listeningExercise.script".
-     - "interactiveListeningMCQ": (Based on "listeningExercise.script")
-       Provide "instructions", "questions" (array of 1-2). Each question: "questionText", "options" (2-4 strings), "correctAnswer" (string), "explanation" (optional).
-     - "interactiveListeningTrueFalse": (Based on "listeningExercise.script")
-       Provide "instructions", "statements" (array of 2-4). Each statement: "statement" (string), "isTrue" (boolean), "explanation" (optional).
-     - "interactiveListeningSequencing": (Based on "listeningExercise.script")
-       Provide "instructions", "shuffledItems" (array of 3-5 strings from the script, out of order), "correctOrder" (array of same strings in correct order).
+     - "interactiveListeningMCQ": (Based on "listeningExercise.script") Provide "instructions", "questions" (array of 1-2). Each question: "questionText", "options" (2-4 strings), "correctAnswer" (string), "explanation" (optional).
+     - "interactiveListeningTrueFalse": (Based on "listeningExercise.script") Provide "instructions", "statements" (array of 2-4). Each statement: "statement" (string), "isTrue" (boolean), "explanation" (optional).
+     - "interactiveListeningSequencing": (Based on "listeningExercise.script") Provide "instructions", "shuffledItems" (array of 3-5 strings from the script, out of order), "correctOrder" (array of same strings in correct order).
 
   4. OPTIONAL Interactive Reading Exercises: Provide AT MOST ONE of the following. This exercise should be based on the main "readingPassage".
-     - "interactiveReadingMCQ": (Based on "readingPassage")
-       Provide "instructions", "questions" (array of 1-2). Each question: "questionText", "options" (2-4 strings), "correctAnswer" (string), "explanation" (optional).
-     - "interactiveReadingTrueFalse": (Based on "readingPassage")
-       Provide "instructions", "statements" (array of 2-4). Each statement: "statement" (string), "isTrue" (boolean), "explanation" (optional).
-     - "interactiveReadingSequencing": (Based on "readingPassage")
-       Provide "instructions", "shuffledItems" (array of 3-5 strings/sentences from the passage, out of order), "correctOrder" (array of same strings in correct order).
+     - "interactiveReadingMCQ": (Based on "readingPassage") Provide "instructions", "questions" (array of 1-2). Each question: "questionText", "options" (2-4 strings), "correctAnswer" (string), "explanation" (optional).
+     - "interactiveReadingTrueFalse": (Based on "readingPassage") Provide "instructions", "statements" (array of 2-4). Each statement: "statement" (string), "isTrue" (boolean), "explanation" (optional).
+     - "interactiveReadingSequencing": (Based on "readingPassage") Provide "instructions", "shuffledItems" (array of 3-5 strings/sentences from the passage, out of order), "correctOrder" (array of same strings in correct order).
 
   Ensure that ALL content, including all parts of interactive exercises, is appropriate for the specified level: {{{level}}}.
   Provide rich and varied content. For vocabulary, always try to include example sentences and conversational phrases. For grammar, try to include an exercise if suitable, focusing on core concepts like verb usage.
@@ -254,7 +245,7 @@ const generateLessonContentFlow = ai.defineFlow(
         if (!output) {
           throw new Error('[generateLessonContentFlow] AI model returned an empty output during lesson generation.');
         }
-        if (output.vocabulary.length < 5) {
+        if (output.vocabulary && output.vocabulary.length < 5) { // Check if vocabulary exists before accessing length
             console.warn(`[generateLessonContentFlow] AI returned only ${output.vocabulary.length} vocabulary items for topic "${input.topic}" at level ${input.level}. Expected at least 5.`);
         }
         return output;
@@ -267,13 +258,15 @@ const generateLessonContentFlow = ai.defineFlow(
         }
         
         const errorMessage = error.message ? error.message.toLowerCase() : '';
+        const errorStatus = error.status || (error.cause as any)?.status; // Try to get status from error or its cause
+
         if (
           errorMessage.includes('503') || 
           errorMessage.includes('service unavailable') || 
           errorMessage.includes('model is overloaded') || 
           errorMessage.includes('server error') || 
           errorMessage.includes('internal error') ||
-          (error.status === 400 && errorMessage.includes('constraint that has too many states')) 
+          (errorStatus === 400 && errorMessage.includes('constraint that has too many states')) 
         ) {
             
           const delay = INITIAL_RETRY_DELAY_MS * Math.pow(2, retries - 1);

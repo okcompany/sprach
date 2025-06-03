@@ -129,6 +129,7 @@ export interface AISentenceConstructionExercise {
   tasks: AISentenceConstructionTask[];
 }
 
+// This type is now only for individual exercise structures, not for the main lesson content.
 export type AIGrammarExercise = 
   | AIFillInTheBlanksExercise 
   | AIMultipleChoiceExercise 
@@ -166,7 +167,7 @@ export interface AIAudioQuizExercise {
 }
 
 // --- Common Interactive Exercise Types for Listening/Reading ---
-export interface AIComprehensionMQ_Question { // Renamed to avoid conflict with AIMultipleChoiceQuestion
+export interface AIComprehensionMQ_Question { 
   questionText: string;
   options: string[];
   correctAnswer: string;
@@ -199,12 +200,17 @@ export interface AISequencingExercise {
 // --- Main Lesson Content Structure ---
 export interface AILessonContent {
   lessonTitle: string;
-  vocabulary: AILessonVocabularyItem[];
+  vocabulary: AILessonVocabularyItem[]; // No .min constraint in Zod
   grammarExplanation: string;
-  grammarExercise?: AIGrammarExercise;
-  listeningExercise: AILessonListeningExercise; 
+  
+  // Grammar exercises split into individual optional fields
+  grammarFillInTheBlanks?: AIFillInTheBlanksExercise;
+  grammarMultipleChoice?: AIMultipleChoiceExercise;
+  grammarSentenceConstruction?: AISentenceConstructionExercise;
+  
+  listeningExercise: AILessonListeningExercise; // questions array has no .min constraint in Zod
   readingPassage: string;
-  readingQuestions: string[]; 
+  readingQuestions: string[]; // No .min constraint in Zod
   writingPrompt: string; 
 
   // Interactive Vocabulary (Split)
@@ -220,9 +226,6 @@ export interface AILessonContent {
   interactiveReadingMCQ?: AIComprehensionMultipleChoiceExercise;
   interactiveReadingTrueFalse?: AITrueFalseExercise;
   interactiveReadingSequencing?: AISequencingExercise;
-
-  // Interactive Writing is temporarily removed
-  // interactiveWritingExercise?: AIStructuredWritingExercise; 
 }
 
 export interface AIEvaluationResult {

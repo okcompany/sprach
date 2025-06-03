@@ -371,8 +371,16 @@ export const UserDataProvider = ({ children }: { children: ReactNode }) => {
       return lesson;
     } catch (error: any) {
       const errorMessage = error?.message || "";
-      if (errorMessage.includes("503") || errorMessage.includes("overloaded") || errorMessage.includes("Service Unavailable")) {
-        console.warn(`[UserDataContext] AI Service Overloaded (503) while generating lesson for "${topicName}". Returning null. Error: ${error.message}`);
+      const lowerErrorMessage = errorMessage.toLowerCase();
+      const errorStatus = error.status || (error.cause as any)?.status;
+
+      if (
+        lowerErrorMessage.includes("503") ||
+        lowerErrorMessage.includes("overloaded") ||
+        lowerErrorMessage.includes("service unavailable") ||
+        (errorStatus === 400 && lowerErrorMessage.includes('constraint that has too many states'))
+      ) {
+        console.warn(`[UserDataContext] AI Service issue (transient or schema-related) while generating lesson for "${topicName}". Error: ${error.message}`);
       } else {
         console.error(`[UserDataContext] Error generating lesson content for "${topicName}" in context:`, error);
       }
@@ -381,8 +389,8 @@ export const UserDataProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   const evaluateUserResponse = useCallback(async (
-    levelId: LanguageLevel, // Added levelId
-    topicId: string,      // Added topicId
+    levelId: LanguageLevel, 
+    topicId: string,      
     moduleType: ModuleType, 
     userResponse: string, 
     questionContext: string, 
@@ -425,9 +433,9 @@ export const UserDataProvider = ({ children }: { children: ReactNode }) => {
             if (existingWeakness) {
               existingWeakness.count++;
               existingWeakness.lastEncounteredDate = new Date().toISOString();
-              existingWeakness.exampleContexts.unshift(currentContext); // Add to the beginning
+              existingWeakness.exampleContexts.unshift(currentContext); 
               if (existingWeakness.exampleContexts.length > MAX_GRAMMAR_CONTEXTS) {
-                existingWeakness.exampleContexts.pop(); // Remove the oldest if limit exceeded
+                existingWeakness.exampleContexts.pop(); 
               }
             } else {
               updatedUserData.grammarWeaknesses![tag] = {
@@ -446,7 +454,7 @@ export const UserDataProvider = ({ children }: { children: ReactNode }) => {
       console.error("Error evaluating user response:", error);
       return null;
     }
-  }, [userData, setUserData]); // Added setUserData to dependencies
+  }, [userData, setUserData]); 
 
   const getAIRecommendedLesson = useCallback(async (): Promise<RecommendAiLessonOutput | null> => {
     if (!userData) return null;
@@ -567,7 +575,7 @@ export const UserDataProvider = ({ children }: { children: ReactNode }) => {
         userProgress: userProgressForAI,
         weakAreas: weakAreas, 
         preferredTopics: userData.profile.preferredTopics || [],
-        grammarWeaknesses: grammarWeaknessesForAI, // Pass the prepared grammar weaknesses
+        grammarWeaknesses: grammarWeaknessesForAI, 
       });
       return recommendation;
     } catch (error: any) {
