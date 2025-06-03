@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { ALL_MODULE_TYPES, MODULE_NAMES_RU, type LanguageLevel, type ModuleType, DEFAULT_TOPICS } from '@/types/german-learning';
 import { useUserData } from '@/context/user-data-context';
-import { CheckCircle, BookOpen, Mic, Pencil, Headphones, Brain } from 'lucide-react';
+import { CheckCircle, BookOpen, Mic, Pencil, Headphones, Brain, BookOpenText } from 'lucide-react';
 
 interface TopicModulesPageProps {
   levelId: LanguageLevel;
@@ -99,5 +99,3 @@ export function TopicModulesPage({ levelId, topicId }: TopicModulesPageProps) {
   );
 }
 
-// Placeholder for BookOpenText icon if not available in lucide-react directly, or use BookOpen
-const BookOpenText = BookOpen;
