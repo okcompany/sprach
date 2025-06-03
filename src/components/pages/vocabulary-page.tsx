@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useUserData } from '@/context/user-data-context';
 import type { VocabularyWord } from '@/types/german-learning';
-import { Speaker, CheckCircle, AlertCircle, RotateCcw, Lightbulb, Send, ArrowRight, BookCopy, Sparkles, Repeat as RepeatIcon } from 'lucide-react';
+import { Speaker, CheckCircle, AlertCircle, RotateCcw, Lightbulb, Send, ArrowRight, BookCopy, Sparkles, Repeat as RepeatIcon, CheckCheck } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 
 // Dummy TTS function - replace with actual implementation from module-page or central util
@@ -23,7 +23,7 @@ const speak = (text: string, lang: 'ru-RU' | 'de-DE') => {
 };
 
 export function VocabularyPage() {
-  const { userData, isLoading, getWordsForReview, updateWordInBank } = useUserData();
+  const { userData, isLoading, getWordsForReview, updateWordInBank, markWordAsMastered } = useUserData();
   const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -65,12 +65,10 @@ export function VocabularyPage() {
   };
 
   const startReviewSession = () => {
-    // wordsForReview is already calculated via useMemo using getWordsForReview
     if (wordsForReview.length === 0) {
       toast({ title: "Словарь для повторения пуст", description: "Нет слов для повторения.", variant: "default" });
       return;
     }
-    // Shuffle words for review
     const shuffledWords = [...wordsForReview].sort(() => Math.random() - 0.5);
     setReviewWordsQueue(shuffledWords);
     setCurrentReviewWordIndex(0);
@@ -91,6 +89,7 @@ export function VocabularyPage() {
     if (isCorrect) {
       feedbackMsg = "Правильно!";
       updatedWord.consecutiveCorrectAnswers = (updatedWord.consecutiveCorrectAnswers || 0) + 1;
+      updatedWord.errorCount = Math.max(0, (updatedWord.errorCount || 0) - (updatedWord.errorCount > 1 ? 1 : 0) ); // Optionally reduce error count on correct
       toast({ title: "Отлично!", description: "Верный ответ.", variant: "default" });
     } else {
       feedbackMsg = `Неправильно. Правильный ответ: ${currentReviewWord.russian}`;
@@ -107,15 +106,16 @@ export function VocabularyPage() {
 
   const handleShowAnswer = () => {
     if (!currentReviewWord) return;
-    let updatedWord = { ...currentReviewWord, 
-        consecutiveCorrectAnswers: 0, 
-        errorCount: (currentReviewWord.errorCount || 0) + 1,
-        lastTestedDate: new Date().toISOString() 
+    let updatedWord = { 
+      ...currentReviewWord, 
+      consecutiveCorrectAnswers: 0, 
+      errorCount: (currentReviewWord.errorCount || 0) + 1,
+      lastTestedDate: new Date().toISOString() 
     };
     updateWordInBank(updatedWord);
     setReviewFeedback(`Правильный ответ: ${currentReviewWord.russian}`);
     setShowCorrectAnswer(true);
-    toast({ title: "Показан ответ", description: `Слово: ${currentReviewWord.german}`, variant: "default" });
+    toast({ title: "Показан ответ", description: `Слово "${currentReviewWord.german}" отмечено как требующее внимания.`, variant: "default" });
   };
 
   const handleNextWord = () => {
@@ -128,6 +128,14 @@ export function VocabularyPage() {
       setIsReviewSessionActive(false);
       toast({ title: "Сессия завершена!", description: "Отличная работа! Все слова пройдены.", duration: 5000 });
     }
+  };
+  
+  const handleMarkAsMastered = (wordId: string) => {
+    markWordAsMastered(wordId);
+    toast({
+        title: "Слово отмечено как выученное",
+        description: "Оно больше не будет активно предлагаться для повторения.",
+    });
   };
 
   const WordCardDisplay = ({ word }: { word: VocabularyWord }) => (
@@ -143,9 +151,11 @@ export function VocabularyPage() {
             </div>
             <p className="text-muted-foreground">{word.russian}</p>
           </div>
-          <div className="text-xs text-muted-foreground">
+          <div className="text-xs text-right text-muted-foreground">
             <p>Уровень: {word.level}</p>
-            <p>Тема: {userData?.progress[word.level]?.topics[word.topic]?.name || word.topic}</p>
+            <p className="truncate max-w-[150px]" title={userData?.progress[word.level]?.topics[word.topic]?.name || word.topic}>
+              Тема: {userData?.progress[word.level]?.topics[word.topic]?.name || word.topic}
+            </p>
           </div>
         </div>
         <div className="mt-2 flex items-center justify-between text-xs">
@@ -159,6 +169,16 @@ export function VocabularyPage() {
             </div>
         </div>
         {word.exampleSentence && <p className="text-sm mt-1 italic">Пример: {word.exampleSentence}</p>}
+         {(word.consecutiveCorrectAnswers || 0) < 3 && (
+            <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => handleMarkAsMastered(word.id)} 
+                className="mt-3 text-xs"
+            >
+                <CheckCheck className="mr-1.5 h-3.5 w-3.5" /> Отметить как выученное
+            </Button>
+        )}
       </CardContent>
     </Card>
   );
@@ -331,3 +351,4 @@ export function VocabularyPage() {
     </div>
   );
 }
+
