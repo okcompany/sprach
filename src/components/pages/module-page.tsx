@@ -32,7 +32,7 @@ import type {
   DefaultTopicDefinition,
 } from '@/types/german-learning';
 import { MODULE_NAMES_RU, DEFAULT_TOPICS, ALL_MODULE_TYPES, ALL_LEVELS } from '@/types/german-learning';
-import { Speaker, RotateCcw, CheckCircle, AlertTriangle, ArrowRight, Shuffle, ThumbsUp, ThumbsDown, ListOrdered, Trash2, Info, BookCheck, SearchX } from 'lucide-react';
+import { Speaker, RotateCcw, CheckCircle, AlertTriangle, ArrowRight, Shuffle, ThumbsUp, ThumbsDown, ListOrdered, Trash2, Info, BookCheck, SearchX, Loader2 } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
@@ -169,30 +169,38 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
   const fetchLesson = useCallback(async () => {
     setIsLoadingTask(true);
     setLessonContent(null); 
-    setCurrentTask(null);
-    setFeedback(null);
+    setCurrentTask(null); // Reset current task
+    setFeedback(null); // Reset feedback
     resetInteractiveStates();
-    setNoContentForModule(false); // Reset no content flag
+    setNoContentForModule(false); 
 
     if (topicName === "Загрузка...") {
       setIsLoadingTask(false); 
       return;
     }
 
-    const content = await getTopicLessonContent(levelId, topicName);
-    setLessonContent(content);
+    let loadedLessonContent: AILessonContent | null = null;
+    try {
+      loadedLessonContent = await getTopicLessonContent(levelId, topicName);
+    } catch (error) {
+      console.error("[ModulePage fetchLesson] Error fetching lesson content:", error);
+      // loadedLessonContent will remain null, handled further down
+    }
+
+    setLessonContent(loadedLessonContent); // Update state for rendering
 
     let vocabularySourceUsed: 'ai_interactive' | 'ai_list' | 'fallback' | 'bank_only' | 'none' = 'none';
 
-    if (content) {
+    if (loadedLessonContent) {
+      setNoContentForModule(false); // Assume content exists initially if lessonData is not null
       if (moduleId === 'vocabulary') {
-        const matchingExercise = content.interactiveVocabularyExercises?.find(ex => ex.type === 'matching') as AIMatchingExercise | undefined;
-        const audioQuiz = content.interactiveVocabularyExercises?.find(ex => ex.type === 'audioQuiz') as AIAudioQuizExercise | undefined;
+        const matchingExercise = loadedLessonContent.interactiveVocabularyExercises?.find(ex => ex.type === 'matching') as AIMatchingExercise | undefined;
+        const audioQuiz = loadedLessonContent.interactiveVocabularyExercises?.find(ex => ex.type === 'audioQuiz') as AIAudioQuizExercise | undefined;
 
         if (matchingExercise) {
           vocabularySourceUsed = 'ai_interactive';
           setActiveMatchingExercise(matchingExercise);
-          setTotalTasks(1); // Matching is one task
+          setTotalTasks(1); 
           const germanPairs = matchingExercise.pairs.map((p, i) => ({ id: `gp_${i}`, text: p.german, originalText: p.german, type: 'pair', selected: false, matchedId: null, isPairTarget: true } as MatchItem));
           const germanDistractors = (matchingExercise.germanDistractors || []).map((d, i) => ({ id: `gd_${i}`, text: d, originalText: d, type: 'distractor', selected: false, matchedId: null, isPairTarget: false } as MatchItem));
           setGermanMatchItems(shuffleArray([...germanPairs, ...germanDistractors]));
@@ -203,114 +211,130 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
           vocabularySourceUsed = 'ai_interactive';
           setActiveAudioQuizExercise(audioQuiz);
           setTotalTasks(audioQuiz.items.length);
-        } else if (content.vocabulary && content.vocabulary.length > 0) {
+        } else if (loadedLessonContent.vocabulary && loadedLessonContent.vocabulary.length > 0) {
             vocabularySourceUsed = 'ai_list';
-            content.vocabulary.forEach((vocabItem: AILessonVocabularyItem) => {
+            loadedLessonContent.vocabulary.forEach((vocabItem: AILessonVocabularyItem) => {
                 addWordToBank({ german: vocabItem.german, russian: vocabItem.russian, exampleSentence: vocabItem.exampleSentence, topic: topicId, level: levelId });
             });
             const wordsToUse = getWordsForTopic(topicId);
             setCurrentVocabulary(wordsToUse); 
             const availableWordsCount = wordsToUse.length;
-            if (availableWordsCount === 0) { vocabularySourceUsed = 'none'; } // Should not happen if content.vocabulary had items
-            else { setTotalTasks(availableWordsCount); setCurrentTask(wordsToUse[0].german); }
+            if (availableWordsCount === 0) { vocabularySourceUsed = 'none'; } 
+            else { setTotalTasks(availableWordsCount); if (wordsToUse[0]) setCurrentTask(wordsToUse[0].german); }
+        } else {
+            vocabularySourceUsed = 'none'; // AI responded, but no vocab for this module type
         }
       } else if (moduleId === 'wordTest') {
-          if (content.vocabulary && content.vocabulary.length > 0) {
-            vocabularySourceUsed = 'ai_list'; // For wordTest, AI vocab list is primary source if available
-            content.vocabulary.forEach((vocabItem: AILessonVocabularyItem) => {
+          if (loadedLessonContent.vocabulary && loadedLessonContent.vocabulary.length > 0) {
+            vocabularySourceUsed = 'ai_list'; 
+            loadedLessonContent.vocabulary.forEach((vocabItem: AILessonVocabularyItem) => {
                 addWordToBank({ german: vocabItem.german, russian: vocabItem.russian, exampleSentence: vocabItem.exampleSentence, topic: topicId, level: levelId });
             });
+          } else {
+            vocabularySourceUsed = 'none';
           }
       }
-      // ... (handling for other modules: listening, reading, writing, grammar)
       if (moduleId === 'listening' || moduleId === 'reading') {
-        const interactiveExercises = moduleId === 'listening' ? content.interactiveListeningExercises : content.interactiveReadingExercises;
+        const interactiveExercises = moduleId === 'listening' ? loadedLessonContent.interactiveListeningExercises : loadedLessonContent.interactiveReadingExercises;
         const mcqExercise = interactiveExercises?.find(ex => ex.type === 'comprehensionMultipleChoice') as AIComprehensionMultipleChoiceExercise | undefined;
         const trueFalseExercise = interactiveExercises?.find(ex => ex.type === 'trueFalse') as AITrueFalseExercise | undefined;
         const sequencingExercise = interactiveExercises?.find(ex => ex.type === 'sequencing') as AISequencingExercise | undefined;
 
-        // Priority: MCQ > True/False > Sequencing
         if (mcqExercise) {
-            setActiveInteractiveExercise(mcqExercise);
-            setTotalTasks(mcqExercise.questions.length);
+            setActiveInteractiveExercise(mcqExercise); setTotalTasks(mcqExercise.questions.length);
         } else if (trueFalseExercise) {
-            setActiveInteractiveExercise(trueFalseExercise);
-            setTotalTasks(trueFalseExercise.statements.length);
+            setActiveInteractiveExercise(trueFalseExercise); setTotalTasks(trueFalseExercise.statements.length);
         } else if (sequencingExercise) {
-            setActiveInteractiveExercise(sequencingExercise);
-            setAvailableSequenceItems(shuffleArray([...sequencingExercise.shuffledItems]));
-            setUserSequence([]);
-            setTotalTasks(1);
+            setActiveInteractiveExercise(sequencingExercise); setAvailableSequenceItems(shuffleArray([...sequencingExercise.shuffledItems])); setUserSequence([]); setTotalTasks(1);
         } else { 
-            const questionsList = moduleId === 'listening' ? content.listeningExercise?.questions : content.readingQuestions;
-            const baseText = moduleId === 'listening' ? content.listeningExercise?.script : content.readingPassage;
+            const questionsList = moduleId === 'listening' ? loadedLessonContent.listeningExercise?.questions : loadedLessonContent.readingQuestions;
+            const baseText = moduleId === 'listening' ? loadedLessonContent.listeningExercise?.script : loadedLessonContent.readingPassage;
             if (baseText && questionsList && questionsList.length > 0) { 
                 setTotalTasks(questionsList.length); setCurrentTask(questionsList[0]); 
             } else if (baseText) { 
                 setCurrentTask("Какова главная идея этого текста?"); setTotalTasks(1); 
             } else { 
-                 setNoContentForModule(true); toast({ title: `Нет контента для модуля ${MODULE_NAMES_RU[moduleId]}`, description: "AI не смог сгенерировать необходимые материалы.", variant: "destructive", duration: 7000 }); setIsLoadingTask(false); return;
+                 setNoContentForModule(true); 
             }
         }
       } else if (moduleId === 'writing') {
-        const structuredWritingExercise = content.interactiveWritingExercises?.find(ex => ex.type === 'structuredWriting') as AIStructuredWritingExercise | undefined;
+        const structuredWritingExercise = loadedLessonContent.interactiveWritingExercises?.find(ex => ex.type === 'structuredWriting') as AIStructuredWritingExercise | undefined;
         if (structuredWritingExercise) {
-            setActiveInteractiveExercise(structuredWritingExercise);
-            setCurrentTask(structuredWritingExercise.promptDetails); 
-            setTotalTasks(1);
-        } else if (content.writingPrompt) {
-            setCurrentTask(content.writingPrompt); 
-            setTotalTasks(1);
+            setActiveInteractiveExercise(structuredWritingExercise); setCurrentTask(structuredWritingExercise.promptDetails); setTotalTasks(1);
+        } else if (loadedLessonContent.writingPrompt) {
+            setCurrentTask(loadedLessonContent.writingPrompt); setTotalTasks(1);
         } else {
-             setNoContentForModule(true); toast({ title: "Нет задания для письма", description: "AI не смог сгенерировать письменное задание.", variant: "destructive", duration: 7000 }); setIsLoadingTask(false); return;
+             setNoContentForModule(true);
         }
       } else if (moduleId === 'grammar') { 
-        if (content.grammarExplanation) {
-            setCurrentTask(content.grammarExplanation); setTotalTasks(1); 
+        if (loadedLessonContent.grammarExplanation) {
+            setCurrentTask(loadedLessonContent.grammarExplanation); setTotalTasks(1); 
         } else {
-            setNoContentForModule(true); toast({ title: "Нет грамматического материала", description: "AI не смог сгенерировать объяснение грамматики.", variant: "destructive", duration: 7000 }); setIsLoadingTask(false); return;
+            setNoContentForModule(true);
         }
       }
-    } // End of if (content)
+    } // End of if (loadedLessonContent)
 
-    // Handle vocabulary/wordTest if AI content was insufficient or failed
     if ((moduleId === 'vocabulary' || moduleId === 'wordTest') && vocabularySourceUsed === 'none') {
         const defaultTopicDef = DEFAULT_TOPICS[levelId]?.find(t => t.id === topicId);
+        let wordsToUseForModule: VocabularyWord[] = [];
+
         if (defaultTopicDef && defaultTopicDef.fallbackVocabulary && defaultTopicDef.fallbackVocabulary.length > 0) {
             vocabularySourceUsed = 'fallback';
-            toast({ title: "AI не предоставил слов", description: `Используем базовый словарный запас для темы "${defaultTopicDef.name}".`, variant: "default", duration: 6000 });
-            defaultTopicDef.fallbackVocabulary.forEach(item => {
+            toast({ title: "AI не предоставил слов", description: `Используем базовый словарный запас для темы "${topicName}".`, variant: "default", duration: 6000 });
+            
+            const tempFallbackWords: VocabularyWord[] = defaultTopicDef.fallbackVocabulary.map(item => {
                 addWordToBank({ german: item.german, russian: item.russian, exampleSentence: item.exampleSentence, topic: topicId, level: levelId });
+                return { 
+                    id: `${item.german}-${topicId}-fallback-${Date.now()}${Math.random()}`, 
+                    german: item.german, russian: item.russian, exampleSentence: item.exampleSentence,
+                    topic: topicId, level: levelId, consecutiveCorrectAnswers: 0, errorCount: 0,
+                };
             });
-        }
-
-        const wordsFromBank = getWordsForTopic(topicId);
-        setCurrentVocabulary(wordsFromBank);
-        const availableWordsCount = wordsFromBank.length;
-
-        if (availableWordsCount > 0) {
-            if(vocabularySourceUsed !== 'fallback' && !content) { // AI failed completely, but bank has words
-                 vocabularySourceUsed = 'bank_only';
-                 toast({ title: "Загрузка AI-контента не удалась", description: "Модуль будет использовать слова из вашего словаря для этой темы.", variant: "default", duration: 6000 });
+            wordsToUseForModule = tempFallbackWords;
+        } else {
+            wordsToUseForModule = getWordsForTopic(topicId);
+            if (wordsToUseForModule.length > 0) {
+                vocabularySourceUsed = 'bank_only';
+                if (!loadedLessonContent) { 
+                    toast({ title: "Загрузка AI-контента не удалась", description: "Модуль будет использовать слова из вашего словаря для этой темы.", variant: "default", duration: 6000 });
+                }
             }
-            setTotalTasks(availableWordsCount); setCurrentTask(wordsFromBank[0].german);
-        } else { // No words from AI, no fallback, no words in bank
+        }
+        
+        if (wordsToUseForModule.length > 0) {
+            setCurrentVocabulary(wordsToUseForModule);
+            setTotalTasks(wordsToUseForModule.length);
+            if (wordsToUseForModule[0]) setCurrentTask(wordsToUseForModule[0].german);
+            setNoContentForModule(false); 
+        } else {
             vocabularySourceUsed = 'none';
+            setNoContentForModule(true);
         }
     }
     
-    // Final check for no content
-    if (vocabularySourceUsed === 'none' && (moduleId === 'vocabulary' || moduleId === 'wordTest')) {
-      setNoContentForModule(true);
-      if (!content) {
-        toast({ title: "Ошибка загрузки урока", description: `Не удалось получить материалы для модуля "${MODULE_NAMES_RU[moduleId]}".`, variant: "default", duration: 7000 });
-      } else {
-         toast({ title: "Нет слов для изучения", description: "AI не предоставил слова, и ваш локальный банк слов для этой темы пуст.", variant: "default", duration: 7000 });
-      }
+    if (noContentForModule) { // If any path above set noContentForModule
+        if (vocabularySourceUsed !== 'fallback' && vocabularySourceUsed !== 'bank_only') { // Avoid double toasting if fallback was used
+            if (!loadedLessonContent && (moduleId !== 'vocabulary' && moduleId !== 'wordTest')) {
+                toast({ title: "Ошибка загрузки урока", description: `Не удалось получить материалы для модуля "${MODULE_NAMES_RU[moduleId]}". Попробуйте позже.`, variant: "destructive", duration: 7000 });
+            } else if ((moduleId === 'vocabulary' || moduleId === 'wordTest') && vocabularySourceUsed === 'none') {
+                 toast({ title: "Нет слов для изучения", description: "AI не предоставил слова, и ваш локальный банк слов или резервный список для этой темы пусты.", variant: "default", duration: 7000 });
+            } else if (loadedLessonContent) { // AI responded, but no specific content for this module
+                 toast({ title: `Нет контента для модуля ${MODULE_NAMES_RU[moduleId]}`, description: "AI не смог сгенерировать необходимые материалы для этого модуля.", variant: "default", duration: 7000 });
+            }
+        }
     }
     
     setIsLoadingTask(false);
-  }, [levelId, topicId, moduleId, topicName, getTopicLessonContent, getWordsForTopic, addWordToBank, toast]);
+  }, [
+      levelId, topicId, moduleId, topicName, 
+      getTopicLessonContent, getWordsForTopic, addWordToBank, toast, 
+      setIsLoadingTask, setLessonContent, resetInteractiveStates, setNoContentForModule,
+      setCurrentVocabulary, setTotalTasks, setCurrentTask,
+      setActiveMatchingExercise, setGermanMatchItems, setRussianMatchItems,
+      setActiveAudioQuizExercise, setCurrentAudioQuizItemIndex,
+      setActiveInteractiveExercise, setCurrentInteractiveQuestionIndex, setUserSequence, setAvailableSequenceItems
+  ]);
 
   useEffect(() => {
     if (topicName !== "Загрузка...") {
@@ -402,6 +426,7 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
 
   const handleMatchingCheck = () => {
     if (!activeMatchingExercise) return;
+    setIsLoadingTask(true); // Indicate loading/processing
     setIsMatchingChecked(true);
     let correctMatches = 0;
     const totalPairs = activeMatchingExercise.pairs.length;
@@ -438,6 +463,7 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
     setTasksCompleted(1);
     setIsModuleFinished(true);
     toast({ title: "Сопоставление завершено!", description: `Ваш результат: ${score}%. Найдено ${correctMatches} из ${totalPairs} пар.`, duration: 7000 });
+    setIsLoadingTask(false);
   };
 
 
@@ -449,6 +475,7 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
 
   const handleSubmitAudioQuizAnswer = () => {
     if (!activeAudioQuizExercise || !selectedAudioQuizOption || audioQuizItemFeedback) return;
+    setIsLoadingTask(true);
     const currentItem = activeAudioQuizExercise.items[currentAudioQuizItemIndex];
     const isCorrect = selectedAudioQuizOption === currentItem.correctAnswer;
     let scoreIncrement = 0;
@@ -462,6 +489,7 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
       setAudioQuizItemFeedback({ message: `Неверно. Правильный ответ: ${currentItem.correctAnswer}`, isCorrect: false, correctAnswer: currentItem.correctAnswer, explanation: currentItem.explanation });
       toast({ title: "Ошибка", description: `Правильный ответ: ${currentItem.correctAnswer}`, variant: "destructive" });
     }
+    setIsLoadingTask(false);
   };
 
   const handleNextAudioQuizItem = () => {
@@ -489,6 +517,7 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
 
   const handleSubmitMCQAnswer = () => {
     if (!activeInteractiveExercise || activeInteractiveExercise.type !== 'comprehensionMultipleChoice' || !selectedMCQOption || interactiveExerciseFeedback) return;
+    setIsLoadingTask(true);
     const currentQuestion = (activeInteractiveExercise as AIComprehensionMultipleChoiceExercise).questions[currentInteractiveQuestionIndex];
     const isCorrect = selectedMCQOption === currentQuestion.correctAnswer;
     let scoreIncrement = 0;
@@ -500,6 +529,7 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
     } else {
       setInteractiveExerciseFeedback({ message: `Неверно. Правильный ответ: ${currentQuestion.correctAnswer}`, isCorrect: false, correctAnswerText: currentQuestion.correctAnswer, explanation: currentQuestion.explanation });
     }
+    setIsLoadingTask(false);
   };
 
   // --- True/False Handlers (Listening/Reading) ---
@@ -510,6 +540,7 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
 
   const handleSubmitTrueFalseAnswer = () => {
     if (!activeInteractiveExercise || activeInteractiveExercise.type !== 'trueFalse' || selectedTrueFalseAnswer === null || interactiveExerciseFeedback) return;
+    setIsLoadingTask(true);
     const currentStatement = (activeInteractiveExercise as AITrueFalseExercise).statements[currentInteractiveQuestionIndex];
     const isCorrect = selectedTrueFalseAnswer === currentStatement.isTrue;
     let scoreIncrement = 0;
@@ -526,6 +557,7 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
         explanation: currentStatement.explanation 
       });
     }
+    setIsLoadingTask(false);
   };
   
   // --- Sequencing Handlers (Listening/Reading) ---
@@ -551,6 +583,7 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
 
   const handleCheckSequence = () => {
     if (!activeInteractiveExercise || activeInteractiveExercise.type !== 'sequencing' || interactiveExerciseFeedback) return;
+    setIsLoadingTask(true);
     const correctOrder = (activeInteractiveExercise as AISequencingExercise).correctOrder;
     const isCorrect = userSequence.length === correctOrder.length && userSequence.every((item, index) => item === correctOrder[index]);
     
@@ -573,6 +606,7 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
     setIsModuleFinished(true);
     setTasksCompleted(1); 
     toast({ title: "Упражнение на упорядочивание завершено!", description: `Ваш результат: ${finalScore}%`, duration: 5000 });
+    setIsLoadingTask(false);
   };
 
   // --- Common Handler for Next Interactive Item (MCQ, True/False) ---
@@ -649,8 +683,12 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
     }
     
     const evaluation = await evaluateUserResponse(levelId, topicId, moduleId, userResponse, questionContext, expectedAnswerForAI, grammarRulesForAI);
-    if (!evaluation) { toast({ title: "Ошибка оценки ответа", variant: "destructive" }); setIsLoadingTask(false); return;  }
-    setFeedback(evaluation); setIsLoadingTask(false);
+    if (!evaluation) { 
+        toast({ title: "Ошибка оценки ответа", description: "Не удалось получить оценку от AI. Попробуйте еще раз.", variant: "destructive" }); 
+        setIsLoadingTask(false); 
+        return;  
+    }
+    setFeedback(evaluation); 
     
     let scoreIncrement = 0;
     if (evaluation?.isCorrect) { 
@@ -685,6 +723,7 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
         else { setIsModuleFinished(true); const finalScoreFallback = Math.round(moduleScore); updateModuleProgress(levelId, topicId, moduleId, finalScoreFallback); setFinalModuleScore(finalScoreFallback); toast({title: `Неожиданное завершение модуля (${MODULE_NAMES_RU[moduleId]})`, description: "Вопросы закончились раньше."}); }
       }
     }
+    setIsLoadingTask(false);
   };
 
   const renderModuleContent = () => {
@@ -697,10 +736,11 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
                     К сожалению, для модуля "{MODULE_NAMES_RU[moduleId]}" по теме "{topicName}" сейчас нет доступных материалов.
                 </p>
                 <p className="text-sm">
-                    Это могло произойти, если AI не смог сгенерировать урок, или если для этой темы еще не были добавлены слова в ваш словарь.
+                    Это могло произойти, если AI не смог сгенерировать урок, или если для этой темы еще не были добавлены слова в ваш словарь, либо произошла ошибка при загрузке.
                 </p>
-                 <Button onClick={fetchLesson} variant="outline" className="mt-6">
-                    <RotateCcw className="mr-2 h-4 w-4" /> Попробовать загрузить снова
+                 <Button onClick={fetchLesson} variant="outline" className="mt-6" disabled={isLoadingTask}>
+                    {isLoadingTask ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RotateCcw className="mr-2 h-4 w-4" />}
+                    {isLoadingTask ? "Загрузка..." : "Попробовать загрузить снова"}
                 </Button>
             </div>
         );
@@ -785,7 +825,7 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
                 variant={selectedAudioQuizOption === option ? "default" : "outline"}
                 className="w-full justify-start p-4 h-auto text-base"
                 onClick={() => handleSelectAudioQuizOption(option)}
-                disabled={!!audioQuizItemFeedback}
+                disabled={!!audioQuizItemFeedback || isLoadingTask}
               >
                 {option}
               </Button>
@@ -845,7 +885,7 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
                                     variant={selectedMCQOption === option ? "default" : "outline"}
                                     className="w-full justify-start p-4 h-auto text-base"
                                     onClick={() => handleSelectMCQOption(option)}
-                                    disabled={!!interactiveExerciseFeedback}
+                                    disabled={!!interactiveExerciseFeedback || isLoadingTask}
                                 >
                                     {option}
                                 </Button>
@@ -866,7 +906,7 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
                                     variant={selectedTrueFalseAnswer === true ? "default" : "outline"}
                                     className="p-4 h-auto text-base min-w-[120px]"
                                     onClick={() => handleSelectTrueFalseAnswer(true)}
-                                    disabled={!!interactiveExerciseFeedback}
+                                    disabled={!!interactiveExerciseFeedback || isLoadingTask}
                                 >
                                     <ThumbsUp className="mr-2 h-5 w-5"/> Верно
                                 </Button>
@@ -874,7 +914,7 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
                                     variant={selectedTrueFalseAnswer === false ? (interactiveExerciseFeedback && !interactiveExerciseFeedback.isCorrect ? "destructive" : "default") : "outline"}
                                     className="p-4 h-auto text-base min-w-[120px]"
                                     onClick={() => handleSelectTrueFalseAnswer(false)}
-                                    disabled={!!interactiveExerciseFeedback}
+                                    disabled={!!interactiveExerciseFeedback || isLoadingTask}
                                 >
                                      <ThumbsDown className="mr-2 h-5 w-5"/> Неверно
                                 </Button>
@@ -896,7 +936,7 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
                                             key={`avail-${index}`} 
                                             variant="outline"
                                             onClick={() => handleSelectSequenceItem(item)}
-                                            disabled={!!interactiveExerciseFeedback}
+                                            disabled={!!interactiveExerciseFeedback || isLoadingTask}
                                             className="text-sm"
                                         >
                                             {item}
@@ -907,7 +947,7 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
                             <div>
                                 <div className="flex justify-between items-center mb-2">
                                     <h4 className="font-medium text-md">Ваша последовательность:</h4>
-                                    <Button variant="ghost" size="sm" onClick={handleResetSequence} disabled={!!interactiveExerciseFeedback || userSequence.length === 0}>
+                                    <Button variant="ghost" size="sm" onClick={handleResetSequence} disabled={!!interactiveExerciseFeedback || userSequence.length === 0 || isLoadingTask}>
                                         <RotateCcw className="mr-1 h-3 w-3" /> Сбросить
                                     </Button>
                                 </div>
@@ -916,7 +956,7 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
                                     {userSequence.map((item, index) => (
                                         <li key={`user-${index}`} className="text-sm p-2 border rounded-md bg-muted/20 flex justify-between items-center">
                                             <span>{item}</span>
-                                            {!interactiveExerciseFeedback && (
+                                            {!interactiveExerciseFeedback && !isLoadingTask && (
                                                 <Button variant="ghost" size="icon" onClick={() => handleRemoveFromSequence(item, index)} className="h-6 w-6">
                                                     <Trash2 className="h-4 w-4 text-destructive/70"/>
                                                 </Button>
@@ -1085,7 +1125,7 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
         </div>
       );
   }
-  if (isLoadingTask) { 
+  if (isLoadingTask && !isModuleFinished && !feedback && !activeMatchingExercise && !activeAudioQuizExercise && !activeInteractiveExercise) { 
       return (
          <div className="container mx-auto py-8">
             <Button variant="outline" onClick={() => router.back()} className="mb-6 opacity-50" disabled>
@@ -1125,7 +1165,8 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
             {activeInteractiveExercise?.type === 'structuredWriting' && <Info className="mr-2 h-6 w-6 text-primary"/>}
             {activeAudioQuizExercise && <Speaker className="mr-2 h-6 w-6 text-primary"/>}
             {activeMatchingExercise && <Shuffle className="mr-2 h-6 w-6 text-primary"/>}
-            {noContentForModule && <SearchX className="mr-2 h-6 w-6 text-destructive"/>}
+            {noContentForModule && !isLoadingTask && <SearchX className="mr-2 h-6 w-6 text-destructive"/>}
+            {isLoadingTask && !isModuleFinished && <Loader2 className="mr-2 h-6 w-6 animate-spin text-primary" />}
             {moduleTitle}: {topicName}
           </CardTitle>
           {!isModuleFinished && !noContentForModule ? (
@@ -1137,18 +1178,24 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
              activeInteractiveExercise && activeInteractiveExercise.type === 'structuredWriting' ? `Структурированное письменное задание.` :
               (currentVocabulary.length > 0 || (lessonContent?.vocabulary && lessonContent.vocabulary.length > 0) || (lessonContent?.listeningExercise && lessonContent.listeningExercise.questions.length > 0) || lessonContent?.readingQuestions.length > 0 || lessonContent?.grammarExplanation || lessonContent?.writingPrompt) ? `Задание ${tasksCompleted + 1} из ${totalTasks}.` : "Загрузка задания..."}
             </CardDescription>
-          ) : noContentForModule ? (
+          ) : noContentForModule && !isLoadingTask ? (
              <CardDescription>Уровень {levelId}. Нет доступного контента для этого модуля.</CardDescription>
-          ) : (
+          ) : isModuleFinished ? (
             <CardDescription>Уровень {levelId}. Модуль завершен. Ваш результат: {finalModuleScore}%</CardDescription>
+          ) : (
+             <CardDescription>Уровень {levelId}. Загрузка...</CardDescription>
           )}
-          {!noContentForModule && <Progress value={isModuleFinished ? (finalModuleScore ?? 0) : progressPercent} className="mt-2 h-2" />}
+          {!(noContentForModule && !isLoadingTask) && <Progress value={isModuleFinished ? (finalModuleScore ?? 0) : progressPercent} className="mt-2 h-2" />}
         </CardHeader>
         <CardContent>
           {!isModuleFinished ? (
             <>
               <div className="mb-6 min-h-[100px]">
-                {renderModuleContent()}
+                {isLoadingTask && !activeMatchingExercise && !activeAudioQuizExercise && !activeInteractiveExercise ? (
+                    <div className="flex justify-center items-center h-full">
+                        <Loader2 className="h-8 w-8 animate-spin text-primary" /> 
+                    </div>
+                ) : renderModuleContent() }
               </div>
               {placeholderText && ( 
                 <Textarea
@@ -1224,16 +1271,22 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
             </Card>
           )}
         </CardContent>
-        {!isModuleFinished && !noContentForModule && (
+        {!isModuleFinished && !(noContentForModule && !isLoadingTask) && (
           <CardFooter>
             {/* Matching Exercise Button */}
             {activeMatchingExercise && moduleId === 'vocabulary' && !isMatchingChecked && (
-              <Button onClick={handleMatchingCheck} className="w-full" size="lg">Проверить сопоставления</Button>
+              <Button onClick={handleMatchingCheck} className="w-full" size="lg" disabled={isLoadingTask}>
+                 {isLoadingTask ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                {isLoadingTask ? "Проверка..." : "Проверить сопоставления"}
+              </Button>
             )}
             {/* Audio Quiz Buttons */}
             {activeAudioQuizExercise && moduleId === 'vocabulary' && (
               !audioQuizItemFeedback ? (
-                <Button onClick={handleSubmitAudioQuizAnswer} className="w-full" size="lg" disabled={!selectedAudioQuizOption}>Проверить ответ</Button>
+                <Button onClick={handleSubmitAudioQuizAnswer} className="w-full" size="lg" disabled={!selectedAudioQuizOption || isLoadingTask}>
+                 {isLoadingTask ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                 {isLoadingTask ? "Проверка..." : "Проверить ответ"}
+                </Button>
               ) : (
                 <Button onClick={handleNextAudioQuizItem} className="w-full" size="lg">Следующий вопрос</Button>
               )
@@ -1242,11 +1295,20 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
             {activeInteractiveExercise && (moduleId === 'listening' || moduleId === 'reading') && (
                 !interactiveExerciseFeedback ? (
                     activeInteractiveExercise.type === 'comprehensionMultipleChoice' ? (
-                        <Button onClick={handleSubmitMCQAnswer} className="w-full" size="lg" disabled={!selectedMCQOption}>Проверить ответ</Button>
+                        <Button onClick={handleSubmitMCQAnswer} className="w-full" size="lg" disabled={!selectedMCQOption || isLoadingTask}>
+                             {isLoadingTask ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                             {isLoadingTask ? "Проверка..." : "Проверить ответ"}
+                        </Button>
                     ) : activeInteractiveExercise.type === 'trueFalse' ? (
-                        <Button onClick={handleSubmitTrueFalseAnswer} className="w-full" size="lg" disabled={selectedTrueFalseAnswer === null}>Проверить ответ</Button>
+                        <Button onClick={handleSubmitTrueFalseAnswer} className="w-full" size="lg" disabled={selectedTrueFalseAnswer === null || isLoadingTask}>
+                            {isLoadingTask ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                            {isLoadingTask ? "Проверка..." : "Проверить ответ"}
+                        </Button>
                     ) : activeInteractiveExercise.type === 'sequencing' ? (
-                        <Button onClick={handleCheckSequence} className="w-full" size="lg" disabled={userSequence.length !== (activeInteractiveExercise as AISequencingExercise).shuffledItems.length}>Проверить последовательность</Button>
+                        <Button onClick={handleCheckSequence} className="w-full" size="lg" disabled={userSequence.length !== (activeInteractiveExercise as AISequencingExercise).shuffledItems.length || isLoadingTask}>
+                            {isLoadingTask ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                            {isLoadingTask ? "Проверка..." : "Проверить последовательность"}
+                        </Button>
                     ) : null 
                 ) : ( 
                      activeInteractiveExercise.type !== 'sequencing' && <Button onClick={handleNextInteractiveItem} className="w-full" size="lg">Следующее задание</Button>
@@ -1259,6 +1321,7 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
                 disabled={isLoadingTask || !userResponse.trim() || tasksCompleted >= totalTasks || (!currentTask && moduleId !== 'writing' && (moduleId === 'listening' || (moduleId === 'reading' && lessonContent?.readingQuestions && lessonContent.readingQuestions.length > 0)))}
                 className="w-full" size="lg"
               >
+                {isLoadingTask ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                 {isLoadingTask ? "Проверка..." : "Ответить"}
               </Button>
             )}
@@ -1271,6 +1334,7 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
     
 
     
+
 
 
 
