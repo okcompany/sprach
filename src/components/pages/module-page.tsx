@@ -78,7 +78,17 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
     setCurrentQuestionIndex(0);
 
     const content = await getTopicLessonContent(levelId, topicName);
+    
+    if (!content && topicName !== "Загрузка...") {
+      toast({
+        title: "Ошибка загрузки урока",
+        description: "Не удалось получить материалы урока от AI. Пожалуйста, попробуйте обновить страницу или вернуться позже.",
+        variant: "destructive",
+        duration: 7000,
+      });
+    }
     setLessonContent(content);
+
 
     if (content) {
       if (moduleId === 'vocabulary' || moduleId === 'wordTest') {
@@ -141,7 +151,7 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
         setTotalTasks(1); 
     }
     setIsLoadingTask(false);
-  }, [levelId, topicName, moduleId, getTopicLessonContent, getWordsForTopic, addWordToBank, topicId]);
+  }, [levelId, topicName, moduleId, getTopicLessonContent, getWordsForTopic, addWordToBank, topicId, toast]);
 
   useEffect(() => {
     if (topicName !== "Загрузка...") {
@@ -175,20 +185,19 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
           const topicIsNowFullyCompleted = isTopicCompleted(levelId, topicId);
 
           if (topicIsNowFullyCompleted) {
-             // Check if level was advanced due to this topic completion
             if (userData.currentLevel !== levelId && ALL_LEVELS.indexOf(userData.currentLevel) > ALL_LEVELS.indexOf(levelId)) {
                 setTopicContinuationLink(`/levels/${userData.currentLevel.toLowerCase()}`);
                 setTopicContinuationText("К следующему уровню");
-            } else if (isLevelCompleted(levelId)) { // Level is complete, but currentLevel might not have changed (e.g. C2)
+            } else if (isLevelCompleted(levelId)) { 
                 const originalLvlIdx = ALL_LEVELS.indexOf(levelId);
-                if (levelId === ALL_LEVELS[ALL_LEVELS.length - 1]) { // Max level completed
+                if (levelId === ALL_LEVELS[ALL_LEVELS.length - 1]) { 
                     setTopicContinuationLink(`/levels`);
                     setTopicContinuationText("Все уровни пройдены!");
-                } else { // Not max level, offer next level
+                } else { 
                     setTopicContinuationLink(`/levels/${ALL_LEVELS[originalLvlIdx + 1].toLowerCase()}`);
                     setTopicContinuationText("Перейти к следующему уровню");
                 }
-            } else { // Topic complete, but level not yet complete (other topics remain)
+            } else { 
               const currentLvlData = userData.progress[levelId];
               const defaultTopics = DEFAULT_TOPICS[levelId] || [];
               const customLevelTopics = userData.customTopics?.filter(ct => ct.id.startsWith(levelId + "_")) || [];
@@ -213,10 +222,10 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
                 setTopicContinuationText("Следующая тема");
               } else {
                 setTopicContinuationLink(`/levels/${levelId.toLowerCase()}`);
-                setTopicContinuationText("К темам уровня (все пройдено)"); // Fallback if level complete logic is complex
+                setTopicContinuationText("К темам уровня"); 
               }
             }
-          } else { // Topic not fully complete (implies logic error or this module was not the last uncompleted one)
+          } else { 
             setTopicContinuationLink(`/levels/${levelId.toLowerCase()}/${topicId}`);
             setTopicContinuationText("К модулям темы");
           }
@@ -280,6 +289,18 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
     }
     
     const evaluation = await evaluateUserResponse(moduleId, userResponse, questionContext, expectedAnswerForAI, grammarRulesForAI);
+    
+    if (!evaluation) {
+        toast({
+            title: "Ошибка оценки ответа",
+            description: "Не удалось получить оценку вашего ответа от AI. Пожалуйста, попробуйте еще раз.",
+            variant: "destructive",
+            duration: 7000,
+        });
+        setIsLoadingTask(false);
+        return; 
+    }
+
     setFeedback(evaluation);
     setIsLoadingTask(false);
     
