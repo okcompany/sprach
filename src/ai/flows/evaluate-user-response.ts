@@ -118,8 +118,9 @@ const evaluateUserResponseFlow = ai.defineFlow(
         return output;
       } catch (error: any) {
         retries++;
+        console.error(`[evaluateUserResponseFlow] Attempt ${retries} FAILED. Input keys: ${Object.keys(input).join(', ')}. Error:`, error.message ? error.message : error);
         if (retries >= MAX_RETRIES) {
-          console.error(`[evaluateUserResponseFlow] Failed after ${MAX_RETRIES} attempts. Last error:`, error);
+          console.error(`[evaluateUserResponseFlow] All ${MAX_RETRIES} retries FAILED for input:`, JSON.stringify(input, null, 2), "Last error:", error.message ? error.message : error);
           throw error; 
         }
         
@@ -132,10 +133,10 @@ const evaluateUserResponseFlow = ai.defineFlow(
           errorMessage.includes('internal error') 
         ) {
           const delay = INITIAL_RETRY_DELAY_MS * Math.pow(2, retries - 1); 
-          console.warn(`[evaluateUserResponseFlow] Attempt ${retries} failed with transient error. Retrying in ${delay / 1000}s... Error: ${error.message}`);
+          console.warn(`[evaluateUserResponseFlow] Attempt ${retries} failed with transient error. Retrying in ${delay / 1000}s...`);
           await new Promise(resolve => setTimeout(resolve, delay));
         } else {
-          console.error('[evaluateUserResponseFlow] Failed with non-retryable error:', error);
+          console.error('[evaluateUserResponseFlow] Failed with non-retryable error. Input:', JSON.stringify(input, null, 2), 'Error:', error.message ? error.message : error);
           throw error;
         }
       }
@@ -143,3 +144,4 @@ const evaluateUserResponseFlow = ai.defineFlow(
     throw new Error('[evaluateUserResponseFlow] Failed after multiple retries, and loop exited unexpectedly.');
   }
 );
+

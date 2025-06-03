@@ -296,8 +296,9 @@ const generateLessonContentFlow = ai.defineFlow(
         return output;
       } catch (error: any) {
         retries++;
+        console.error(`[generateLessonContentFlow] Attempt ${retries} for topic "${input.topic}" level ${input.level} FAILED. Error:`, error.message ? error.message : error);
         if (retries >= MAX_RETRIES) {
-          console.error(`[generateLessonContentFlow] Failed after ${MAX_RETRIES} attempts for topic "${input.topic}" at level ${input.level}. Last error:`, error);
+          console.error(`[generateLessonContentFlow] All ${MAX_RETRIES} retries FAILED for input:`, JSON.stringify(input, null, 2), "Last error:", error.message ? error.message : error);
           throw error;
         }
         
@@ -310,10 +311,10 @@ const generateLessonContentFlow = ai.defineFlow(
           errorMessage.includes('internal error')
         ) {
           const delay = INITIAL_RETRY_DELAY_MS * Math.pow(2, retries - 1);
-          console.warn(`[generateLessonContentFlow] Attempt ${retries} failed with transient error for topic "${input.topic}" at level ${input.level}. Retrying in ${delay / 1000}s... Error: ${error.message}`);
+          console.warn(`[generateLessonContentFlow] Attempt ${retries} failed with transient error for topic "${input.topic}" at level ${input.level}. Retrying in ${delay / 1000}s...`);
           await new Promise(resolve => setTimeout(resolve, delay));
         } else {
-          console.error(`[generateLessonContentFlow] Failed with non-retryable error for topic "${input.topic}" at level ${input.level}:`, error);
+          console.error(`[generateLessonContentFlow] Failed with non-retryable error for topic "${input.topic}" at level ${input.level}. Input:`, JSON.stringify(input, null, 2), "Error:", error.message ? error.message : error);
           throw error;
         }
       }
@@ -321,3 +322,4 @@ const generateLessonContentFlow = ai.defineFlow(
     throw new Error(`[generateLessonContentFlow] Failed after multiple retries for topic "${input.topic}" at level ${input.level}, and loop exited unexpectedly.`);
   }
 );
+
