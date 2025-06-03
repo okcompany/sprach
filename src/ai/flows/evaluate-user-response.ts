@@ -20,6 +20,12 @@ const EvaluateUserResponseInputSchema = z.object({
   questionContext: z.string().describe('The context of the question or task.'),
   userLevel: z.enum(['A0', 'A1', 'A2', 'B1', 'B2', 'C1', 'C2']).describe('The user\u2019s proficiency level in German.'),
   grammarRules: z.string().optional().describe('Relevant grammar rules for the given user level.'),
+  // Boolean flags for Handlebars templating based on moduleType
+  isModuleWordTest: z.boolean().optional().describe('Internal flag for templating: true if moduleType is "wordTest".'),
+  isModuleVocabulary: z.boolean().optional().describe('Internal flag for templating: true if moduleType is "vocabulary".'),
+  isModuleGrammar: z.boolean().optional().describe('Internal flag for templating: true if moduleType is "grammar".'),
+  isModuleReading: z.boolean().optional().describe('Internal flag for templating: true if moduleType is "reading".'),
+  isModuleWriting: z.boolean().optional().describe('Internal flag for templating: true if moduleType is "writing".'),
 });
 
 export type EvaluateUserResponseInput = z.infer<typeof EvaluateUserResponseInputSchema>;
@@ -34,12 +40,21 @@ const EvaluateUserResponseOutputSchema = z.object({
 export type EvaluateUserResponseOutput = z.infer<typeof EvaluateUserResponseOutputSchema>;
 
 export async function evaluateUserResponse(input: EvaluateUserResponseInput): Promise<EvaluateUserResponseOutput> {
-  return evaluateUserResponseFlow(input);
+  // Populate boolean flags for templating based on input.moduleType
+  const promptInputData = {
+    ...input,
+    isModuleWordTest: input.moduleType === 'wordTest',
+    isModuleVocabulary: input.moduleType === 'vocabulary',
+    isModuleGrammar: input.moduleType === 'grammar',
+    isModuleReading: input.moduleType === 'reading',
+    isModuleWriting: input.moduleType === 'writing',
+  };
+  return evaluateUserResponseFlow(promptInputData);
 }
 
 const evaluateUserResponsePrompt = ai.definePrompt({
   name: 'evaluateUserResponsePrompt',
-  input: {schema: EvaluateUserResponseInputSchema},
+  input: {schema: EvaluateUserResponseInputSchema}, // Schema still defines original input shape + optional flags
   output: {schema: EvaluateUserResponseOutputSchema},
   prompt: `You are an AI-powered German language tutor. Your task is to evaluate a user's response to a question or task.
 
@@ -54,26 +69,30 @@ Provide an evaluation of the user's response. Include feedback and suggestions f
 
 If the module type is 'grammar' or 'writing', and the user's response is incorrect due to specific grammatical errors relevant to their level ({{{userLevel}}}), please identify these errors and list them in the 'grammarErrorTags' field. Use short, English, snake_case tags (e.g., "nominative_case_error", "verb_position_subclause", "modal_verb_usage", "adjective_declension_dativ", "perfekt_auxiliary_verb"). Only include tags for clear, identifiable grammatical mistakes, not stylistic issues or minor vocabulary errors.
 
-{{#if (eq moduleType "wordTest")}}
+{{#if isModuleWordTest}}
 This is a 'wordTest' module. The user is being tested on their knowledge of vocabulary.
 - Be stricter in your evaluation.
 - If the user's response is incorrect, clearly state the correct answer in the 'suggestedCorrection'.
 - The primary goal is to assess if the user knows the word.
 - Do not provide 'grammarErrorTags' for this module type unless the error is directly tied to a grammatical aspect of a single word (e.g. gender of a noun if tested).
-{{else if (eq moduleType "vocabulary")}}
+{{/if}}
+{{#if isModuleVocabulary}}
 This is a 'vocabulary' learning module. The user is learning new words.
 - Be encouraging.
 - If the user's response is incorrect, provide the 'suggestedCorrection' and explain briefly if necessary.
 - Do not provide 'grammarErrorTags' for this module type.
-{{else if (eq moduleType "grammar")}}
+{{/if}}
+{{#if isModuleGrammar}}
 This is a 'grammar' module.
 - Focus on grammatical correctness according to the user's level and the provided grammar rules.
 - If incorrect, provide 'grammarErrorTags' if applicable.
-{{else if (eq moduleType "reading")}}
+{{/if}}
+{{#if isModuleReading}}
 This is a 'reading' module.
 - Evaluate comprehension of the provided text based on the user's answer to the question.
 - Provide 'grammarErrorTags' only if the user's answer itself contains significant grammatical errors that hinder understanding, and these errors are relevant to their learning level.
-{{else if (eq moduleType "writing")}}
+{{/if}}
+{{#if isModuleWriting}}
 This is a 'writing' module.
 - Evaluate the user's written text for clarity, grammar, and relevance to the prompt.
 - If incorrect due to grammar, provide 'grammarErrorTags'.
@@ -104,23 +123,24 @@ const INITIAL_RETRY_DELAY_MS = 3000;
 const evaluateUserResponseFlow = ai.defineFlow(
   {
     name: 'evaluateUserResponseFlow',
-    inputSchema: EvaluateUserResponseInputSchema,
+    inputSchema: EvaluateUserResponseInputSchema, // Flow input still respects the (now augmented) schema
     outputSchema: EvaluateUserResponseOutputSchema,
   },
-  async input => {
+  async (inputWithFlags: EvaluateUserResponseInput) => { // This input already has the flags from the wrapper
     let retries = 0;
     while (retries < MAX_RETRIES) {
       try {
-        const {output} = await evaluateUserResponsePrompt(input);
+        const {output} = await evaluateUserResponsePrompt(inputWithFlags); // Pass the input with flags
         if (!output) {
           throw new Error('[evaluateUserResponseFlow] AI model returned an empty output during response evaluation.');
         }
         return output;
       } catch (error: any) {
         retries++;
-        console.error(`[evaluateUserResponseFlow] Attempt ${retries} FAILED. Input keys: ${Object.keys(input).join(', ')}. Error:`, error.message ? error.message : error);
+        const inputKeys = inputWithFlags ? Object.keys(inputWithFlags).join(', ') : 'undefined input';
+        console.error(`[evaluateUserResponseFlow] Attempt ${retries} FAILED. Input keys: ${inputKeys}. Error:`, error.message ? error.message : error);
         if (retries >= MAX_RETRIES) {
-          console.error(`[evaluateUserResponseFlow] All ${MAX_RETRIES} retries FAILED for input:`, JSON.stringify(input, null, 2), "Last error:", error.message ? error.message : error);
+          console.error(`[evaluateUserResponseFlow] All ${MAX_RETRIES} retries FAILED for input:`, JSON.stringify(inputWithFlags, null, 2), "Last error:", error.message ? error.message : error);
           throw error; 
         }
         
@@ -136,7 +156,7 @@ const evaluateUserResponseFlow = ai.defineFlow(
           console.warn(`[evaluateUserResponseFlow] Attempt ${retries} failed with transient error. Retrying in ${delay / 1000}s...`);
           await new Promise(resolve => setTimeout(resolve, delay));
         } else {
-          console.error('[evaluateUserResponseFlow] Failed with non-retryable error. Input:', JSON.stringify(input, null, 2), 'Error:', error.message ? error.message : error);
+          console.error('[evaluateUserResponseFlow] Failed with non-retryable error. Input:', JSON.stringify(inputWithFlags, null, 2), 'Error:', error.message ? error.message : error);
           throw error;
         }
       }
