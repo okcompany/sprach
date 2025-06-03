@@ -14,18 +14,19 @@ import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 
 const EvaluateUserResponseInputSchema = z.object({
-  moduleType: z.enum(['vocabulary', 'grammar', 'reading', 'writing', 'wordTest']).describe('The type of module the user is responding to.'),
+  moduleType: z.enum(['vocabulary', 'grammar', 'reading', 'writing', 'wordTest', 'listening']).describe('The type of module the user is responding to.'),
   userResponse: z.string().describe('The user\u2019s response to the question or task.'),
   expectedAnswer: z.string().optional().describe('The expected answer to the question or task, if applicable.'),
   questionContext: z.string().describe('The context of the question or task.'),
   userLevel: z.enum(['A0', 'A1', 'A2', 'B1', 'B2', 'C1', 'C2']).describe('The user\u2019s proficiency level in German.'),
   grammarRules: z.string().optional().describe('Relevant grammar rules for the given user level.'),
   // Boolean flags for Handlebars templating based on moduleType
-  isModuleWordTest: z.boolean().optional().describe('Internal flag for templating: true if moduleType is "wordTest".'),
-  isModuleVocabulary: z.boolean().optional().describe('Internal flag for templating: true if moduleType is "vocabulary".'),
-  isModuleGrammar: z.boolean().optional().describe('Internal flag for templating: true if moduleType is "grammar".'),
-  isModuleReading: z.boolean().optional().describe('Internal flag for templating: true if moduleType is "reading".'),
-  isModuleWriting: z.boolean().optional().describe('Internal flag for templating: true if moduleType is "writing".'),
+  isModuleWordTest: z.boolean().optional().describe('Internal flag: true if moduleType is "wordTest".'),
+  isModuleVocabulary: z.boolean().optional().describe('Internal flag: true if moduleType is "vocabulary".'),
+  isModuleGrammar: z.boolean().optional().describe('Internal flag: true if moduleType is "grammar".'),
+  isModuleReading: z.boolean().optional().describe('Internal flag: true if moduleType is "reading".'),
+  isModuleWriting: z.boolean().optional().describe('Internal flag: true if moduleType is "writing".'),
+  isModuleListening: z.boolean().optional().describe('Internal flag: true if moduleType is "listening".'),
 });
 
 export type EvaluateUserResponseInput = z.infer<typeof EvaluateUserResponseInputSchema>;
@@ -48,13 +49,14 @@ export async function evaluateUserResponse(input: EvaluateUserResponseInput): Pr
     isModuleGrammar: input.moduleType === 'grammar',
     isModuleReading: input.moduleType === 'reading',
     isModuleWriting: input.moduleType === 'writing',
+    isModuleListening: input.moduleType === 'listening',
   };
   return evaluateUserResponseFlow(promptInputData);
 }
 
 const evaluateUserResponsePrompt = ai.definePrompt({
   name: 'evaluateUserResponsePrompt',
-  input: {schema: EvaluateUserResponseInputSchema}, // Schema still defines original input shape + optional flags
+  input: {schema: EvaluateUserResponseInputSchema}, 
   output: {schema: EvaluateUserResponseOutputSchema},
   prompt: `You are an AI-powered German language tutor. Your task is to evaluate a user's response to a question or task.
 
@@ -86,6 +88,11 @@ This is a 'vocabulary' learning module. The user is learning new words.
 This is a 'grammar' module.
 - Focus on grammatical correctness according to the user's level and the provided grammar rules.
 - If incorrect, provide 'grammarErrorTags' if applicable.
+{{/if}}
+{{#if isModuleListening}}
+This is a 'listening' module.
+- Evaluate comprehension of the provided audio script based on the user's answer to the question.
+- Provide 'grammarErrorTags' only if the user's answer itself contains significant grammatical errors that hinder understanding, and these errors are relevant to their learning level.
 {{/if}}
 {{#if isModuleReading}}
 This is a 'reading' module.
@@ -123,14 +130,14 @@ const INITIAL_RETRY_DELAY_MS = 3000;
 const evaluateUserResponseFlow = ai.defineFlow(
   {
     name: 'evaluateUserResponseFlow',
-    inputSchema: EvaluateUserResponseInputSchema, // Flow input still respects the (now augmented) schema
+    inputSchema: EvaluateUserResponseInputSchema, 
     outputSchema: EvaluateUserResponseOutputSchema,
   },
-  async (inputWithFlags: EvaluateUserResponseInput) => { // This input already has the flags from the wrapper
+  async (inputWithFlags: EvaluateUserResponseInput) => { 
     let retries = 0;
     while (retries < MAX_RETRIES) {
       try {
-        const {output} = await evaluateUserResponsePrompt(inputWithFlags); // Pass the input with flags
+        const {output} = await evaluateUserResponsePrompt(inputWithFlags); 
         if (!output) {
           throw new Error('[evaluateUserResponseFlow] AI model returned an empty output during response evaluation.');
         }
