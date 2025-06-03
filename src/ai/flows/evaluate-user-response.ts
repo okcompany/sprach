@@ -116,14 +116,16 @@ This is a 'reading' module.
 {{/if}}
 {{#if isModuleWriting}}
 This is a 'writing' module.
+- When providing feedback in the 'writingDetails' object, ensure each field ('taskAchievement', 'coherenceAndCohesion', etc.) contains specific and DISTINCT information relevant ONLY to that criterion.
 - Evaluate the user's written text based on the following criteria, appropriate for their level ({{{userLevel}}}):
-  1. Task Achievement: How well does the text address the prompt '{{{questionContext}}}'?
-  2. Coherence and Cohesion: Is the text logically structured? Are ideas connected smoothly?
-  3. Lexical Resource (Vocabulary): Is the vocabulary appropriate for the level and topic? Is there a range of words?
-  4. Grammatical Range and Accuracy: Are grammatical structures used correctly and appropriately for the level?
-- Provide detailed feedback in the 'writingDetails' object with the following fields: 'taskAchievement', 'coherenceAndCohesion', 'lexicalResource', 'grammaticalAccuracy', 'overallFeedback', and optionally 'suggestedImprovements' (array of strings).
-- The 'writingDetails.overallFeedback' field should contain a summary of performance and main suggestions. This summary should also be the value for the main 'evaluation' field of the entire response.
-- The 'writingDetails.suggestedImprovements' field can contain 1-3 specific sentences from the user's text with suggestions for how to improve them.
+  1.  'taskAchievement': Focus SOLELY on how well the user's text met the explicit requirements of the writing prompt '{{{questionContext}}}' (e.g., did they write about the topic, did they include specific information if asked, was it the right length for the level?). Do NOT include general praise or summaries here. Keep this section concise and to the point.
+  2.  'coherenceAndCohesion': Focus SOLELY on the text's logical structure, flow, and use of linking words. Keep this section concise.
+  3.  'lexicalResource' (Vocabulary): Focus SOLELY on vocabulary choice, range, and appropriateness for the level and topic. Keep this section concise.
+  4.  'grammaticalAccuracy': Focus SOLELY on grammatical correctness and range of structures used, appropriate for the level. Keep this section concise.
+- Provide detailed feedback in the 'writingDetails' object with these fields.
+- The 'writingDetails.overallFeedback' field should contain a BRIEF, holistic summary of overall performance, general encouragement, and 1-2 key suggestions for improvement or next steps. This is the main summary. THIS SUMMARY SHOULD BE THE VALUE for the main 'evaluation' field of the entire response.
+- The 'writingDetails.suggestedImprovements' field can contain 1-3 *specific* examples from the user's text with suggested rewrites, if applicable. Focus on concrete examples.
+- AVOID generic, repetitive phrases across different fields within 'writingDetails'. The goal is to provide targeted, useful, and non-redundant feedback for each aspect.
 - Set 'isCorrect' to true if the text is generally understandable, adequately addresses the prompt for the user's level ({{{userLevel}}}), and doesn't contain an overwhelming number of errors that impede communication. Minor errors are acceptable for a 'true' evaluation, especially at lower levels.
 - If 'isCorrect' is false due to grammar, provide relevant 'grammarErrorTags'.
 - The 'suggestedCorrection' field can optionally contain a fully corrected version of the user's text if it's short and the corrections are significant, or a few key corrections otherwise.
