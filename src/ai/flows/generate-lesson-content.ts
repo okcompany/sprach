@@ -21,10 +21,17 @@ const GenerateLessonInputSchema = z.object({
 
 export type GenerateLessonInput = z.infer<typeof GenerateLessonInputSchema>;
 
+// Define Zod schema for the vocabulary item
+const VocabularyItemSchema = z.object({
+  german: z.string().describe('The German word or phrase.'),
+  russian: z.string().describe('The Russian translation of the word or phrase.'),
+  exampleSentence: z.string().optional().describe('An optional example sentence in German using the word/phrase, appropriate for the user\'s level.'),
+});
+
 // Define Zod schema for the output
 const GenerateLessonOutputSchema = z.object({
   lessonTitle: z.string().describe('The title of the generated lesson.'),
-  vocabulary: z.array(z.string()).describe('An array of key vocabulary words for the lesson.'),
+  vocabulary: z.array(VocabularyItemSchema).describe('An array of key vocabulary items for the lesson, each including the German word/phrase, its Russian translation, and an optional example sentence. Ensure this vocabulary list is based on common German language textbooks for the specified level and topic.'),
   grammarExplanation: z.string().describe('A detailed explanation of a relevant grammar point.'),
   listeningExercise: z.string().describe('A description or script for a listening comprehension exercise.'),
   readingPassage: z.string().describe('A short reading passage related to the topic.'),
@@ -49,7 +56,7 @@ const lessonPrompt = ai.definePrompt({
 
   The lesson should include:
   - A lessonTitle field.
-  - A vocabulary field which is a list of key vocabulary words (minimum 5 words) relevant to the topic. Ensure this vocabulary list is based on common German language textbooks for the specified level and topic.
+  - A vocabulary field which is a list of key vocabulary items (minimum 5 items). Each item must be an object with "german" (the word/phrase), "russian" (its translation), and an optional "exampleSentence" (in German, appropriate for the user's level). Ensure this vocabulary list is based on common German language textbooks for the specified level and topic.
   - A grammarExplanation field which explains a grammar point relevant to the level and topic.
   - A listeningExercise field which describes a listening comprehension exercise.
   - A readingPassage field which provides a short reading passage related to the topic.
@@ -71,4 +78,3 @@ const generateLessonContentFlow = ai.defineFlow(
     return output!;
   }
 );
-

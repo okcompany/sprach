@@ -69,9 +69,15 @@ export interface UserData {
 }
 
 // AI Generated Content Types (matches flows)
+export interface AILessonVocabularyItem {
+  german: string;
+  russian: string;
+  exampleSentence?: string;
+}
+
 export interface AILessonContent {
   lessonTitle: string;
-  vocabulary: string[]; // List of German words
+  vocabulary: AILessonVocabularyItem[]; // Updated: List of objects with German, Russian, and example sentence
   grammarExplanation: string;
   listeningExercise: string; // Description or script
   readingPassage: string;
