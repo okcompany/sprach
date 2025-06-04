@@ -71,16 +71,21 @@ export const UserDataProvider = ({ children }: { children: ReactNode }) => {
           if (!parsedData.progress[level]) {
             parsedData.progress[level] = { topics: {}, completed: false };
           }
-          DEFAULT_TOPICS[level].forEach(topic => {
-            if (!parsedData.progress[level]!.topics[topic.id]) {
-              parsedData.progress[level]!.topics[topic.id] = {
-                id: topic.id,
-                name: topic.name,
-                modules: {},
-                completed: false,
-              };
-            }
-          });
+          const topicsForLevel = DEFAULT_TOPICS[level];
+          if (topicsForLevel && Array.isArray(topicsForLevel)) {
+            topicsForLevel.forEach(topic => {
+              if (!parsedData.progress[level]!.topics[topic.id]) {
+                parsedData.progress[level]!.topics[topic.id] = {
+                  id: topic.id,
+                  name: topic.name,
+                  modules: {},
+                  completed: false,
+                };
+              }
+            });
+          } else {
+            console.warn(`[UserDataProvider] No default topics found for level: ${level} when parsing stored data. Skipping topic initialization for this level.`);
+          }
         });
         if (parsedData.currentTopicId === undefined) { 
             parsedData.currentTopicId = initialUserData.currentTopicId;
@@ -99,20 +104,43 @@ export const UserDataProvider = ({ children }: { children: ReactNode }) => {
         const defaultProgress: UserData['progress'] = {};
         ALL_LEVELS.forEach(level => {
           defaultProgress[level] = { topics: {}, completed: false };
-          DEFAULT_TOPICS[level].forEach(topic => {
-            defaultProgress[level]!.topics[topic.id] = {
-              id: topic.id,
-              name: topic.name,
-              modules: {},
-              completed: false,
-            };
-          });
+          const topicsForLevel = DEFAULT_TOPICS[level];
+          if (topicsForLevel && Array.isArray(topicsForLevel)) {
+            topicsForLevel.forEach(topic => {
+              defaultProgress[level]!.topics[topic.id] = {
+                id: topic.id,
+                name: topic.name,
+                modules: {},
+                completed: false,
+              };
+            });
+          } else {
+             console.warn(`[UserDataProvider] No default topics found for level: ${level} during initial setup. Skipping topic initialization for this level.`);
+          }
         });
         setUserData({...initialUserData, progress: defaultProgress, grammarWeaknesses: {}});
       }
     } catch (error) {
       console.error("Failed to load user data from localStorage", error);
-      setUserData(initialUserData);
+      // Fallback to initial user data on error, ensuring progress structure for all levels
+      const fallbackProgress: UserData['progress'] = {};
+       ALL_LEVELS.forEach(level => {
+          fallbackProgress[level] = { topics: {}, completed: false };
+           const topicsForLevel = DEFAULT_TOPICS[level];
+           if (topicsForLevel && Array.isArray(topicsForLevel)) {
+             topicsForLevel.forEach(topic => {
+                fallbackProgress[level]!.topics[topic.id] = {
+                 id: topic.id,
+                 name: topic.name,
+                 modules: {},
+                 completed: false,
+               };
+             });
+           } else {
+             console.warn(`[UserDataProvider] No default topics found for level: ${level} during error fallback. Skipping topic initialization for this level.`);
+           }
+       });
+      setUserData({...initialUserData, progress: fallbackProgress, grammarWeaknesses: {} });
     }
     setIsLoading(false);
   }, []);
@@ -148,14 +176,19 @@ export const UserDataProvider = ({ children }: { children: ReactNode }) => {
     const defaultProgress: UserData['progress'] = {};
     ALL_LEVELS.forEach(level => {
       defaultProgress[level] = { topics: {}, completed: false };
-      DEFAULT_TOPICS[level].forEach(topic => {
-        defaultProgress[level]!.topics[topic.id] = {
-          id: topic.id,
-          name: topic.name,
-          modules: {},
-          completed: false,
-        };
-      });
+      const topicsForLevel = DEFAULT_TOPICS[level];
+      if (topicsForLevel && Array.isArray(topicsForLevel)) {
+          topicsForLevel.forEach(topic => {
+            defaultProgress[level]!.topics[topic.id] = {
+              id: topic.id,
+              name: topic.name,
+              modules: {},
+              completed: false,
+            };
+          });
+      } else {
+         console.warn(`[UserDataProvider] No default topics found for level: ${level} during reset. Skipping topic initialization for this level.`);
+      }
     });
     const freshUserData = {...initialUserData, progress: defaultProgress, currentTopicId: undefined, grammarWeaknesses: {} }; 
     setUserData(freshUserData);
@@ -274,7 +307,7 @@ export const UserDataProvider = ({ children }: { children: ReactNode }) => {
       
       if (!updatedUserData.progress[level]) updatedUserData.progress[level] = { topics: {}, completed: false };
       if (!updatedUserData.progress[level]!.topics[topicId]) {
-        const defaultTopicInfo = DEFAULT_TOPICS[level]?.find(t => t.id === topicId);
+        const defaultTopicInfo = (DEFAULT_TOPICS[level] || []).find(t => t.id === topicId);
         const customTopicInfo = updatedUserData.customTopics.find((t: TopicProgress) => t.id === topicId);
         
         updatedUserData.progress[level]!.topics[topicId] = { 
@@ -380,8 +413,8 @@ export const UserDataProvider = ({ children }: { children: ReactNode }) => {
   }, [setUserData]);
   
   const getTopicLessonContent = useCallback(async (level: LanguageLevel, topicName: string, topicId: string): Promise<AILessonContent | null> => {
-    const isDefaultTopic = DEFAULT_TOPICS[level]?.some(t => t.id === topicId);
-    const cacheKey = `${LESSON_CACHE_KEY_PREFIX}${level}_${topicId.replace(/\s+/g, '_')}`;
+    const isDefaultTopic = (DEFAULT_TOPICS[level] || []).some(t => t.id === topicId);
+    const cacheKey = `${LESSON_CACHE_KEY_PREFIX}${level}_${topicId.replace(/[\s:]+/g, '_')}`; // Sanitize topicId for cache key
 
     if (isDefaultTopic) {
       try {
@@ -389,11 +422,11 @@ export const UserDataProvider = ({ children }: { children: ReactNode }) => {
         if (cachedItem) {
           const parsedCache: CachedLesson = JSON.parse(cachedItem);
           if (Date.now() - parsedCache.timestamp < LESSON_CACHE_EXPIRY_MS) {
-            console.log(`[Cache] Serving lesson for ${level} - ${topicName} from cache.`);
+            console.log(`[Cache] Serving lesson for ${level} - ${topicName} (ID: ${topicId}) from cache.`);
             return parsedCache.content;
           } else {
             localStorage.removeItem(cacheKey); // Cache expired
-            console.log(`[Cache] Expired lesson for ${level} - ${topicName} removed.`);
+            console.log(`[Cache] Expired lesson for ${level} - ${topicName} (ID: ${topicId}) removed.`);
           }
         }
       } catch (e) {
@@ -402,34 +435,33 @@ export const UserDataProvider = ({ children }: { children: ReactNode }) => {
       }
     }
 
-    console.log(`[Cache] Generating new lesson for ${level} - ${topicName}.`);
+    console.log(`[Cache] Generating new lesson for ${level} - ${topicName} (ID: ${topicId}).`);
     try {
-      const lesson = await generateLessonContentAI({ level, topic: topicName }) as AILessonContent;
+      // Pass topicId to generateLessonContentAI so it can use specific vocabulary if defined
+      const lesson = await generateLessonContentAI({ level, topic: topicName, topicId }) as AILessonContent; 
       if (lesson && isDefaultTopic) {
         try {
           const newCachedItem: CachedLesson = { timestamp: Date.now(), content: lesson };
           localStorage.setItem(cacheKey, JSON.stringify(newCachedItem));
-          console.log(`[Cache] Lesson for ${level} - ${topicName} saved to cache.`);
+          console.log(`[Cache] Lesson for ${level} - ${topicName} (ID: ${topicId}) saved to cache.`);
         } catch (e) {
           console.warn("[Cache] Error saving lesson to localStorage:", e);
-          // If localStorage is full, try to clear some old cache entries
           if (e instanceof DOMException && e.name === 'QuotaExceededError') {
             console.warn("[Cache] QuotaExceededError. Attempting to clear old cache.");
             let clearedCount = 0;
             const keys = Object.keys(localStorage);
-            // Simple FIFO: remove oldest lesson caches
             keys.filter(k => k.startsWith(LESSON_CACHE_KEY_PREFIX))
                 .map(k => ({ key: k, timestamp: JSON.parse(localStorage.getItem(k) || '{}').timestamp || 0 }))
                 .sort((a, b) => a.timestamp - b.timestamp)
-                .slice(0, 5) // Attempt to remove up to 5 oldest items
+                .slice(0, 5) 
                 .forEach(item => {
                     localStorage.removeItem(item.key);
                     clearedCount++;
                 });
             console.log(`[Cache] Cleared ${clearedCount} old cache entries. Retrying save...`);
             try {
-              localStorage.setItem(cacheKey, JSON.stringify(newCachedItem)); // Retry saving
-              console.log(`[Cache] Lesson for ${level} - ${topicName} saved to cache after cleanup.`);
+              localStorage.setItem(cacheKey, JSON.stringify(newCachedItem)); 
+              console.log(`[Cache] Lesson for ${level} - ${topicName} (ID: ${topicId}) saved to cache after cleanup.`);
             } catch (e2) {
                 console.error("[Cache] Still failed to save lesson to localStorage after cleanup:", e2);
             }
@@ -485,14 +517,14 @@ export const UserDataProvider = ({ children }: { children: ReactNode }) => {
           }
 
           const topicName = updatedUserData.progress[levelId]?.topics[topicId]?.name || 
-                            DEFAULT_TOPICS[levelId]?.find(t => t.id === topicId)?.name ||
+                            (DEFAULT_TOPICS[levelId] || []).find(t => t.id === topicId)?.name ||
                             updatedUserData.customTopics.find(t => t.id === topicId)?.name ||
                             topicId;
 
           const currentContext: GrammarWeaknessContext = {
             level: levelId,
-            topicId: topicId,
-            topicName: topicName,
+            topicId: topicId, // Storing topicId
+            topicName: topicName, // Storing topicName
             moduleId: moduleType,
           };
 
@@ -629,7 +661,7 @@ export const UserDataProvider = ({ children }: { children: ReactNode }) => {
                 lastEncounteredDate: detail.lastEncounteredDate,
                 exampleContexts: detail.exampleContexts.map(ctx => ({
                     level: ctx.level,
-                    topicName: ctx.topicName,
+                    topicName: ctx.topicName, // topicName is already available in GrammarWeaknessContext
                     moduleId: ctx.moduleId
                 }))
             };
