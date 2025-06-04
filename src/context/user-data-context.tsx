@@ -10,7 +10,14 @@ import { evaluateUserResponse as evaluateUserResponseAI, type EvaluateUserRespon
 import { recommendAiLesson as recommendAiLessonAI, type RecommendAiLessonOutput } from '@/ai/flows/recommend-ai-lesson';
 
 const USER_DATA_KEY = 'sprachheld_userData';
-const MAX_GRAMMAR_CONTEXTS = 5; // Max example contexts to store per grammar weakness
+const LESSON_CACHE_KEY_PREFIX = 'sprachheld_lessonCache_';
+const LESSON_CACHE_EXPIRY_MS = 24 * 60 * 60 * 1000; // 24 hours
+const MAX_GRAMMAR_CONTEXTS = 5; 
+
+interface CachedLesson {
+  timestamp: number;
+  content: AILessonContent;
+}
 
 const initialUserData: UserData = {
   currentLevel: 'A0',
@@ -25,7 +32,7 @@ const initialUserData: UserData = {
     lastActivityTimestamp: Date.now(),
   },
   customTopics: [],
-  grammarWeaknesses: {}, // Initialize grammarWeaknesses
+  grammarWeaknesses: {},
 };
 
 interface UserDataContextType {
@@ -35,7 +42,7 @@ interface UserDataContextType {
   resetProgress: () => void;
   updateModuleProgress: (level: LanguageLevel, topicId: string, moduleId: ModuleType, score: number) => void;
   addCustomTopic: (topicName: string) => Promise<void>;
-  getTopicLessonContent: (level: LanguageLevel, topicName: string) => Promise<AILessonContent | null>;
+  getTopicLessonContent: (level: LanguageLevel, topicName: string, topicId: string) => Promise<AILessonContent | null>;
   evaluateUserResponse: (levelId: LanguageLevel, topicId: string, moduleId: ModuleType, userResponse: string, questionContext: string, expectedAnswer?: string, grammarRules?:string) => Promise<AIEvaluationResultType | null>;
   getAIRecommendedLesson: () => Promise<RecommendAiLessonOutput | null>;
   addWordToBank: (word: Omit<VocabularyWord, 'id' | 'consecutiveCorrectAnswers' | 'errorCount'>) => void;
@@ -60,7 +67,6 @@ export const UserDataProvider = ({ children }: { children: ReactNode }) => {
       const storedData = localStorage.getItem(USER_DATA_KEY);
       if (storedData) {
         const parsedData = JSON.parse(storedData) as UserData;
-        // Ensure progress structure exists for all levels and default topics
         ALL_LEVELS.forEach(level => {
           if (!parsedData.progress[level]) {
             parsedData.progress[level] = { topics: {}, completed: false };
@@ -85,7 +91,7 @@ export const UserDataProvider = ({ children }: { children: ReactNode }) => {
         if (!parsedData.profile.preferredTopics) { 
             parsedData.profile.preferredTopics = [];
         }
-        if (!parsedData.grammarWeaknesses) { // Initialize if missing
+        if (!parsedData.grammarWeaknesses) { 
             parsedData.grammarWeaknesses = {};
         }
         setUserData(parsedData);
@@ -154,6 +160,14 @@ export const UserDataProvider = ({ children }: { children: ReactNode }) => {
     const freshUserData = {...initialUserData, progress: defaultProgress, currentTopicId: undefined, grammarWeaknesses: {} }; 
     setUserData(freshUserData);
     localStorage.setItem(USER_DATA_KEY, JSON.stringify(freshUserData));
+
+    // Clear lesson cache
+    Object.keys(localStorage).forEach(key => {
+      if (key.startsWith(LESSON_CACHE_KEY_PREFIX)) {
+        localStorage.removeItem(key);
+      }
+    });
+
   }, []);
 
   const isTopicCompleted = useCallback((level: LanguageLevel, topicId: string): boolean => {
@@ -365,9 +379,63 @@ export const UserDataProvider = ({ children }: { children: ReactNode }) => {
     });
   }, [setUserData]);
   
-  const getTopicLessonContent = useCallback(async (level: LanguageLevel, topicName: string): Promise<AILessonContent | null> => {
+  const getTopicLessonContent = useCallback(async (level: LanguageLevel, topicName: string, topicId: string): Promise<AILessonContent | null> => {
+    const isDefaultTopic = DEFAULT_TOPICS[level]?.some(t => t.id === topicId);
+    const cacheKey = `${LESSON_CACHE_KEY_PREFIX}${level}_${topicId.replace(/\s+/g, '_')}`;
+
+    if (isDefaultTopic) {
+      try {
+        const cachedItem = localStorage.getItem(cacheKey);
+        if (cachedItem) {
+          const parsedCache: CachedLesson = JSON.parse(cachedItem);
+          if (Date.now() - parsedCache.timestamp < LESSON_CACHE_EXPIRY_MS) {
+            console.log(`[Cache] Serving lesson for ${level} - ${topicName} from cache.`);
+            return parsedCache.content;
+          } else {
+            localStorage.removeItem(cacheKey); // Cache expired
+            console.log(`[Cache] Expired lesson for ${level} - ${topicName} removed.`);
+          }
+        }
+      } catch (e) {
+        console.warn("[Cache] Error reading lesson from localStorage:", e);
+        localStorage.removeItem(cacheKey); // Corrupted cache
+      }
+    }
+
+    console.log(`[Cache] Generating new lesson for ${level} - ${topicName}.`);
     try {
       const lesson = await generateLessonContentAI({ level, topic: topicName }) as AILessonContent;
+      if (lesson && isDefaultTopic) {
+        try {
+          const newCachedItem: CachedLesson = { timestamp: Date.now(), content: lesson };
+          localStorage.setItem(cacheKey, JSON.stringify(newCachedItem));
+          console.log(`[Cache] Lesson for ${level} - ${topicName} saved to cache.`);
+        } catch (e) {
+          console.warn("[Cache] Error saving lesson to localStorage:", e);
+          // If localStorage is full, try to clear some old cache entries
+          if (e instanceof DOMException && e.name === 'QuotaExceededError') {
+            console.warn("[Cache] QuotaExceededError. Attempting to clear old cache.");
+            let clearedCount = 0;
+            const keys = Object.keys(localStorage);
+            // Simple FIFO: remove oldest lesson caches
+            keys.filter(k => k.startsWith(LESSON_CACHE_KEY_PREFIX))
+                .map(k => ({ key: k, timestamp: JSON.parse(localStorage.getItem(k) || '{}').timestamp || 0 }))
+                .sort((a, b) => a.timestamp - b.timestamp)
+                .slice(0, 5) // Attempt to remove up to 5 oldest items
+                .forEach(item => {
+                    localStorage.removeItem(item.key);
+                    clearedCount++;
+                });
+            console.log(`[Cache] Cleared ${clearedCount} old cache entries. Retrying save...`);
+            try {
+              localStorage.setItem(cacheKey, JSON.stringify(newCachedItem)); // Retry saving
+              console.log(`[Cache] Lesson for ${level} - ${topicName} saved to cache after cleanup.`);
+            } catch (e2) {
+                console.error("[Cache] Still failed to save lesson to localStorage after cleanup:", e2);
+            }
+          }
+        }
+      }
       return lesson;
     } catch (error: any) {
       const errorMessage = error?.message || "";
