@@ -129,7 +129,6 @@ export interface AISentenceConstructionExercise {
   tasks: AISentenceConstructionTask[];
 }
 
-// This type is now only for individual exercise structures, not for the main lesson content.
 export type AIGrammarExercise =
   | AIFillInTheBlanksExercise
   | AIMultipleChoiceExercise
@@ -203,7 +202,6 @@ export interface AILessonContent {
   vocabulary: AILessonVocabularyItem[];
   grammarExplanation: string;
 
-  // Grammar exercises split into individual optional fields
   grammarFillInTheBlanks?: AIFillInTheBlanksExercise;
   grammarMultipleChoice?: AIMultipleChoiceExercise;
   grammarSentenceConstruction?: AISentenceConstructionExercise;
@@ -213,16 +211,13 @@ export interface AILessonContent {
   readingQuestions: string[];
   writingPrompt: string;
 
-  // Interactive Vocabulary (Split)
   interactiveMatchingExercise?: AIMatchingExercise;
   interactiveAudioQuizExercise?: AIAudioQuizExercise;
 
-  // Interactive Listening (Split)
   interactiveListeningMCQ?: AIComprehensionMultipleChoiceExercise;
   interactiveListeningTrueFalse?: AITrueFalseExercise;
   interactiveListeningSequencing?: AISequencingExercise;
 
-  // Interactive Reading (Split)
   interactiveReadingMCQ?: AIComprehensionMultipleChoiceExercise;
   interactiveReadingTrueFalse?: AITrueFalseExercise;
   interactiveReadingSequencing?: AISequencingExercise;
@@ -250,8 +245,8 @@ export interface AIEvaluationResult {
   isCorrect: boolean; // Whether the user response is correct or not. For writing, true if the text is generally understandable and addresses the prompt adequately for the level.
   suggestedCorrection?: string; // ПОЛНЫЙ предлагаемый правильный ответ на русском языке, если ответ пользователя был коротким и неверным, или ключевые исправления. Для письма это может быть исправленная версия текста.
   grammarErrorTags?: string[]; // Specific grammar points the user made errors on (e.g., "akkusativ_prepositions", "verb_conjugation_modal").
-  writingDetails?: WritingEvaluationDetails; // Detailed feedback specific to the writing module, if applicable. This object itself is optional.
-  errorExplanationDetails?: ErrorExplanation; // Детальное объяснение ошибки, если ответ неверный (для модулей НЕ 'writing'). Это поле опционально. ВСЯ ИНФОРМАЦИЯ ВНУТРИ ЭТОГО ОБЪЕКТА ДОЛЖНА БЫТЬ НА РУССКОМ ЯЗЫКЕ.
+  writingDetails?: WritingEvaluationDetails;
+  errorExplanationDetails?: ErrorExplanation;
 }
 
 
@@ -264,6 +259,13 @@ export interface AIRecommendedLesson {
 export interface DefaultTopicDefinition {
   id: string;
   name: string;
+  /**
+   * Optional list of vocabulary items for this topic.
+   * If provided, the AI will be instructed to primarily use these words
+   * for the lesson's vocabulary section, generating example sentences if needed,
+   * and supplementing the list to reach 14-20 items if this list is shorter.
+   * If not provided, AI generates vocabulary based on the topic name and level.
+   */
   fallbackVocabulary?: AILessonVocabularyItem[];
 }
 
@@ -533,3 +535,5 @@ export const MANDATORY_GRAMMAR_TOPICS: Record<LanguageLevel, string[]> = {
     "Стилистическая вариативность грамматических конструкций",
   ],
 };
+
+    

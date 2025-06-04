@@ -14,20 +14,14 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
-import { MANDATORY_GRAMMAR_TOPICS } from '@/types/german-learning'; // Import the new list
+import { MANDATORY_GRAMMAR_TOPICS, DEFAULT_TOPICS, type AILessonVocabularyItem as AILessonVocabularyItemType } from '@/types/german-learning';
 
 // Define Zod schema for the input
 const GenerateLessonInputSchema = z.object({
   level: z.enum(['A0', 'A1', 'A2', 'B1', 'B2', 'C1', 'C2']).describe('Уровень (A0-C2).'),
-  topic: z.string().describe('Тема урока (например, "Путешествия").'),
+  topic: z.string().describe('Тема урока (например, "Путешествия").'), // This is the topic NAME
+  topicId: z.string().describe('ID темы урока (например, "a1_travel_transport").'), // Add topicId
 });
-
-// Schema for the prompt context, including the dynamically added grammar instruction
-const LessonPromptInputSchema = GenerateLessonInputSchema.extend({
-  grammarFocusInstruction: z.string().describe('Instruction regarding mandatory grammar topics for the level.'),
-});
-
-export type GenerateLessonInput = z.infer<typeof GenerateLessonInputSchema>;
 
 // --- Zod Schemas for Vocabulary ---
 const VocabularyItemSchema = z.object({
@@ -35,6 +29,16 @@ const VocabularyItemSchema = z.object({
   russian: z.string().describe('Русский перевод.'),
   exampleSentence: z.string().optional().describe('Необязательное нем. предложение-пример.'),
 });
+export type AILessonVocabularyItem = z.infer<typeof VocabularyItemSchema>;
+
+// Schema for the prompt context, including dynamically added instructions
+const LessonPromptInputSchema = GenerateLessonInputSchema.extend({
+  grammarFocusInstruction: z.string().describe('Instruction regarding mandatory grammar topics for the level.'),
+  topicVocabularyList: z.array(VocabularyItemSchema).optional().describe('Optional list of pre-defined vocabulary for the topic.'),
+});
+
+
+export type GenerateLessonInput = z.infer<typeof GenerateLessonInputSchema>;
 
 // --- Zod Schemas for Interactive Vocabulary Exercises ---
 const AIMatchingPairSchema = z.object({
@@ -143,7 +147,7 @@ const AISequencingExerciseSchema = z.object({
 // --- Define Zod schema for the MAIN output ---
 const GenerateLessonOutputSchema = z.object({
   lessonTitle: z.string().describe('Сгенерированный заголовок урока на русском или немецком.'),
-  vocabulary: z.array(VocabularyItemSchema).describe('Ключевые словарные единицы (14-20). Фразы/идиомы для уровня/темы.'),
+  vocabulary: z.array(VocabularyItemSchema).describe('Ключевые словарные единицы (14-20). Фразы/идиомы для уровня/темы. Каждый элемент должен содержать немецкое слово, русский перевод и пример предложения на немецком.'),
   grammarExplanation: z.string().describe('Подробное объяснение грамматики на русском. Фокус на глаголах для A0-B2.'),
 
   grammarFillInTheBlanks: FillInTheBlanksExerciseSchema.optional().describe('Необязательное ОДНО упражнение "Заполните пропуски" по грамматике (4-8 вопроса).'),
@@ -175,10 +179,15 @@ export async function generateLessonContent(input: GenerateLessonInput): Promise
   const grammarFocusInstruction = grammarTopicsForLevel.length > 0
       ? `Для объяснения грамматики ("grammarExplanation") выберите ОДНУ грамматическую тему, релевантную уровню ${input.level} и лексической теме "${input.topic}". Пожалуйста, постарайтесь выбрать тему из следующего списка обязательных грамматических тем для уровня ${input.level}: ${grammarTopicsForLevel.join("; ")}. Если ни одна из них не подходит идеально, выберите наиболее близкую и релевантную тему, подходящую для данного уровня. Объяснение должно быть подробным и на русском языке.`
       : "Для объяснения грамматики (\"grammarExplanation\") выберите подходящую грамматическую тему для этого уровня и лексической темы, и объясните её подробно на русском языке.";
+
+  const topicVocabularyList = DEFAULT_TOPICS[input.level]?.find(t => t.id === input.topicId)?.fallbackVocabulary || [];
   
-  const promptPayload = {
-    ...input,
+  const promptPayload: z.infer<typeof LessonPromptInputSchema> = {
+    level: input.level,
+    topic: input.topic, // Topic name
+    topicId: input.topicId, // Topic ID
     grammarFocusInstruction: grammarFocusInstruction,
+    topicVocabularyList: topicVocabularyList as AILessonVocabularyItemType[],
   };
   
   return generateLessonContentFlow(promptPayload);
@@ -187,11 +196,11 @@ export async function generateLessonContent(input: GenerateLessonInput): Promise
 // Define the prompt
 const lessonPrompt = ai.definePrompt({
   name: 'lessonPrompt',
-  input: {schema: LessonPromptInputSchema}, // Use the extended schema for prompt's input
+  input: {schema: LessonPromptInputSchema},
   output: {schema: GenerateLessonOutputSchema},
   prompt: `You are an expert German language teacher. Generate a comprehensive German lesson for a student.
   The student is at level: {{{level}}}
-  The topic is: {{{topic}}}
+  The topic is: {{{topic}}} (ID: {{{topicId}}})
 
   The ENTIRE lesson, including all instructions, explanations, prompts, and question texts, MUST be in RUSSIAN, unless it's a German word, phrase, sentence for learning, or a German text/script for reading/listening.
   Example: "lessonTitle" should be in Russian. "grammarExplanation" in Russian. "writingPrompt" in Russian. Instructions for exercises in Russian.
@@ -199,7 +208,16 @@ const lessonPrompt = ai.definePrompt({
 
   The lesson MUST include the following core components:
   - "lessonTitle": A suitable title (in Russian).
-  - "vocabulary": An array of 14-20 key vocabulary items (German word, Russian translation, and strongly prefer an exampleSentence in German). Include common conversational phrases and idioms relevant to the topic and level.
+  - "vocabulary": 
+    {{#if topicVocabularyList.length}}
+    For the vocabulary section, you MUST primarily use the words from the 'topicVocabularyList' provided below. Ensure each item has a German word, a Russian translation, and a good German example sentence (generate one if missing or improve the existing one if it is too simple or not relevant). The target is 14-20 vocabulary items. If the provided list has fewer than 14 items, you may supplement it with 2-5 highly relevant additional words for the topic '{{{topic}}}' and level '{{{level}}}' to reach the target count, ensuring they also have German, Russian, and an example sentence. The items you generate MUST conform to the AILessonVocabularyItem schema (german: string, russian: string, exampleSentence?: string).
+    Provided 'topicVocabularyList' (use these first):
+    {{#each topicVocabularyList}}
+    - German: {{this.german}}, Russian: {{this.russian}}{{#if this.exampleSentence}}, Current Example: {{this.exampleSentence}}{{/if}}
+    {{/each}}
+    {{else}}
+    An array of 14-20 key vocabulary items (German word, Russian translation, and strongly prefer an exampleSentence in German). Include common conversational phrases and idioms relevant to the topic and level. These items MUST conform to the AILessonVocabularyItem schema (german: string, russian: string, exampleSentence?: string).
+    {{/if}}
   - "grammarExplanation": {{{grammarFocusInstruction}}} For levels A0-B2, systematically try to include grammar topics related to verbs (tenses, modals, reflexives, common strong/irregular verbs, word order with verbs, etc.), while respecting the mandatory list provided in grammarFocusInstruction.
   - "listeningExercise": An object with "script" and "questions".
     - "script": The script for listening must be a coherent text in the format of a **monologue or a story** from the first or third person, appropriate for the level {{{level}}}. Please **completely avoid dialogues** between characters.
@@ -218,8 +236,8 @@ const lessonPrompt = ai.definePrompt({
      - "grammarSentenceConstruction": Provide "instructions" (in Russian, e.g., "Составьте предложения из слов.") and a "tasks" array (4-6 tasks). Each task object needs: "words" (array of German strings to arrange), "possibleCorrectSentences" (array of German strings), "explanation" (optional, in Russian).
 
   2. OPTIONAL Interactive Vocabulary Exercises: Provide AT MOST ONE of the following fields:
-     - "interactiveMatchingExercise": Provide "instructions" (in Russian), "pairs" (array of {german, russian} - 10-16 pairs), "germanDistractors" (optional, 1-3 strings), "russianDistractors" (optional, 1-3 strings).
-     - "interactiveAudioQuizExercise": Provide "instructions" (in Russian), "items" (array of 6-10 items). Each item: "germanPhraseToSpeak", "options" (3-4 Russian translations), "correctAnswer" (string), "explanation" (optional, in Russian).
+     - "interactiveMatchingExercise": Provide "instructions" (in Russian), "pairs" (array of {german, russian} - 10-16 pairs from the main "vocabulary" list), "germanDistractors" (optional, 1-3 strings), "russianDistractors" (optional, 1-3 strings).
+     - "interactiveAudioQuizExercise": Provide "instructions" (in Russian), "items" (array of 6-10 items from the main "vocabulary" list). Each item: "germanPhraseToSpeak", "options" (3-4 Russian translations), "correctAnswer" (string), "explanation" (optional, in Russian).
 
   3. OPTIONAL Interactive Listening Exercises: Provide AT MOST ONE of the following fields. This exercise should be based on the main "listeningExercise.script". Instructions and questions/statements MUST be in RUSSIAN. For each question/statement, ensure the expected answer language is clear from the context or explicitly stated.
      - "interactiveListeningMCQ": (Based on "listeningExercise.script") Provide "instructions", "questions" (array of 4-6). Each question: "questionText" (Russian), "options" (strings), "correctAnswer" (string), "explanation" (optional, in Russian).
@@ -232,9 +250,10 @@ const lessonPrompt = ai.definePrompt({
      - "interactiveReadingSequencing": (Based on "readingPassage") Provide "instructions", "shuffledItems" (array of 8-12 German strings/sentences from the passage, out of order), "correctOrder" (array of same strings in correct order).
 
   Ensure that ALL content, including all parts of interactive exercises, is appropriate for the specified level: {{{level}}}.
-  Provide rich and varied content. For vocabulary, always try to include example sentences and conversational phrases. For grammar, try to include an exercise if suitable, focusing on core concepts like verb usage.
+  Provide rich and varied content. For grammar, try to include an exercise if suitable, focusing on core concepts like verb usage.
   The main components ("vocabulary", "grammarExplanation", "listeningExercise", "readingPassage", "readingQuestions", "writingPrompt") are mandatory. The interactive exercise fields are optional single-object enhancements.
   Remember: All instructions, titles, explanations, and prompts for the user must be in RUSSIAN, unless it is specifically German language content for learning (e.g. vocabulary words, example sentences, reading passages, listening scripts).
+  Output must be a valid JSON object matching the GenerateLessonOutputSchema. Ensure vocabulary items always include 'german', 'russian', and 'exampleSentence' fields.
 `,
 });
 
@@ -245,26 +264,38 @@ const INITIAL_RETRY_DELAY_MS = 3000;
 const generateLessonContentFlow = ai.defineFlow(
   {
     name: 'generateLessonContentFlow',
-    inputSchema: LessonPromptInputSchema, // The flow now uses the extended schema internally
+    inputSchema: LessonPromptInputSchema,
     outputSchema: GenerateLessonOutputSchema,
   },
-  async (inputWithGrammarInstruction: z.infer<typeof LessonPromptInputSchema>) => { // Type for input of the flow function
+  async (inputWithInstructions: z.infer<typeof LessonPromptInputSchema>) => {
     let retries = 0;
     while (retries < MAX_RETRIES) {
       try {
-        const {output} = await lessonPrompt(inputWithGrammarInstruction); // Pass the extended input
+        const {output} = await lessonPrompt(inputWithInstructions);
         if (!output) {
           throw new Error('[generateLessonContentFlow] AI model returned an empty output during lesson generation.');
         }
-        if (output.vocabulary && output.vocabulary.length < 1 && inputWithGrammarInstruction.level !== 'C1' && inputWithGrammarInstruction.level !== 'C2') {
-            console.warn(`[generateLessonContentFlow] AI returned only ${output.vocabulary.length} vocabulary items for topic "${inputWithGrammarInstruction.topic}" at level ${inputWithGrammarInstruction.level}. Expected more for A0-B2.`);
+        if (output.vocabulary && output.vocabulary.length < 1 && inputWithInstructions.level !== 'C1' && inputWithInstructions.level !== 'C2' && (!inputWithInstructions.topicVocabularyList || inputWithInstructions.topicVocabularyList.length === 0) ) {
+            console.warn(`[generateLessonContentFlow] AI returned only ${output.vocabulary.length} vocabulary items for topic "${inputWithInstructions.topic}" at level ${inputWithInstructions.level} when no predefined list was used. Expected more for A0-B2.`);
+        }
+        // Ensure all vocabulary items have example sentences
+        if (output.vocabulary) {
+          output.vocabulary.forEach(item => {
+            if (!item.exampleSentence) {
+              // This is a fallback, ideally the AI generates it.
+              // Forcing a generic example if AI fails is not ideal, but schema demands it.
+              // Better approach: If AI fails this, we could log an error or retry, but for now let's just warn.
+              console.warn(`[generateLessonContentFlow] Vocabulary item "${item.german}" is missing exampleSentence for topic "${inputWithInstructions.topic}" at level ${inputWithInstructions.level}. The AI should have generated this.`);
+              item.exampleSentence = `Пример для ${item.german} будет добавлен позже.`; // Placeholder to satisfy schema
+            }
+          });
         }
         return output;
       } catch (error: any) {
         retries++;
-        console.error(`[generateLessonContentFlow] Attempt ${retries} for topic "${inputWithGrammarInstruction.topic}" level ${inputWithGrammarInstruction.level} FAILED. Error:`, error.message ? error.message : error);
+        console.error(`[generateLessonContentFlow] Attempt ${retries} for topic "${inputWithInstructions.topic}" (ID: ${inputWithInstructions.topicId}) level ${inputWithInstructions.level} FAILED. Error:`, error.message ? error.message : error);
         if (retries >= MAX_RETRIES) {
-          console.error(`[generateLessonContentFlow] All ${MAX_RETRIES} retries FAILED for input:`, JSON.stringify(inputWithGrammarInstruction, null, 2), "Last error:", error.message ? error.message : error);
+          console.error(`[generateLessonContentFlow] All ${MAX_RETRIES} retries FAILED for input:`, JSON.stringify(inputWithInstructions, null, 2), "Last error:", error.message ? error.message : error);
           throw error;
         }
 
@@ -281,14 +312,17 @@ const generateLessonContentFlow = ai.defineFlow(
         ) {
 
           const delay = INITIAL_RETRY_DELAY_MS * Math.pow(2, retries - 1);
-          console.warn(`[generateLessonContentFlow] Attempt ${retries} failed for topic "${inputWithGrammarInstruction.topic}" at level ${inputWithGrammarInstruction.level} (Error: ${error.message ? error.message.split('\n')[0] : 'Unknown'}). Retrying in ${delay / 1000}s...`);
+          console.warn(`[generateLessonContentFlow] Attempt ${retries} failed for topic "${inputWithInstructions.topic}" at level ${inputWithInstructions.level} (Error: ${error.message ? error.message.split('\n')[0] : 'Unknown'}). Retrying in ${delay / 1000}s...`);
           await new Promise(resolve => setTimeout(resolve, delay));
         } else {
-          console.error(`[generateLessonContentFlow] Failed with non-retryable error for topic "${inputWithGrammarInstruction.topic}" at level ${inputWithGrammarInstruction.level}. Input:`, JSON.stringify(inputWithGrammarInstruction, null, 2), "Error:", error.message ? error.message : error);
+          console.error(`[generateLessonContentFlow] Failed with non-retryable error for topic "${inputWithInstructions.topic}" at level ${inputWithInstructions.level}. Input:`, JSON.stringify(inputWithInstructions, null, 2), "Error:", error.message ? error.message : error);
           throw error;
         }
       }
     }
-    throw new Error(`[generateLessonContentFlow] Failed after multiple retries for topic "${inputWithGrammarInstruction.topic}" at level ${inputWithGrammarInstruction.level}, and loop exited unexpectedly.`);
+    throw new Error(`[generateLessonContentFlow] Failed after multiple retries for topic "${inputWithInstructions.topic}" at level ${inputWithInstructions.level}, and loop exited unexpectedly.`);
   }
 );
+
+
+    
