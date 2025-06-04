@@ -14,11 +14,17 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
+import { MANDATORY_GRAMMAR_TOPICS } from '@/types/german-learning'; // Import the new list
 
 // Define Zod schema for the input
 const GenerateLessonInputSchema = z.object({
   level: z.enum(['A0', 'A1', 'A2', 'B1', 'B2', 'C1', 'C2']).describe('Уровень (A0-C2).'),
   topic: z.string().describe('Тема урока (например, "Путешествия").'),
+});
+
+// Schema for the prompt context, including the dynamically added grammar instruction
+const LessonPromptInputSchema = GenerateLessonInputSchema.extend({
+  grammarFocusInstruction: z.string().describe('Instruction regarding mandatory grammar topics for the level.'),
 });
 
 export type GenerateLessonInput = z.infer<typeof GenerateLessonInputSchema>;
@@ -165,13 +171,23 @@ const GenerateLessonOutputSchema = z.object({
 export type GenerateLessonOutput = z.infer<typeof GenerateLessonOutputSchema>;
 
 export async function generateLessonContent(input: GenerateLessonInput): Promise<GenerateLessonOutput> {
-  return generateLessonContentFlow(input);
+  const grammarTopicsForLevel = MANDATORY_GRAMMAR_TOPICS[input.level] || [];
+  const grammarFocusInstruction = grammarTopicsForLevel.length > 0
+      ? `Для объяснения грамматики ("grammarExplanation") выберите ОДНУ грамматическую тему, релевантную уровню ${input.level} и лексической теме "${input.topic}". Пожалуйста, постарайтесь выбрать тему из следующего списка обязательных грамматических тем для уровня ${input.level}: ${grammarTopicsForLevel.join("; ")}. Если ни одна из них не подходит идеально, выберите наиболее близкую и релевантную тему, подходящую для данного уровня. Объяснение должно быть подробным и на русском языке.`
+      : "Для объяснения грамматики (\"grammarExplanation\") выберите подходящую грамматическую тему для этого уровня и лексической темы, и объясните её подробно на русском языке.";
+  
+  const promptPayload = {
+    ...input,
+    grammarFocusInstruction: grammarFocusInstruction,
+  };
+  
+  return generateLessonContentFlow(promptPayload);
 }
 
 // Define the prompt
 const lessonPrompt = ai.definePrompt({
   name: 'lessonPrompt',
-  input: {schema: GenerateLessonInputSchema},
+  input: {schema: LessonPromptInputSchema}, // Use the extended schema for prompt's input
   output: {schema: GenerateLessonOutputSchema},
   prompt: `You are an expert German language teacher. Generate a comprehensive German lesson for a student.
   The student is at level: {{{level}}}
@@ -184,7 +200,7 @@ const lessonPrompt = ai.definePrompt({
   The lesson MUST include the following core components:
   - "lessonTitle": A suitable title (in Russian).
   - "vocabulary": An array of 14-20 key vocabulary items (German word, Russian translation, and strongly prefer an exampleSentence in German). Include common conversational phrases and idioms relevant to the topic and level.
-  - "grammarExplanation": A detailed explanation (in Russian) of a grammar point relevant to the level and topic. For levels A0-B2, systematically try to include grammar topics related to verbs (tenses, modals, reflexives, common strong/irregular verbs, word order with verbs, etc.).
+  - "grammarExplanation": {{{grammarFocusInstruction}}} For levels A0-B2, systematically try to include grammar topics related to verbs (tenses, modals, reflexives, common strong/irregular verbs, word order with verbs, etc.), while respecting the mandatory list provided in grammarFocusInstruction.
   - "listeningExercise": An object with "script" and "questions".
     - "script": The script for listening must be a coherent text in the format of a **monologue or a story** from the first or third person, appropriate for the level {{{level}}}. Please **completely avoid dialogues** between characters.
     - "questions": An array of 4-8 open-ended comprehension questions about the script. These questions MUST ALWAYS be in RUSSIAN. For each question, explicitly state if the answer should be in Russian or German.
@@ -229,26 +245,26 @@ const INITIAL_RETRY_DELAY_MS = 3000;
 const generateLessonContentFlow = ai.defineFlow(
   {
     name: 'generateLessonContentFlow',
-    inputSchema: GenerateLessonInputSchema,
+    inputSchema: LessonPromptInputSchema, // The flow now uses the extended schema internally
     outputSchema: GenerateLessonOutputSchema,
   },
-  async input => {
+  async (inputWithGrammarInstruction: z.infer<typeof LessonPromptInputSchema>) => { // Type for input of the flow function
     let retries = 0;
     while (retries < MAX_RETRIES) {
       try {
-        const {output} = await lessonPrompt(input);
+        const {output} = await lessonPrompt(inputWithGrammarInstruction); // Pass the extended input
         if (!output) {
           throw new Error('[generateLessonContentFlow] AI model returned an empty output during lesson generation.');
         }
-        if (output.vocabulary && output.vocabulary.length < 1 && input.level !== 'C1' && input.level !== 'C2') { // Check if vocabulary exists before accessing length, relaxed for C1/C2
-            console.warn(`[generateLessonContentFlow] AI returned only ${output.vocabulary.length} vocabulary items for topic "${input.topic}" at level ${input.level}. Expected more for A0-B2.`);
+        if (output.vocabulary && output.vocabulary.length < 1 && inputWithGrammarInstruction.level !== 'C1' && inputWithGrammarInstruction.level !== 'C2') {
+            console.warn(`[generateLessonContentFlow] AI returned only ${output.vocabulary.length} vocabulary items for topic "${inputWithGrammarInstruction.topic}" at level ${inputWithGrammarInstruction.level}. Expected more for A0-B2.`);
         }
         return output;
       } catch (error: any) {
         retries++;
-        console.error(`[generateLessonContentFlow] Attempt ${retries} for topic "${input.topic}" level ${input.level} FAILED. Error:`, error.message ? error.message : error);
+        console.error(`[generateLessonContentFlow] Attempt ${retries} for topic "${inputWithGrammarInstruction.topic}" level ${inputWithGrammarInstruction.level} FAILED. Error:`, error.message ? error.message : error);
         if (retries >= MAX_RETRIES) {
-          console.error(`[generateLessonContentFlow] All ${MAX_RETRIES} retries FAILED for input:`, JSON.stringify(input, null, 2), "Last error:", error.message ? error.message : error);
+          console.error(`[generateLessonContentFlow] All ${MAX_RETRIES} retries FAILED for input:`, JSON.stringify(inputWithGrammarInstruction, null, 2), "Last error:", error.message ? error.message : error);
           throw error;
         }
 
@@ -265,15 +281,14 @@ const generateLessonContentFlow = ai.defineFlow(
         ) {
 
           const delay = INITIAL_RETRY_DELAY_MS * Math.pow(2, retries - 1);
-          console.warn(`[generateLessonContentFlow] Attempt ${retries} failed for topic "${input.topic}" at level ${input.level} (Error: ${error.message ? error.message.split('\n')[0] : 'Unknown'}). Retrying in ${delay / 1000}s...`);
+          console.warn(`[generateLessonContentFlow] Attempt ${retries} failed for topic "${inputWithGrammarInstruction.topic}" at level ${inputWithGrammarInstruction.level} (Error: ${error.message ? error.message.split('\n')[0] : 'Unknown'}). Retrying in ${delay / 1000}s...`);
           await new Promise(resolve => setTimeout(resolve, delay));
         } else {
-          console.error(`[generateLessonContentFlow] Failed with non-retryable error for topic "${input.topic}" at level ${input.level}. Input:`, JSON.stringify(input, null, 2), "Error:", error.message ? error.message : error);
+          console.error(`[generateLessonContentFlow] Failed with non-retryable error for topic "${inputWithGrammarInstruction.topic}" at level ${inputWithGrammarInstruction.level}. Input:`, JSON.stringify(inputWithGrammarInstruction, null, 2), "Error:", error.message ? error.message : error);
           throw error;
         }
       }
     }
-    throw new Error(`[generateLessonContentFlow] Failed after multiple retries for topic "${input.topic}" at level ${input.level}, and loop exited unexpectedly.`);
+    throw new Error(`[generateLessonContentFlow] Failed after multiple retries for topic "${inputWithGrammarInstruction.topic}" at level ${inputWithGrammarInstruction.level}, and loop exited unexpectedly.`);
   }
 );
-

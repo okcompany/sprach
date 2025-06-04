@@ -238,20 +238,22 @@ export interface WritingEvaluationDetails {
 }
 
 export interface ErrorExplanation {
-  generalExplanation: string; // Общее объяснение типа ошибки на русском языке.
-  specificExample?: string; // Конкретный пример из ответа пользователя, выделяющий ошибку (если применимо).
-  correctionExample?: string; // Пример исправления для ОШИБОЧНОГО фрагмента ответа пользователя (если применимо), а не полный правильный ответ.
-  theoryReference?: string; // Краткое упоминание соответствующего грамматического правила или лексического нюанса на русском языке (если применимо).
+  generalExplanation: string; // Общее объяснение типа ошибки на русском языке. Должно быть четким и по существу.
+  specificExample?: string; // Конкретный пример из ответа пользователя, ВЫДЕЛЯЮЩИЙ ошибку (если применимо и если ошибка не во всем ответе).
+  correctionExample?: string; // Пример исправления для ОШИБОЧНОГО ФРАГМЕНТА ответа пользователя (если применимо), а не полный правильный ответ. Полный ответ указывается в поле 'suggestedCorrection'.
+  theoryReference?: string; // Краткое упоминание соответствующего грамматического правила или лексического нюанса на русском языке (если применимо, например, 'Предлог 'mit' требует Dativ').
 }
 
+
 export interface AIEvaluationResult {
-  evaluation: string; // Краткий общий вывод. Для письма здесь будет writingDetails.overallFeedback. Для других - основная мысль оценки.
-  isCorrect: boolean; // Для письма: true, если текст в целом понятен и соответствует заданию для уровня.
-  suggestedCorrection?: string; // ПОЛНЫЙ предлагаемый правильный ответ, если ответ пользователя был коротким и неверным, или ключевые исправления.
-  grammarErrorTags?: string[];
-  writingDetails?: WritingEvaluationDetails; // Детализированная оценка для письма
-  errorExplanationDetails?: ErrorExplanation; // Детализированное объяснение ошибки для других модулей, если ответ неверный.
+  evaluation: string; // Краткий общий вывод на русском языке. Для письма это будет writingDetails.overallFeedback. Для других модулей – основная мысль оценки (например, "Верно!" или "Не совсем точно, есть ошибка в употреблении слова").
+  isCorrect: boolean; // Whether the user response is correct or not. For writing, true if the text is generally understandable and addresses the prompt adequately for the level.
+  suggestedCorrection?: string; // ПОЛНЫЙ предлагаемый правильный ответ на русском языке, если ответ пользователя был коротким и неверным, или ключевые исправления. Для письма это может быть исправленная версия текста.
+  grammarErrorTags?: string[]; // Specific grammar points the user made errors on (e.g., "akkusativ_prepositions", "verb_conjugation_modal").
+  writingDetails?: WritingEvaluationDetails; // Detailed feedback specific to the writing module, if applicable. This object itself is optional.
+  errorExplanationDetails?: ErrorExplanation; // Детальное объяснение ошибки, если ответ неверный (для модулей НЕ 'writing'). Это поле опционально. ВСЯ ИНФОРМАЦИЯ ВНУТРИ ЭТОГО ОБЪЕКТА ДОЛЖНА БЫТЬ НА РУССКОМ ЯЗЫКЕ.
 }
+
 
 export interface AIRecommendedLesson {
   topic: string;
@@ -265,7 +267,7 @@ export interface DefaultTopicDefinition {
   fallbackVocabulary?: AILessonVocabularyItem[];
 }
 
-// Default Topics
+// Default Topics (Considered "Mandatory Lexical Topics")
 export const DEFAULT_TOPICS: Record<LanguageLevel, DefaultTopicDefinition[]> = {
   A0: [
     {
@@ -439,3 +441,95 @@ export const DEFAULT_TOPICS: Record<LanguageLevel, DefaultTopicDefinition[]> = {
   ],
 };
 
+// Mandatory Grammar Topics per Level
+export const MANDATORY_GRAMMAR_TOPICS: Record<LanguageLevel, string[]> = {
+  A0: [
+    "Спряжение глагола 'sein' (быть) в Präsens",
+    "Спряжение глагола 'haben' (иметь) в Präsens",
+    "Личные местоимения в Nominativ (именительный падеж): ich, du, er/sie/es, wir, ihr, sie/Sie",
+    "Простые утвердительные предложения (Aussagesatz) - порядок слов",
+    "Вопросительные предложения с вопросительным словом (W-Fragen): Wer? Was? Wo? Wie?",
+    "Вопросительные предложения без вопросительного слова (Ja/Nein-Fragen)",
+    "Род существительных (der, die, das) и неопределенный артикль (ein, eine) в Nominativ",
+    "Числительные от 0 до 20",
+    "Отрицание с 'nicht'",
+    "Предлоги места: in, an, auf (простое использование с Nominativ или без падежа)",
+  ],
+  A1: [
+    "Спряжение слабых глаголов в Präsens (настоящее время)",
+    "Спряжение сильных глаголов в Präsens (основные группы с изменением корневой гласной, например, e-i, e-ie, a-ä)",
+    "Модальные глаголы: können, müssen, wollen, dürfen, sollen, mögen (значение и спряжение в Präsens)",
+    "Akkusativ (винительный падеж): артикли, местоимения, использование после определенных глаголов и предлогов (durch, für, gegen, ohne, um)",
+    "Dativ (дательный падеж): артикли, местоимения, использование после определенных глаголов и предлогов (aus, bei, mit, nach, seit, von, zu)",
+    "Порядок слов в простом предложении (Hauptsatz): прямой и обратный порядок",
+    "Отрицание с 'nicht' и 'kein'",
+    "Perfekt (прошедшее разговорное время) слабых глаголов с 'haben'",
+    "Perfekt основных сильных глаголов с 'haben' и 'sein'",
+    "Притяжательные местоимения (mein, dein, sein и т.д.) в Nominativ и Akkusativ",
+    "Предлоги времени (am, um, im)",
+    "Повелительное наклонение (Imperativ) для du и ihr",
+  ],
+  A2: [
+    "Präteritum (прошедшее повествовательное время) глаголов 'sein' и 'haben'",
+    "Präteritum модальных глаголов",
+    "Склонение прилагательных после определенного артикля (слабое склонение)",
+    "Склонение прилагательных после неопределенного артикля (смешанное склонение)",
+    "Склонение прилагательных без артикля (сильное склонение) - ознакомление",
+    "Сравнительная и превосходная степени прилагательных (Komparativ, Superlativ)",
+    "Предлоги с Dativ и Akkusativ (предлоги двойного управления): in, an, auf, über, unter, vor, hinter, neben, zwischen",
+    "Порядок слов в сложносочиненном предложении с союзами (und, aber, oder, denn, sondern)",
+    "Порядок слов в придаточном предложении (Nebensatz) с союзами weil, dass, wenn, ob",
+    "Возвратные глаголы (Reflexivpronomen в Akkusativ и Dativ)",
+    "Неопределенные местоимения: man, jemand, niemand, etwas, nichts, alle, einige, viele, wenige",
+    "Указательные местоимения: dieser, jener",
+  ],
+  B1: [
+    "Präteritum (прошедшее повествовательное время) слабых и сильных глаголов",
+    "Plusquamperfekt (предпрошедшее время)",
+    "Futur I (будущее время)",
+    "Passiv (страдательный залог) в Präsens и Präteritum",
+    "Konjunktiv II (сослагательное наклонение): формы würde + Infinitiv, формы глаголов sein, haben, модальных глаголов",
+    "Придаточные предложения причины (kausal: weil, da), цели (final: damit, um...zu), времени (temporal: als, wenn, während, bevor, nachdem, seit), условия (konditional: wenn, falls), уступки (konzessiv: obwohl, trotzdem)",
+    "Относительные предложения (Relativsätze) и относительные местоимения (der, die, das, welcher)",
+    "Инфинитивные конструкции с 'zu' (Infinitiv mit zu)",
+    "Косвенная речь (Indirekte Rede) - основы",
+    "Предлоги, требующие Genitiv (родительный падеж): während, trotz, wegen, statt, außerhalb, innerhalb",
+    "Склонение существительных (n-Deklination)",
+    "Парные союзы (zweiteilige Konnektoren): entweder...oder, sowohl...als auch, nicht nur...sondern auch, weder...noch, zwar...aber",
+  ],
+  B2: [
+    "Passiv (страдательный залог) во всех временах, включая Perfekt и Plusquamperfekt Passiv",
+    "Konjunktiv II (сослагательное наклонение): формы сильных глаголов, использование для нереальных условий, желаний, вежливых просьб",
+    "Konjunktiv I (косвенная речь): образование и употребление",
+    "Futur II (будущее завершенное время)",
+    "Распространенное определение (erweitertes Partizipialattribut)",
+    "Причастные обороты (Partizipialkonstruktionen: Partizip I, Partizip II)",
+    "Модальные конструкции (Ersatzformen der Modalverben): haben/sein + zu + Infinitiv, brauchen + nicht + zu + Infinitiv",
+    "Субъективный и объективный инфинитив",
+    "Номинализация (превращение глаголов и прилагательных в существительные)",
+    "Сложные предлоги и предложное управление глаголов (Verben mit Präpositionen) - углубление",
+    "Употребление артиклей в сложных случаях и их отсутствие",
+    "Стилистические особенности порядка слов",
+  ],
+  C1: [
+    "Все времена и залоги, включая сложные и редкие формы (например, Zustandspassiv)",
+    "Все формы и случаи употребления Konjunktiv I и II, включая Ersatzformen",
+    "Сложные синтаксические конструкции, периоды",
+    "Употребление модальных частиц для выражения оттенков значения (doch, ja, eben, halt, wohl и т.д.)",
+    "Стилистически окрашенная лексика и грамматика",
+    "Особенности научного и делового стиля",
+    "Фразеология и идиоматика на продвинутом уровне",
+    "Различия между письменной и устной речью на высоком уровне",
+    "Тонкости словообразования (суффиксы, префиксы, сложные слова)",
+    "Сложные случаи предложного управления и рекций глаголов",
+  ],
+  C2: [
+    "Углубленное понимание всех грамматических структур и их стилистических нюансов",
+    "Способность использовать широкий спектр грамматических конструкций для точной передачи смысла и стиля",
+    "Анализ и использование устаревших или редких грамматических форм (при необходимости)",
+    "Понимание и использование имплицитных грамматических структур",
+    "Сложные аспекты синтаксиса, включая инверсию, эллипсис, парцелляцию для стилистических целей",
+    "Грамматика в контексте различных регистров и диалектов (ознакомительно)",
+    "Стилистическая вариативность грамматических конструкций",
+  ],
+};
