@@ -27,9 +27,10 @@ import type {
   AIMultipleChoiceExercise,
   AISentenceConstructionExercise,
   WritingEvaluationDetails,
+  ErrorExplanation, // Import ErrorExplanation
 } from '@/types/german-learning';
 import { MODULE_NAMES_RU, DEFAULT_TOPICS, ALL_MODULE_TYPES, ALL_LEVELS } from '@/types/german-learning';
-import { Speaker, RotateCcw, CheckCircle, AlertTriangle, ArrowRight, Shuffle, ThumbsUp, ThumbsDown, ListOrdered, Trash2, Info, BookCheck, SearchX, Loader2, DownloadCloud, AlignLeft, Edit3, CheckSquare, FileText, ListChecks, BookOpenCheck, SpellCheck, BookHeart } from 'lucide-react'; // Added new icons
+import { Speaker, RotateCcw, CheckCircle, AlertTriangle, ArrowRight, Shuffle, ThumbsUp, ThumbsDown, ListOrdered, Trash2, Info, BookCheck, SearchX, Loader2, DownloadCloud, AlignLeft, Edit3, CheckSquare, FileText, ListChecks, BookOpenCheck, SpellCheck, BookHeart, HelpCircle } from 'lucide-react'; // Added new icons
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
@@ -285,8 +286,6 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
              setNoContentForModule(true);
         }
       } else if (moduleId === 'grammar') {
-        // Grammar explanation is displayed separately now.
-        // This block now only sets up the exercise.
         const fillBlanks = loadedLessonContent.grammarFillInTheBlanks;
         const grammarMCQ = loadedLessonContent.grammarMultipleChoice;
         const sentenceConstr = loadedLessonContent.grammarSentenceConstruction;
@@ -297,11 +296,11 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
             setActiveGrammarMCQExercise(grammarMCQ); setTotalTasks(grammarMCQ.questions.length);
         } else if (sentenceConstr && sentenceConstr.tasks?.length > 0) {
             setActiveSentenceConstrExercise(sentenceConstr); setUserSequence([]); if(sentenceConstr.tasks[0]?.words) {setAvailableSequenceItems(shuffleArray([...sentenceConstr.tasks[0].words]));} setTotalTasks(sentenceConstr.tasks.length);
-        } else if (loadedLessonContent.grammarExplanation) { // Fallback to generic task IF no interactive exercise AND explanation exists
+        } else if (loadedLessonContent.grammarExplanation) {
             setCurrentTask("Напишите 2-3 предложения, используя грамматическое правило, объясненное выше. (Ответьте на немецком)"); 
             setTotalTasks(1);
         } else {
-            setNoContentForModule(true); // No explanation and no interactive exercises
+            setNoContentForModule(true);
         }
       }
     }
@@ -347,20 +346,15 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
     }
 
     if (!loadedLessonContent && !noContentForModule) {
-        // If no lesson content was loaded at all, and we haven't already flagged noContentForModule (e.g. from vocab specific logic)
         setNoContentForModule(true);
     }
 
     if (noContentForModule && vocabularySourceUsed !== 'fallback' && vocabularySourceUsed !== 'bank_only') {
-        // If no content and it wasn't due to vocab falling back to bank/default list
         if (!loadedLessonContent && (moduleId !== 'vocabulary' && moduleId !== 'wordTest')) {
-             // Generic failure if AI content didn't load for non-vocab modules
             toast({ title: "Ошибка загрузки урока", description: `Не удалось получить материалы для модуля "${MODULE_NAMES_RU[moduleId]}". Попробуйте позже.`, variant: "destructive", duration: 7000 });
         } else if ((moduleId === 'vocabulary' || moduleId === 'wordTest') && vocabularySourceUsed === 'none') {
-            // Specific message if vocab module has no words from any source
             toast({ title: "Нет слов для изучения", description: "AI не предоставил слова, и ваш локальный банк слов или резервный список для этой темы пусты.", variant: "default", duration: 7000 });
         } else if (loadedLessonContent) {
-            // AI content loaded, but the specific part for *this* module is missing
              toast({ title: `Нет контента для модуля ${MODULE_NAMES_RU[moduleId]}`, description: "AI не смог сгенерировать необходимые материалы для этого модуля.", variant: "default", duration: 7000 });
         }
     }
@@ -421,15 +415,15 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
   const handleRetryModule = () => {
     setIsModuleFinished(false); setFinalModuleScore(null); setTasksCompleted(0); setModuleScore(0); setUserResponse('');
     setNextSequentialUncompletedModule(null); setTopicContinuationLink(null); setTopicContinuationText('');
-    setContentManuallyRequested(false); // Reset this to allow re-fetching if necessary
-    setLessonContent(null); // Crucial: clear old content to force re-fetch or show "request content"
+    setContentManuallyRequested(false); 
+    setLessonContent(null); 
     setCurrentTask(null);
     setFeedback(null);
     resetInteractiveStates();
   };
 
   const handleRequestContent = () => {
-    setContentManuallyRequested(true); // This will trigger fetchLesson via useEffect
+    setContentManuallyRequested(true); 
   };
 
   // --- Matching Exercise Handlers ---
@@ -607,13 +601,11 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
 
   // --- Sequencing Handlers (Listening/Reading/Grammar Sentence Construction) ---
   const handleSelectSequenceItem = (itemText: string) => {
-    if (interactiveExerciseFeedback) return; // Block if feedback is shown
-    // For grammar sentence construction, add to userSequence
+    if (interactiveExerciseFeedback) return; 
     if (activeSentenceConstrExercise) {
       setUserSequence(prev => [...prev, itemText]);
       setAvailableSequenceItems(prev => prev.filter(item => item !== itemText));
     }
-    // For listening/reading sequencing
     else if (activeSequencingExercise) {
       setUserSequence(prev => [...prev, itemText]);
       setAvailableSequenceItems(prev => prev.filter(item => item !== itemText));
@@ -621,10 +613,10 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
   };
 
   const handleRemoveFromSequence = (itemText: string, index: number) => {
-    if (interactiveExerciseFeedback) return; // Block if feedback is shown
+    if (interactiveExerciseFeedback) return; 
      if (activeSentenceConstrExercise || activeSequencingExercise) {
         setUserSequence(prev => prev.filter((_, i) => i !== index));
-        setAvailableSequenceItems(prev => [...prev, itemText].sort(() => Math.random() - 0.5)); // Re-add and shuffle
+        setAvailableSequenceItems(prev => [...prev, itemText].sort(() => Math.random() - 0.5)); 
      }
   };
 
@@ -643,22 +635,22 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
   };
 
   const handleCheckSequence = () => {
-    if (interactiveExerciseFeedback) return; // Block if already checked for this item
+    if (interactiveExerciseFeedback) return; 
     setIsLoadingTask(true);
     let isCorrect = false;
     let correctOrder: string[] = [];
     let scoreIncrement = 0;
     let feedbackMessage = "";
 
-    if (activeSequencingExercise) { // Listening/Reading Sequencing
+    if (activeSequencingExercise) { 
         correctOrder = activeSequencingExercise.correctOrder;
         isCorrect = userSequence.length === correctOrder.length && userSequence.every((item, index) => item === correctOrder[index]);
         feedbackMessage = isCorrect ? "Правильно! Последовательность верная." : "Неверно. Порядок неправильный.";
-        if (isCorrect) scoreIncrement = 100; // Full score for the single sequencing task
+        if (isCorrect) scoreIncrement = 100; 
 
-    } else if (activeSentenceConstrExercise) { // Grammar Sentence Construction
+    } else if (activeSentenceConstrExercise) { 
         const currentTaskData = activeSentenceConstrExercise.tasks[currentInteractiveQuestionIndex];
-        correctOrder = currentTaskData.possibleCorrectSentences; // This is an array of possible correct sentences
+        correctOrder = currentTaskData.possibleCorrectSentences; 
         const userSentence = userSequence.join(" ");
         isCorrect = correctOrder.some(cs => cs === userSentence);
         feedbackMessage = isCorrect ? "Правильно! Предложение составлено верно." : "Неверно. Попробуйте другой порядок или слова.";
@@ -744,9 +736,6 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
       toast({ title: "Упражнение завершено!", description: `Ваш результат: ${finalScore}%`, duration: 5000 });
     } else {
       setCurrentInteractiveQuestionIndex(prev => prev + 1);
-       if (isGrammarExercise && activeFillBlanksExercise) {
-        // UserAnswers array for fillBlanks is already sized, new input will overwrite
-      }
     }
   };
 
@@ -768,7 +757,7 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
         questionContext = `Пользователя попросили перевести слово "${currentWord.german}" на русский.`;
         expectedAnswerForAI = currentWord.russian;
     }
-    else if (moduleId === 'grammar' && !activeFillBlanksExercise && !activeGrammarMCQExercise && !activeSentenceConstrExercise ) { // Only for fallback grammar task
+    else if (moduleId === 'grammar' && !activeFillBlanksExercise && !activeGrammarMCQExercise && !activeSentenceConstrExercise ) { 
         questionContext = `Пользователя попросили ответить на вопрос или выполнить задание, связанное с грамматическим объяснением: "${lessonContent?.grammarExplanation}". Задание было: "${currentTask}"`;
         grammarRulesForAI = lessonContent?.grammarExplanation;
     }
@@ -802,7 +791,6 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
 
     if (moduleId === 'writing') {
         setIsLoadingTask(false);
-        // For writing, user reviews feedback then clicks "Завершить". No auto-advance.
         return;
     }
 
@@ -838,8 +826,6 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
         if (questionsList && questionsList.length > newTasksCompleted) { setCurrentTask(questionsList[newTasksCompleted]); }
         else { setIsModuleFinished(true); const finalScoreFallback = Math.round(moduleScore); updateModuleProgress(levelId, topicId, moduleId, finalScoreFallback); setFinalModuleScore(finalScoreFallback); toast({title: `Неожиданное завершение модуля (${MODULE_NAMES_RU[moduleId]})`, description: "Вопросы закончились раньше."}); }
       } else if (moduleId === 'grammar' && !activeFillBlanksExercise && !activeGrammarMCQExercise && !activeSentenceConstrExercise && lessonContent?.grammarExplanation) {
-         // Fallback grammar: only one task, should be finished.
-         // This case should now effectively be handled by `newTasksCompleted >= totalTasks` since totalTasks will be 1
       }
     }
     setIsLoadingTask(false);
@@ -848,7 +834,7 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
   const handleCompleteWritingModule = () => {
     if (!feedback) return;
 
-    const score = feedback.isCorrect ? 100 : 50; // Simplified scoring for writing
+    const score = feedback.isCorrect ? 100 : 50; 
     updateModuleProgress(levelId, topicId, moduleId, score);
     setFinalModuleScore(score);
     setTasksCompleted(1);
@@ -899,7 +885,6 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
         );
     }
 
-    // --- Writing Module: Special display for feedback ---
     if (moduleId === 'writing' && feedback && feedback.writingDetails) {
       const details = feedback.writingDetails;
       return (
@@ -1003,8 +988,6 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
       );
     }
 
-
-    // --- Vocabulary: Matching Exercise ---
     if (moduleId === 'vocabulary' && activeMatchingExercise) {
        return (
         <div>
@@ -1065,7 +1048,6 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
         </div>
       );
     }
-    // --- Vocabulary: Audio Quiz ---
     if (moduleId === 'vocabulary' && activeAudioQuizExercise) {
       if (!activeAudioQuizExercise.items || activeAudioQuizExercise.items.length === 0) return <p className="text-center p-4 text-muted-foreground">Нет вопросов для аудио-квиза.</p>;
       const currentItem = activeAudioQuizExercise.items[currentAudioQuizItemIndex];
@@ -1105,7 +1087,6 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
         </div>
       );
     }
-    // --- Listening/Reading: Interactive Exercises ---
     const currentLRInteractiveExercise = activeMCQExercise || activeTrueFalseExercise || activeSequencingExercise;
     if ((moduleId === 'listening' || moduleId === 'reading') && currentLRInteractiveExercise) {
         const baseText = moduleId === 'listening' ? lessonContent?.listeningExercise?.script : lessonContent?.readingPassage;
@@ -1246,6 +1227,9 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
                                     </ol>
                                 </div>
                             )}
+                             {interactiveExerciseFeedback.correctAnswerText && !interactiveExerciseFeedback.isCorrect && (
+                                <p className="text-sm mt-1">Правильный ответ: <span className="font-semibold">{interactiveExerciseFeedback.correctAnswerText}</span></p>
+                            )}
                         </CardContent>
                     </Card>
                 )}
@@ -1253,7 +1237,6 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
         );
     }
 
-    // --- Grammar Module ---
     if (moduleId === 'grammar') {
       const grammarExplanation = lessonContent?.grammarExplanation;
       const currentGrammarInteractiveExercise = activeFillBlanksExercise || activeGrammarMCQExercise || activeSentenceConstrExercise;
@@ -1295,12 +1278,6 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
                       className="min-h-[80px]"
                       disabled={!!(interactiveExerciseFeedback && currentInteractiveQuestionIndex === tasksCompleted && interactiveExerciseFeedback.message.startsWith(`Вопрос ${currentInteractiveQuestionIndex + 1}`)) || isLoadingTask}
                     />
-                    {interactiveExerciseFeedback && currentInteractiveQuestionIndex === tasksCompleted && interactiveExerciseFeedback.isCorrect !== true && interactiveExerciseFeedback.correctAnswerText && (
-                        <p className="text-sm text-red-600 dark:text-red-400">Правильные ответы: {interactiveExerciseFeedback.correctAnswerText}</p>
-                    )}
-                    {interactiveExerciseFeedback && currentInteractiveQuestionIndex === tasksCompleted && currentQuestion.explanation && (
-                        <p className="text-sm text-muted-foreground">Пояснение: {currentQuestion.explanation}</p>
-                    )}
                   </div>
                 );
               })()}
@@ -1373,14 +1350,6 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
                                  ))}
                              </div>
                          </div>
-                         {interactiveExerciseFeedback && interactiveExerciseFeedback.correctSequence && !interactiveExerciseFeedback.isCorrect && (
-                            <div className="mt-2">
-                                <p className="text-sm font-medium text-muted-foreground">Возможные правильные варианты:</p>
-                                <ul className="list-disc list-inside text-sm text-muted-foreground">
-                                    {interactiveExerciseFeedback.correctSequence.map((s, i) => <li key={`corr-sent-${i}`}>{s}</li>)}
-                                </ul>
-                            </div>
-                         )}
                      </div>
                  );
               })()}
@@ -1391,6 +1360,17 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
                     <p className={`font-semibold ${interactiveExerciseFeedback.isCorrect ? 'text-green-700 dark:text-green-400' : 'text-red-700 dark:text-red-400'}`}>
                       {interactiveExerciseFeedback.message}
                     </p>
+                    {interactiveExerciseFeedback.correctAnswerText && !interactiveExerciseFeedback.isCorrect && (
+                        <p className="text-sm mt-1">Правильный ответ: <span className="font-semibold">{interactiveExerciseFeedback.correctAnswerText}</span></p>
+                    )}
+                    {interactiveExerciseFeedback.correctSequence && !interactiveExerciseFeedback.isCorrect && (
+                        <div className="mt-2">
+                            <p className="text-sm font-medium text-muted-foreground">Правильные варианты:</p>
+                            <ul className="list-disc list-inside text-sm text-muted-foreground">
+                                {interactiveExerciseFeedback.correctSequence.map((s, i) => <li key={`corr-sent-fb-${i}`}>{s}</li>)}
+                            </ul>
+                        </div>
+                    )}
                     {interactiveExerciseFeedback.explanation && <p className="text-sm mt-1 text-muted-foreground">Пояснение: {interactiveExerciseFeedback.explanation}</p>}
                   </CardContent>
                 </Card>
@@ -1398,13 +1378,11 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
             </div>
           )}
 
-          {/* Fallback task for grammar if no interactive exercise AND explanation exists */}
           {!currentGrammarInteractiveExercise && grammarExplanation && currentTask && (
              <div>
                 <p className="text-lg mb-2">{currentTask}</p>
              </div>
           )}
-           {/* Placeholder for Textarea if currentTask is set for fallback grammar */}
            {placeholderText && !currentGrammarInteractiveExercise && grammarExplanation && currentTask && (
              <Textarea
                 placeholder={placeholderText} value={userResponse} onChange={(e) => setUserResponse(e.target.value)}
@@ -1418,7 +1396,6 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
     }
 
 
-    // --- Fallback to Standard Vocabulary / Other Modules (Non-interactive or not yet implemented interactive) ---
     if (!lessonContent && ( (moduleId !== 'vocabulary' && moduleId !== 'wordTest') || ((moduleId === 'vocabulary' || moduleId === 'wordTest') && currentVocabulary.length === 0) ) ) { return <p className="text-center p-4 text-muted-foreground">Загрузка данных урока...</p>; }
 
     switch (moduleId) {
@@ -1437,8 +1414,6 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
             </div>
         );
       }
-      // case 'grammar' has been handled above to show explanation first.
-      // The fallback non-interactive task for grammar will be covered by the textarea below if placeholderText is set.
       case 'listening': {
         if (!lessonContent?.listeningExercise || !lessonContent.listeningExercise.script) return <p className="text-center p-4 text-muted-foreground">Загрузка аудирования...</p>;
         const currentListeningQuestion = lessonContent.listeningExercise.questions?.[tasksCompleted];
@@ -1467,7 +1442,7 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
             </div>
         );
       }
-      case 'writing': { // This will now be shown before feedback is available
+      case 'writing': { 
         if (!currentTask) return <p className="text-center p-4 text-muted-foreground">Загрузка письменного задания...</p>;
         return (
             <div>
@@ -1487,10 +1462,9 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
   if (moduleId === 'wordTest') placeholderText = "Введите перевод на русский...";
   const anyActiveInteractiveExercise = activeMatchingExercise || activeAudioQuizExercise || activeMCQExercise || activeTrueFalseExercise || activeSequencingExercise || activeFillBlanksExercise || activeGrammarMCQExercise || activeSentenceConstrExercise;
   if (anyActiveInteractiveExercise || noContentForModule || !contentManuallyRequested || (moduleId === 'grammar' && activeFillBlanksExercise) || (moduleId === 'grammar' && !currentTask && (activeGrammarMCQExercise || activeSentenceConstrExercise)) ) {
-      placeholderText = ""; // No placeholder for most interactive exercises or if grammar only has explanation + interactive
+      placeholderText = ""; 
   }
   if (moduleId === 'grammar' && lessonContent?.grammarExplanation && !anyActiveInteractiveExercise && currentTask) {
-    // Ensure placeholder is set for fallback grammar task if explanation is shown and task exists
     placeholderText = "Напишите здесь ваши предложения...";
   }
 
@@ -1568,7 +1542,6 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
               <div className="mb-6 min-h-[100px]">
                 {renderModuleContent()}
               </div>
-              {/* Textarea for non-writing or writing before feedback, or fallback grammar task */}
               {placeholderText && !(moduleId === 'writing' && feedback) && (
                 <Textarea
                   placeholder={placeholderText} value={userResponse} onChange={(e) => setUserResponse(e.target.value)}
@@ -1576,25 +1549,47 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
                   disabled={isLoadingTask || tasksCompleted >= totalTasks || (!currentTask && moduleId !== 'writing' && !anyActiveInteractiveExercise)}
                 />
               )}
-              {/* General feedback for non-interactive, non-writing modules */}
               {feedback && !anyActiveInteractiveExercise && moduleId !== 'writing' && contentManuallyRequested && (
                 <Card className={`mb-4 ${feedback.isCorrect ? 'border-green-500' : 'border-red-500'}`}>
-                <CardContent className="p-4">
-                    <p className={`font-semibold ${feedback.isCorrect ? 'text-green-700 dark:text-green-400' : 'text-red-700 dark:text-red-400'}`}>
-                    {feedback.evaluation}
-                    </p>
-                    {!feedback.isCorrect && feedback.suggestedCorrection && (
-                    <p className="text-sm mt-1 text-muted-foreground">Предлагаемая коррекция: {feedback.suggestedCorrection}</p>
-                    )}
-                    {feedback.grammarErrorTags && feedback.grammarErrorTags.length > 0 && (
-                        <div className="mt-2">
-                        <p className="text-xs font-medium text-orange-600">Замеченные грамматические моменты:</p>
-                        <ul className="list-disc list-inside text-xs text-orange-500">
-                            {feedback.grammarErrorTags.map(tag => <li key={tag}>{tag.replace(/_/g, ' ')}</li>)}
-                        </ul>
-                        </div>
-                    )}
-                </CardContent>
+                  <CardContent className="p-4">
+                      <p className={`font-semibold ${feedback.isCorrect ? 'text-green-700 dark:text-green-400' : 'text-red-700 dark:text-red-400'}`}>
+                      {feedback.evaluation}
+                      </p>
+                      {!feedback.isCorrect && feedback.suggestedCorrection && (
+                      <p className="text-sm mt-2 text-muted-foreground">Предлагаемый полный правильный ответ: <span className="font-medium">{feedback.suggestedCorrection}</span></p>
+                      )}
+                      {feedback.grammarErrorTags && feedback.grammarErrorTags.length > 0 && (
+                          <div className="mt-3">
+                          <p className="text-xs font-medium text-orange-600 dark:text-orange-400">Замеченные грамматические моменты:</p>
+                          <div className="flex flex-wrap gap-1 mt-1">
+                              {feedback.grammarErrorTags.map(tag => <Badge key={tag} variant="outline" className="text-xs border-orange-400 text-orange-600 dark:text-orange-300">{tag.replace(/_/g, ' ')}</Badge>)}
+                          </div>
+                          </div>
+                      )}
+                      {feedback.errorExplanationDetails && !feedback.isCorrect && (
+                        <Card className="mt-4 border-orange-400 bg-orange-50 dark:bg-orange-800/20">
+                          <CardHeader className="pb-2 pt-3">
+                            <CardTitle className="text-sm font-semibold text-orange-700 dark:text-orange-300 flex items-center">
+                              <HelpCircle className="mr-2 h-4 w-4" /> Разбор ошибки
+                            </CardTitle>
+                          </CardHeader>
+                          <CardContent className="space-y-1.5 text-xs pb-3">
+                            {feedback.errorExplanationDetails.generalExplanation && (
+                              <p><strong>Объяснение:</strong> {feedback.errorExplanationDetails.generalExplanation}</p>
+                            )}
+                            {feedback.errorExplanationDetails.specificExample && (
+                              <p><strong>В вашем ответе:</strong> <code className="bg-orange-200 dark:bg-orange-700/50 p-0.5 rounded text-orange-800 dark:text-orange-200">{feedback.errorExplanationDetails.specificExample}</code></p>
+                            )}
+                            {feedback.errorExplanationDetails.correctionExample && (
+                              <p><strong>Небольшое исправление:</strong> <span className="font-medium text-green-700 dark:text-green-400">{feedback.errorExplanationDetails.correctionExample}</span></p>
+                            )}
+                            {feedback.errorExplanationDetails.theoryReference && (
+                              <p className="mt-1 text-muted-foreground"><strong>Теория:</strong> {feedback.errorExplanationDetails.theoryReference}</p>
+                            )}
+                          </CardContent>
+                        </Card>
+                      )}
+                  </CardContent>
                 </Card>
               )}
             </>
@@ -1613,6 +1608,34 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
                         {interactiveExerciseFeedback.correctSequence.map((item, idx) => <li key={`fb-corr-${idx}`}>{item}</li>)}
                     </ol>
                 </div>
+                )}
+                 {/* Display detailed error explanation on module completion page for non-writing modules if incorrect */}
+                {feedback && feedback.errorExplanationDetails && !feedback.isCorrect && moduleId !== 'writing' && (
+                    <Card className="mt-4 border-orange-400 bg-orange-50 dark:bg-orange-800/20 text-left">
+                        <CardHeader className="pb-2 pt-3">
+                        <CardTitle className="text-sm font-semibold text-orange-700 dark:text-orange-300 flex items-center">
+                            <HelpCircle className="mr-2 h-4 w-4" /> Подробный разбор последней ошибки
+                        </CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-1.5 text-xs pb-3">
+                        {feedback.evaluation && <p><strong>Краткий вывод:</strong> {feedback.evaluation}</p>}
+                        {feedback.suggestedCorrection && (
+                            <p><strong>Полный правильный ответ:</strong> <span className="font-medium text-green-700 dark:text-green-400">{feedback.suggestedCorrection}</span></p>
+                        )}
+                        {feedback.errorExplanationDetails.generalExplanation && (
+                            <p><strong>Объяснение ошибки:</strong> {feedback.errorExplanationDetails.generalExplanation}</p>
+                        )}
+                        {feedback.errorExplanationDetails.specificExample && (
+                            <p><strong>В вашем ответе (фрагмент):</strong> <code className="bg-orange-200 dark:bg-orange-700/50 p-0.5 rounded text-orange-800 dark:text-orange-200">{feedback.errorExplanationDetails.specificExample}</code></p>
+                        )}
+                        {feedback.errorExplanationDetails.correctionExample && (
+                            <p><strong>Исправление фрагмента:</strong> <span className="font-medium text-green-700 dark:text-green-400">{feedback.errorExplanationDetails.correctionExample}</span></p>
+                        )}
+                        {feedback.errorExplanationDetails.theoryReference && (
+                            <p className="mt-1 text-muted-foreground"><strong>Теория:</strong> {feedback.errorExplanationDetails.theoryReference}</p>
+                        )}
+                        </CardContent>
+                    </Card>
                 )}
               <div className="mt-6 flex gap-3 justify-center">
                 <Button onClick={handleRetryModule} variant="outline">
@@ -1638,21 +1661,18 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
         </CardContent>
         {!isModuleFinished && !(noContentForModule && !isLoadingTask && contentManuallyRequested) && contentManuallyRequested && lessonContent && (
           <CardFooter>
-            {/* Writing Module: Show "Complete" button after feedback */}
             {moduleId === 'writing' && feedback && (
               <Button onClick={handleCompleteWritingModule} className="w-full" size="lg" disabled={isLoadingTask}>
                 {isLoadingTask && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Завершить и перейти
               </Button>
             )}
-            {/* Matching Exercise Button */}
             {activeMatchingExercise && moduleId === 'vocabulary' && !isMatchingChecked && (
               <Button onClick={handleMatchingCheck} className="w-full" size="lg" disabled={isLoadingTask}>
                  {isLoadingTask && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 {isLoadingTask ? "Проверка..." : "Проверить сопоставления"}
               </Button>
             )}
-            {/* Audio Quiz Buttons */}
             {activeAudioQuizExercise && moduleId === 'vocabulary' && (
               !audioQuizItemFeedback ? (
                 <Button onClick={handleSubmitAudioQuizAnswer} className="w-full" size="lg" disabled={!selectedAudioQuizOption || isLoadingTask}>
@@ -1663,7 +1683,6 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
                 <Button onClick={handleNextAudioQuizItem} className="w-full" size="lg">Следующий вопрос</Button>
               )
             )}
-            {/* Interactive Listening/Reading Buttons */}
             { (activeMCQExercise || activeTrueFalseExercise || activeSequencingExercise) && (moduleId === 'listening' || moduleId === 'reading') && (
                 !interactiveExerciseFeedback ? (
                     activeMCQExercise ? (
@@ -1686,9 +1705,8 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
                      !activeSequencingExercise && <Button onClick={() => handleNextInteractiveItem(false)} className="w-full" size="lg">Следующее задание</Button>
                 )
             )}
-            {/* Interactive Grammar Buttons */}
              { (activeFillBlanksExercise || activeGrammarMCQExercise || activeSentenceConstrExercise) && moduleId === 'grammar' && (
-                 !interactiveExerciseFeedback || tasksCompleted < currentInteractiveQuestionIndex ? ( // Show check button if no feedback OR if feedback for a PREVIOUS question
+                 !interactiveExerciseFeedback || (tasksCompleted === currentInteractiveQuestionIndex && !interactiveExerciseFeedback.message.startsWith(`Вопрос ${currentInteractiveQuestionIndex + 1}`)) ? (
                     activeFillBlanksExercise ? (
                         <Button
                             onClick={handleSubmitFillBlanks}
@@ -1710,12 +1728,11 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
                             {isLoadingTask ? "Проверка..." : "Проверить предложение"}
                         </Button>
                     ) : null
-                 ) : ( // Show "Next Task" button if feedback for the CURRENT question is shown
+                 ) : ( 
                     <Button onClick={() => handleNextInteractiveItem(true)} className="w-full" size="lg">Следующее задание</Button>
                  )
              )}
 
-            {/* Standard Task Button (excluding Writing module if feedback is shown) */}
             {!(moduleId === 'writing' && feedback) && !anyActiveInteractiveExercise && moduleId !== 'grammar' && (
               <Button
                 onClick={handleSubmit}
@@ -1726,7 +1743,6 @@ export function ModulePage({ levelId, topicId, moduleId }: ModulePageProps) {
                 {isLoadingTask ? "Проверка..." : "Ответить"}
               </Button>
             )}
-            {/* Standard Task Button for Grammar Fallback */}
              {moduleId === 'grammar' && !anyActiveInteractiveExercise && currentTask && lessonContent?.grammarExplanation && (
                  <Button
                     onClick={handleSubmit}

@@ -229,20 +229,28 @@ export interface AILessonContent {
 }
 
 export interface WritingEvaluationDetails {
-  taskAchievement?: string;
-  coherenceAndCohesion?: string;
-  lexicalResource?: string;
-  grammaticalAccuracy?: string;
-  overallFeedback: string;
-  suggestedImprovements?: string[];
+  taskAchievement?: string; // Оценка выполнения задания. ДОЛЖНО БЫТЬ НА РУССКОМ, ОЧЕНЬ КРАТКО
+  coherenceAndCohesion?: string; // Оценка связности и логичности текста. ДОЛЖНО БЫТЬ НА РУССКОМ, КРАТКО
+  lexicalResource?: string; // Оценка использования лексики. ДОЛЖНО БЫТЬ НА РУССКОМ, КРАТКО
+  grammaticalAccuracy?: string; // Оценка грамматической правильности. ДОЛЖНО БЫТЬ НА РУССКОМ, КРАТКО
+  overallFeedback: string; // Общее заключение и ключевые рекомендации. ДОЛЖНО БЫТЬ НА РУССКОМ, 1-2 ПРЕДЛОЖЕНИЯ
+  suggestedImprovements?: string[]; // Конкретные предложения по улучшению. НА РУССКОМ
+}
+
+export interface ErrorExplanation {
+  generalExplanation: string; // Общее объяснение типа ошибки на русском языке.
+  specificExample?: string; // Конкретный пример из ответа пользователя, выделяющий ошибку (если применимо).
+  correctionExample?: string; // Пример исправления для ОШИБОЧНОГО фрагмента ответа пользователя (если применимо), а не полный правильный ответ.
+  theoryReference?: string; // Краткое упоминание соответствующего грамматического правила или лексического нюанса на русском языке (если применимо).
 }
 
 export interface AIEvaluationResult {
-  evaluation: string;
-  isCorrect: boolean;
-  suggestedCorrection?: string;
+  evaluation: string; // Краткий общий вывод. Для письма здесь будет writingDetails.overallFeedback. Для других - основная мысль оценки.
+  isCorrect: boolean; // Для письма: true, если текст в целом понятен и соответствует заданию для уровня.
+  suggestedCorrection?: string; // ПОЛНЫЙ предлагаемый правильный ответ, если ответ пользователя был коротким и неверным, или ключевые исправления.
   grammarErrorTags?: string[];
-  writingDetails?: WritingEvaluationDetails;
+  writingDetails?: WritingEvaluationDetails; // Детализированная оценка для письма
+  errorExplanationDetails?: ErrorExplanation; // Детализированное объяснение ошибки для других модулей, если ответ неверный.
 }
 
 export interface AIRecommendedLesson {

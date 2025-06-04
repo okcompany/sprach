@@ -12,7 +12,7 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
-import type { WritingEvaluationDetails } from '@/types/german-learning';
+import type { WritingEvaluationDetails, ErrorExplanation } from '@/types/german-learning';
 
 
 const EvaluateUserResponseInputSchema = z.object({
@@ -42,21 +42,29 @@ const WritingEvaluationDetailsSchema = z.object({
   suggestedImprovements: z.array(z.string()).optional().describe("Specific sentences or phrases that could be improved, with suggestions. (Конкретные предложения по улучшению. НА РУССКОМ)")
 }).describe("Detailed feedback specific to the writing module, if applicable. This object itself is optional.");
 
+const ErrorExplanationSchema = z.object({
+    generalExplanation: z.string().describe("Общее объяснение типа ошибки на русском языке. Должно быть четким и по существу."),
+    specificExample: z.string().optional().describe("Конкретный пример из ответа пользователя, ВЫДЕЛЯЮЩИЙ ошибку (если применимо и если ошибка не во всем ответе)."),
+    correctionExample: z.string().optional().describe("Пример исправления для ОШИБОЧНОГО ФРАГМЕНТА ответа пользователя (если применимо), а не полный правильный ответ. Полный ответ указывается в поле 'suggestedCorrection'."),
+    theoryReference: z.string().optional().describe("Краткое упоминание соответствующего грамматического правила или лексического нюанса на русском языке (если применимо, например, 'Предлог 'mit' требует Dativ').")
+}).describe("Детальное объяснение ошибки, если ответ неверный (для модулей НЕ 'writing'). Это поле опционально. ВСЯ ИНФОРМАЦИЯ ВНУТРИ ЭТОГО ОБЪЕКТА ДОЛЖНА БЫТЬ НА РУССКОМ ЯЗЫКЕ.");
+
 
 const EvaluateUserResponseOutputSchema = z.object({
-  evaluation: z.string().describe('An evaluation of the user’s response, including feedback and suggestions for improvement. For writing, this will be the overallFeedback from writingDetails.'),
+  evaluation: z.string().describe('Краткий общий вывод на русском языке. Для письма это будет writingDetails.overallFeedback. Для других модулей – основная мысль оценки (например, "Верно!" или "Не совсем точно, есть ошибка в употреблении слова").'),
   isCorrect: z.boolean().describe('Whether the user response is correct or not. For writing, true if the text is generally understandable and addresses the prompt adequately for the level.'),
-  suggestedCorrection: z.string().optional().describe('A suggested correction to the user’s response, if applicable. For writing, this could be a fully corrected version of the text if feasible, or key corrections.'),
+  suggestedCorrection: z.string().optional().describe('ПОЛНЫЙ предлагаемый правильный ответ на русском языке, если ответ пользователя был коротким и неверным, или ключевые исправления. Для письма это может быть исправленная версия текста.'),
   grammarErrorTags: z.array(z.string()).optional().describe('Specific grammar points the user made errors on (e.g., "akkusativ_prepositions", "verb_conjugation_modal"). Provide these only if the response is incorrect and the error is related to a specific, identifiable grammar rule or pattern relevant to the user\'s level. Use short, snake_case, English tags.'),
-  writingDetails: WritingEvaluationDetailsSchema.optional()
+  writingDetails: WritingEvaluationDetailsSchema.optional(),
+  errorExplanationDetails: ErrorExplanationSchema.optional()
 });
 
 export type EvaluateUserResponseOutput = z.infer<typeof EvaluateUserResponseOutputSchema> & {
-  writingDetails?: WritingEvaluationDetails; // Ensure this is part of the TS type
+  writingDetails?: WritingEvaluationDetails;
+  errorExplanationDetails?: ErrorExplanation;
 };
 
 export async function evaluateUserResponse(input: EvaluateUserResponseInput): Promise<EvaluateUserResponseOutput> {
-  // Populate boolean flags for templating based on input.moduleType
   const promptInputData = {
     ...input,
     isModuleWordTest: input.moduleType === 'wordTest',
@@ -82,37 +90,55 @@ Here is the user's current proficiency level in German: {{{userLevel}}}
 {{#if expectedAnswer}}Here is the expected answer: {{{expectedAnswer}}}{{/if}}
 {{#if grammarRules}}Here are some grammar rules relevant to the user level: {{{grammarRules}}}{{/if}}
 
-Provide an evaluation of the user's response. Include feedback and suggestions for improvement, adjusted to the user's proficiency level. Indicate whether the response is correct or not. If the response is incorrect, provide a suggested correction.
+Provide an evaluation of the user's response. Include feedback and suggestions for improvement, adjusted to the user's proficiency level. Indicate whether the response is correct or not.
+The main 'evaluation' field MUST be a concise summary in RUSSIAN.
+If the response is incorrect, provide a 'suggestedCorrection' (full corrected answer, in RUSSIAN) if appropriate.
 
 If the module type is 'grammar' or 'writing', and the user's response is incorrect due to specific grammatical errors relevant to their level ({{{userLevel}}}), please identify these errors and list them in the 'grammarErrorTags' field. Use short, English, snake_case tags (e.g., "nominative_case_error", "verb_position_subclause", "modal_verb_usage", "adjective_declension_dativ", "perfekt_auxiliary_verb"). Only include tags for clear, identifiable grammatical mistakes, not stylistic issues or minor vocabulary errors.
 
+{{#unless isModuleWriting}}
+  {{#unless isCorrect}}
+    If the answer is incorrect (for modules other than 'writing'), provide detailed feedback in the 'errorExplanationDetails' object. This feedback MUST be in RUSSIAN and concise. Do not be overly verbose. Focus on the main error and its explanation.
+    - 'generalExplanation': Clearly explain in RUSSIAN why the user's answer is incorrect. Be specific to the error type (e.g., wrong vocabulary choice, specific grammatical mistake like case or tense, misunderstanding of the question). Keep it brief (1-2 sentences).
+    - 'specificExample': If applicable and the error is localized, quote the specific incorrect part of the user's answer.
+    - 'correctionExample': If you provided a 'specificExample', show how *that specific part* should be corrected in RUSSIAN. This is for a snippet, not the full answer. The main 'suggestedCorrection' field can be used for the full corrected answer.
+    - 'theoryReference': If the error relates to a specific grammar rule (e.g., "Предлог 'mit' всегда требует дательного падежа (Dativ)") or a vocabulary nuance (e.g., "Слово 'aktuell' означает 'актуальный, текущий', а не 'фактический'"), briefly mention this rule/nuance in RUSSIAN.
+  {{/unless}}
+{{/unless}}
+
+
 {{#if isModuleWordTest}}
 This is a 'wordTest' module. The user is being tested on their knowledge of vocabulary.
-- Be stricter in your evaluation.
-- If the user's response is incorrect, clearly state the correct answer in the 'suggestedCorrection'.
+- Be stricter in your evaluation. The main 'evaluation' should clearly state if it's correct or not.
+- If the user's response is incorrect, clearly state the correct answer in the 'suggestedCorrection' (in RUSSIAN).
 - The primary goal is to assess if the user knows the word.
-- Do not provide 'grammarErrorTags' for this module type unless the error is directly tied to a grammatical aspect of a single word (e.g. gender of a noun if tested).
+- For 'errorExplanationDetails' (if incorrect):
+    - 'generalExplanation' should explain why the given translation is wrong.
+    - 'theoryReference' could point out gender/plural if that was part of the expected knowledge or a common confusion.
 {{/if}}
 {{#if isModuleVocabulary}}
 This is a 'vocabulary' learning module. The user is learning new words.
-- Be encouraging.
-- If the user's response is incorrect, provide the 'suggestedCorrection' and explain briefly if necessary.
-- Do not provide 'grammarErrorTags' for this module type.
+- Be encouraging in the 'evaluation' field.
+- If the user's response is incorrect, provide the 'suggestedCorrection' (in RUSSIAN) and explain briefly in 'errorExplanationDetails.generalExplanation'.
+- 'errorExplanationDetails.theoryReference' can mention gender/plural or usage notes.
 {{/if}}
 {{#if isModuleGrammar}}
 This is a 'grammar' module.
 - Focus on grammatical correctness according to the user's level and the provided grammar rules.
 - If incorrect, provide 'grammarErrorTags' if applicable.
+- 'errorExplanationDetails' should focus on the specific grammar mistake, referencing the rule in 'theoryReference'.
 {{/if}}
 {{#if isModuleListening}}
 This is a 'listening' module.
-- Evaluate comprehension of the provided audio script based on the user's answer to the question.
-- Provide 'grammarErrorTags' only if the user's answer itself contains significant grammatical errors that hinder understanding, and these errors are relevant to their learning level.
+- Evaluate comprehension of the provided audio script based on the user's answer to the question. The main 'evaluation' should reflect this.
+- If the user's answer is incorrect, 'errorExplanationDetails' should clarify the misunderstanding of the audio content.
+- Provide 'grammarErrorTags' only if the user's answer *itself* contains significant grammatical errors that hinder understanding, and these errors are relevant to their learning level.
 {{/if}}
 {{#if isModuleReading}}
 This is a 'reading' module.
-- Evaluate comprehension of the provided text based on the user's answer to the question.
-- Provide 'grammarErrorTags' only if the user's answer itself contains significant grammatical errors that hinder understanding, and these errors are relevant to their learning level.
+- Evaluate comprehension of the provided text based on the user's answer to the question. The main 'evaluation' should reflect this.
+- If the user's answer is incorrect, 'errorExplanationDetails' should clarify the misunderstanding of the text.
+- Provide 'grammarErrorTags' only if the user's answer *itself* contains significant grammatical errors that hinder understanding, and these errors are relevant to their learning level.
 {{/if}}
 {{#if isModuleWriting}}
 This is a 'writing' module. For the writing module, ALL feedback in 'writingDetails' (including 'taskAchievement', 'coherenceAndCohesion', 'lexicalResource', 'grammaticalAccuracy', 'overallFeedback', and 'suggestedImprovements') MUST be concise and in RUSSIAN. Avoid lengthy elaborations or general commentary outside of \`overallFeedback\`.
@@ -128,10 +154,10 @@ This is a 'writing' module. For the writing module, ALL feedback in 'writingDeta
 - CRITICAL: Do NOT use lengthy, repetitive motivational phrases such as 'Вместе мы - непобедимы! У вас все получится! Я всегда буду рядом...' or similar extended encouragements in any field of 'writingDetails'. If any encouragement is given in \`overallFeedback\`, it must be extremely brief (a few words) and not repeated. The user needs specific, actionable feedback, not repeated motivational slogans.
 - Set 'isCorrect' to true if the text is generally understandable, adequately addresses the prompt for the user's level ({{{userLevel}}}), and doesn't contain an overwhelming number of errors that impede communication. Minor errors are acceptable for a 'true' evaluation, especially at lower levels.
 - If 'isCorrect' is false due to grammar, provide relevant 'grammarErrorTags'.
-- The 'suggestedCorrection' field can optionally contain a fully corrected version of the user's text if it's short and the corrections are significant, or a few key corrections otherwise. This field, if present, MUST also be in RUSSIAN.
+- The 'suggestedCorrection' field can optionally contain a fully corrected version of the user's text (in RUSSIAN) if it's short and the corrections are significant, or a few key corrections otherwise.
 {{/if}}
 
-IMPORTANT: If you provide a 'suggestedCorrection', ensure it is appropriate for the user's level ({{{userLevel}}}). If a more complex correction would be ideal but is above the user's level, first provide the ideal correction, and then explicitly state: "This might be a bit advanced. A simpler way to say this at your level ({{{userLevel}}}) would be: [simpler correction]". If the ideal correction is already appropriate for the user's level, you don't need to add the "simpler way" part. ALL TEXT IN THIS EXPLANATION MUST BE IN RUSSIAN.
+IMPORTANT: If you provide a 'suggestedCorrection', ensure it is appropriate for the user's level ({{{userLevel}}}). If a more complex correction would be ideal but is above the user's level, first provide the ideal correction, and then explicitly state: "Это может быть немного продвинуто. Более простой способ сказать это на вашем уровне ({{{userLevel}}}): [simpler correction]". If the ideal correction is already appropriate for the user's level, you don't need to add the "более простой способ" часть. ALL TEXT IN THIS EXPLANATION MUST BE IN RUSSIAN.
 
 Focus on these aspects for evaluation, depending on the module type:
 1.  Correctness of the answer.
@@ -139,21 +165,27 @@ Focus on these aspects for evaluation, depending on the module type:
 3.  Grammatical accuracy according to CEFR level {{{userLevel}}}.
 4.  Use of key vocabulary from the topic (if applicable for modules other than vocabulary/wordTest).
 
-Ensure your response is in Russian. All string values in the output JSON object, especially within 'writingDetails', MUST be in RUSSIAN.
+Ensure ALL your string output values in the JSON object are in RUSSIAN, especially within 'writingDetails' and 'errorExplanationDetails'.
 
-Output your response in the following JSON format (ensure grammarErrorTags is an array of strings, or omit if not applicable; ensure writingDetails is an object or omit if not applicable):
+Output your response in the following JSON format (ensure grammarErrorTags is an array of strings, or omit if not applicable; ensure writingDetails and errorExplanationDetails are objects or omit if not applicable):
 {
-  "evaluation": "Evaluation of the user's response...",
-  "isCorrect": true or false,
-  "suggestedCorrection": "Suggested correction, if applicable...",
-  "grammarErrorTags": ["tag1", "tag2"],
+  "evaluation": "Ваш краткий общий вывод на русском...",
+  "isCorrect": true,
+  "suggestedCorrection": "Полный исправленный ответ на русском, если нужно...",
+  "grammarErrorTags": [],
   "writingDetails": {
     "taskAchievement": "...",
     "coherenceAndCohesion": "...",
     "lexicalResource": "...",
     "grammaticalAccuracy": "...",
     "overallFeedback": "...",
-    "suggestedImprovements": ["..."]
+    "suggestedImprovements": []
+  },
+  "errorExplanationDetails": {
+    "generalExplanation": "Общее объяснение ошибки на русском...",
+    "specificExample": "Пример ошибки из ответа пользователя...",
+    "correctionExample": "Исправление этого примера...",
+    "theoryReference": "Ссылка на теорию на русском..."
   }
 }`,
 });
