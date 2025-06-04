@@ -273,14 +273,14 @@ export interface DefaultTopicDefinition {
 // Default Topics (Considered "Mandatory Lexical Topics")
 export const DEFAULT_TOPICS: Record<LanguageLevel, DefaultTopicDefinition[]> = {
   A0: [
-    { 
-      id: "a0_alphabet_pronunciation", 
+    {
+      id: "a0_alphabet_pronunciation",
       name: "Алфавит, произношение, буквы",
-      fallbackVocabulary: [] 
+      fallbackVocabulary: []
     },
     {
       id: "a0_greetings_farewells",
-      name: "Приветствия и прощания",
+      name: "Приветствие и прощание",
       fallbackVocabulary: [
         { german: "Hallo", russian: "Привет", exampleSentence: "Hallo, wie geht's?" },
         { german: "Tschüss", russian: "Пока", exampleSentence: "Tschüss, bis bald!" },
@@ -295,13 +295,13 @@ export const DEFAULT_TOPICS: Record<LanguageLevel, DefaultTopicDefinition[]> = {
       id: "a0_politeness_basics",
       name: "Простые фразы вежливости",
       fallbackVocabulary: [
-        { german: "Bitte", russian: "Пожалуйста / Прошу" },
-        { german: "Danke", russian: "Спасибо" },
-        { german: "Entschuldigung", russian: "Извините" },
-        { german: "Verzeihung", russian: "Простите (более формально)" },
-        { german: "ja", russian: "Да" },
-        { german: "nein", russian: "Нет" },
-      ],
+         { german: "Danke", russian: "Спасибо" },
+         { german: "Bitte", russian: "Пожалуйста" },
+         { german: "Entschuldigung", russian: "Извините" },
+         { german: "Verzeihung", russian: "Простите (более формально)" },
+         { german: "ja", russian: "Да" },
+         { german: "nein", russian: "Нет" },
+      ]
     },
     {
       id: "a0_numbers_0_100",
@@ -317,7 +317,7 @@ export const DEFAULT_TOPICS: Record<LanguageLevel, DefaultTopicDefinition[]> = {
         { german: "acht", russian: "Восемь" },
         { german: "neun", russian: "Девять" },
         { german: "zehn", russian: "Десять" },
-      ],
+      ]
     },
      {
       id: "a0_colors",
@@ -428,8 +428,6 @@ export const DEFAULT_TOPICS: Record<LanguageLevel, DefaultTopicDefinition[]> = {
         { german: "Frühstück", russian: "Завтрак" },
         { german: "Mittagessen", russian: "Обед" },
         { german: "Abendessen", russian: "Ужин" },
-        { german: "essen", russian: "Есть (кушать)" },
-        { german: "trinken", russian: "Пить" },
       ],
     },
     {
@@ -477,6 +475,8 @@ export const DEFAULT_TOPICS: Record<LanguageLevel, DefaultTopicDefinition[]> = {
         { german: "schlafen", russian: "Спать" },
         { german: "sitzen", russian: "Сидеть" },
         { german: "stehen", russian: "Стоять" },
+        { german: "essen", russian: "Есть (кушать)" },
+        { german: "trinken", russian: "Пить" },
         { german: "sehen", russian: "Видеть / Смотреть" },
         { german: "hören", russian: "Слышать / Слушать" },
         { german: "geben", russian: "Давать" },
@@ -618,7 +618,7 @@ export const DEFAULT_TOPICS: Record<LanguageLevel, DefaultTopicDefinition[]> = {
         { german: "kommen aus", russian: "Быть родом из" },
         { german: "Anmeldung", russian: "Регистрация, заявление" },
         { german: "Ausweis", russian: "Удостоверение личности" },
-        { german: "Datum", russian: "Дата" }, 
+        { german: "Datum", russian: "Дата" },
         { german: "Passwort", russian: "Пароль" },
         { german: "Zuhause", russian: "Дом (как родное место)" },
       ]
@@ -651,7 +651,6 @@ export const DEFAULT_TOPICS: Record<LanguageLevel, DefaultTopicDefinition[]> = {
         { german: "Kollegin", russian: "Коллега (женщина)" },
         { german: "Kollegen", russian: "Коллеги (мн.ч.)" },
         { german: "Kindergarten", russian: "Детский сад" },
-
       ]
     },
     {
@@ -979,10 +978,10 @@ export const DEFAULT_TOPICS: Record<LanguageLevel, DefaultTopicDefinition[]> = {
         { german: "Schnee", russian: "Снег" },
         { german: "kalt", russian: "Холодный, холодно" },
         { german: "warm", russian: "Тёплый, тепло" },
-        { german: "Frühling", russian: "Весна" }, // Повтор, но в контексте погоды
-        { german: "Sommer", russian: "Лето" },   // Повтор
-        { german: "Herbst", russian: "Осень" },  // Повтор
-        { german: "Winter", russian: "Зима" },  // Повтор
+        // { german: "Frühling", russian: "Весна" }, // Already in a1_time_calendar
+        // { german: "Sommer", russian: "Лето" },   // Already in a1_time_calendar
+        // { german: "Herbst", russian: "Осень" },  // Already in a1_time_calendar
+        // { german: "Winter", russian: "Зима" },  // Already in a1_time_calendar
         { german: "Grad", russian: "Градус (температуры)" },
         { german: "heiß", russian: "Горячий, жарко" },
         { german: "Himmel", russian: "Небо" },
@@ -1003,7 +1002,7 @@ export const DEFAULT_TOPICS: Record<LanguageLevel, DefaultTopicDefinition[]> = {
       name: "Общие глаголы и действия (A1)",
       fallbackVocabulary: [
         { german: "abgeben", russian: "Сдавать, отдавать" },
-        { german: "anfangen", russian: "Начинать" },
+        { german: "anfangen", russian: "Начинать" }, // Already in a1_time_calendar
         { german: "ankreuzen", russian: "Отмечать крестиком" },
         { german: "anmachen", russian: "Включать (свет, прибор)" },
         { german: "anrufen", russian: "Звонить (по телефону)" },
@@ -1086,7 +1085,7 @@ export const DEFAULT_TOPICS: Record<LanguageLevel, DefaultTopicDefinition[]> = {
         { german: "sehen", russian: "Видеть, смотреть" },
         { german: "sein", russian: "Быть" },
         { german: "senden", russian: "Отправлять, передавать (по радио/ТВ)" },
-        { german: "setzen", russian: "Сажать, ставить" }, // sich setzen - садиться
+        { german: "setzen", russian: "Сажать, ставить" },
         { german: "singen", russian: "Петь" },
         { german: "sitzen", russian: "Сидеть" },
         { german: "sollen", russian: "Быть должным (по чьему-л. указанию)" },
@@ -1134,9 +1133,9 @@ export const DEFAULT_TOPICS: Record<LanguageLevel, DefaultTopicDefinition[]> = {
         { german: "wissen", russian: "Знать (факты, информацию)" },
         { german: "wünschen", russian: "Желать" },
         { german: "zeigen", russian: "Показывать" },
-        { german: "ziehen", russian: "Тянуть; переезжать" }, // umziehen, anziehen
+        { german: "ziehen", russian: "Тянуть; переезжать" },
         { german: "zumachen", russian: "Закрывать (дверь, окно)" },
-        { german: "anziehen", russian: "Одевать(ся)" }, 
+        { german: "anziehen", russian: "Одевать(ся)" },
         { german: "ausziehen", russian: "Раздевать(ся); съезжать (с квартиры)" },
         { german: "beantworten", russian: "Отвечать (на вопрос)" },
         { german: "beantragen", russian: "Подавать заявление, ходатайствовать" },
@@ -1460,8 +1459,8 @@ export const DEFAULT_TOPICS: Record<LanguageLevel, DefaultTopicDefinition[]> = {
         { german: "elf", russian: "Одиннадцать" },
         { german: "eins", russian: "Один" },
         { german: "neun", russian: "Девять" },
-        { german: "neunzehn", russian: "Девятнадцать" },
-        { german: "vielmal", russian: "Много раз (устар. или диалект., обычно viele Male)" }, 
+        { german: "neunzehn", russian: "Девятнадцать" }, // Already in a1_time_calendar
+        { german: "vielmal", russian: "Много раз (устар. или диалект., обычно viele Male)" },
       ]
     },
     {
@@ -1476,14 +1475,14 @@ export const DEFAULT_TOPICS: Record<LanguageLevel, DefaultTopicDefinition[]> = {
         { german: "Anrufbeantworter", russian: "Автоответчик" },
         { german: "Ansage", russian: "Объявление (по громкоговорителю)" },
         { german: "Antwort", russian: "Ответ" },
-        { german: "Anzeige", russian: "Объявление (в газете)" },
+        // { german: "Anzeige", russian: "Объявление (в газете)" }, // Already in a1_clothing
         { german: "Apparat", russian: "Аппарат, прибор" },
         { german: "Arbeitsplatz", russian: "Рабочее место" },
         { german: "Arm", russian: "Рука (от плеча до кисти)" },
         { german: "Artikel", russian: "Статья; артикль (грам.)" },
         { german: "Aufzug", russian: "Лифт" },
         { german: "Auge", russian: "Глаз" },
-        { german: "August", russian: "Август" },
+        // { german: "August", russian: "Август" }, // Already in a1_time_calendar
         { german: "Ausgang", russian: "Выход" },
         { german: "Auskunft", russian: "Информация, справка" },
         { german: "Ausland", russian: "Заграница" },
@@ -1524,7 +1523,7 @@ export const DEFAULT_TOPICS: Record<LanguageLevel, DefaultTopicDefinition[]> = {
         { german: "Erlaubnis", russian: "Разрешение" },
         { german: "Ermäßigung", russian: "Скидка, льгота" },
         { german: "Erwachsene", russian: "Взрослый (человек)" },
-        { german: "Euro", russian: "Евро (валюта)" },
+        // { german: "Euro", russian: "Евро (валюта)" }, // Already in a0_shopping_stores
         { german: "Fahrgast", russian: "Пассажир" },
         { german: "Fehler", russian: "Ошибка" },
         { german: "Fernseher", russian: "Телевизор" },
@@ -1572,7 +1571,7 @@ export const DEFAULT_TOPICS: Record<LanguageLevel, DefaultTopicDefinition[]> = {
         { german: "Instrument", russian: "Инструмент (музыкальный)" },
         { german: "Internet", russian: "Интернет" },
         { german: "Interview", russian: "Интервью" },
-        { german: "Januar", russian: "Январь" },
+        // { german: "Januar", russian: "Январь" }, // Already in a1_time_calendar
         { german: "Junge", russian: "Мальчик" },
         { german: "Jugendliche", russian: "Подросток, молодежь" },
         { german: "Kamera", russian: "Камера, фотоаппарат" },
@@ -1710,7 +1709,7 @@ export const DEFAULT_TOPICS: Record<LanguageLevel, DefaultTopicDefinition[]> = {
         { german: "Zettel", russian: "Записка, листок бумаги" },
         { german: "Zeugnis", russian: "Свидетельство, аттестат; показание" },
         { german: "Zoo", russian: "Зоопарк" },
-        { german: "Zucker", russian: "Сахар" }, // Повтор, но может быть здесь как отдельный товар
+        // { german: "Zucker", russian: "Сахар" }, // Already in a1_food_drinks
         { german: "Zukunft", russian: "Будущее" },
         { german: "einer", russian: "Один (местоимение)" },
         { german: "an sein", russian: "Быть включенным (о приборе)" },
@@ -1724,7 +1723,7 @@ export const DEFAULT_TOPICS: Record<LanguageLevel, DefaultTopicDefinition[]> = {
         { german: "sich", russian: "Себя, себе (возвратное местоимение)" },
         { german: "wird", russian: "Становится (3 л. ед.ч. от werden); вспомогательный глагол для пассива/будущего" },
         { german: "worden", russian: "Стал (Partizip II от werden, используется в пассиве)" },
-        { german: "achten", russian: "Обращать внимание, уважать (от achtgeben)" }, // от achtgeben
+        { german: "achten", russian: "Обращать внимание, уважать" }, // от achtgeben
         { german: "aufbauen", russian: "Строить, сооружать; создавать" },
         { german: "aufhören", russian: "Прекращать(ся), переставать" },
         { german: "aufpassen", russian: "Быть внимательным, присматривать" },
@@ -1742,113 +1741,787 @@ export const DEFAULT_TOPICS: Record<LanguageLevel, DefaultTopicDefinition[]> = {
       ]
     },
   ],
-  B1: [
-    { 
-      id: "b1_education_studies_systems", 
-      name: "Образование и учёба",
+  A2: [
+    {
+      id: "a2_daily_life_routine",
+      name: "Повседневная жизнь",
       fallbackVocabulary: [
-        // Сюда можно будет добавить слова позже
-      ] 
+        { german: "Arbeit", russian: "Работа" },
+        { german: "Abendessen", russian: "Ужин" },
+        { german: "Aufgabe", russian: "Задача, задание" },
+        { german: "Ausflug", russian: "Экскурсия, поездка" },
+        { german: "Frühstück", russian: "Завтрак" },
+        { german: "Freizeit", russian: "Свободное время" },
+        { german: "Haushalt", russian: "Домашнее хозяйство" }, // Добавил новую тему и слово сюда
+        { german: "Mittag", russian: "Полдень" },
+        { german: "Pause", russian: "Перерыв" },
+        { german: "Schule", russian: "Школа" },
+        { german: "Stunde", russian: "Час, урок" },
+        { german: "Tag", russian: "День" },
+        { german: "Uhr", russian: "Часы, час (время)" },
+        { german: "Unterricht", russian: "Урок, занятие" },
+        { german: "Woche", russian: "Неделя" },
+        { german: "Wochenende", russian: "Выходные" }, // Добавил это слово сюда
+        { german: "aufstehen", russian: "Вставать" },
+        { german: "beginnen", russian: "Начинать" },
+        { german: "einkaufen", russian: "Делать покупки" },
+        { german: "essen", russian: "Есть, кушать" },
+        { german: "fernsehen", russian: "Смотреть телевизор" },
+        { german: "kochen", russian: "Готовить (еду)" },
+        { german: "lernen", russian: "Учиться" },
+        { german: "lesen", russian: "Читать" },
+        { german: "schlafen", russian: "Спать" },
+        { german: "spielen", russian: "Играть" },
+        { german: "treffen", russian: "Встречать" },
+        { german: "trinken", russian: "Пить" },
+        { german: "waschen", russian: "Мыть, стирать" },
+        { german: "wecken", russian: "Будить" }, // Добавил сюда
+        { german: "aufhören", russian: "Прекращать" },
+        { german: "ausruhen", russian: "Отдыхать" },
+        { german: "beeilen", russian: "Торопиться, спешить" },
+        { german: "erinnern", russian: "Помнить, напоминать (sich erinnern an - вспоминать о)" },
+        { german: "festhalten", russian: "Держать(ся); записывать" },
+        { german: "führen", russian: "Вести, руководить" },
+        { german: "fühlen", russian: "Чувствовать" },
+        { german: "funktionieren", russian: "Функционировать, работать (о механизме)" },
+        { german: "heiraten", russian: "Жениться, выходить замуж" },
+        { german: "interessiert sein", russian: "Быть заинтересованным (an + D)" },
+        { german: "joggen", russian: "Бегать трусцой" },
+        { german: "küssen", russian: "Целовать" },
+        { german: "loben", russian: "Хвалить" },
+        { german: "ordnen", russian: "Приводить в порядок, упорядочивать" },
+        { german: "organisieren", russian: "Организовывать" },
+        { german: "planen", russian: "Планировать" },
+        { german: "regnen", russian: "Идти (о дожде)" },
+        { german: "sammeln", russian: "Собирать, коллекционировать" },
+        { german: "schmecken", russian: "Быть на вкус, нравиться (о еде)" },
+        { german: "stimmen", russian: "Соответствовать действительности, быть верным; настраивать (инструмент)" },
+        { german: "tanzen", russian: "Танцевать" },
+        { german: "teilen", russian: "Делить, разделять" },
+        { german: "teilnehmen", russian: "Участвовать (an + D)" },
+        { german: "übernachten", russian: "Ночевать, переночевать" },
+        { german: "überraschen", russian: "Удивлять, делать сюрприз" },
+        { german: "überzeugen", russian: "Убеждать" },
+        { german: "verbringen", russian: "Проводить (время)" },
+        { german: "verdienen", russian: "Зарабатывать; заслуживать" },
+        { german: "verbessern", russian: "Улучшать" },
+        { german: "vergleichen", russian: "Сравнивать" },
+        { german: "verlangen", russian: "Требовать, просить" },
+        { german: "vorbereiten", russian: "Готовить(ся)" },
+        { german: "wachsen", russian: "Расти" },
+        { german: "weinen", russian: "Плакать" },
+        { german: "weitergehen", russian: "Идти дальше, продолжаться" },
+        { german: "zuhören", russian: "Слушать (внимательно)" },
+        { german: "zurückkommen", russian: "Возвращаться" },
+        { german: "zusammenarbeiten", russian: "Сотрудничать, работать вместе" },
+        { german: "zusammenfassen", russian: "Обобщать, подводить итог" },
+        { german: "zustimmen", russian: "Соглашаться" },
+      ]
     },
-    { 
-      id: "b1_professions_career_planning_application", 
+    {
+      id: "a2_work_professions",
+      name: "Работа и профессии",
+      fallbackVocabulary: [
+        { german: "Arbeitsplatz", russian: "Рабочее место" },
+        { german: "Beruf", russian: "Профессия" }, // Уже есть в А1, но важно и здесь
+        { german: "Chef", russian: "Шеф, начальник" }, // Добавил сюда
+        { german: "Firma", russian: "Фирма, компания" }, // Уже есть в А1, но важно и здесь
+        { german: "Gehalt", russian: "Зарплата" }, // Добавил сюда
+        { german: "Kollege", russian: "Коллега" }, // Уже есть в А1, но важно и здесь
+        { german: "Termin", russian: "Встреча, запись (деловая)" }, // Уже есть в А1, но важно и здесь
+        { german: "arbeiten", russian: "Работать" }, // Уже есть в А1
+        { german: "anrufen", russian: "Звонить по телефону" }, // Уже есть в А1
+        { german: "beantworten", russian: "Отвечать (на вопрос)" }, // Уже есть в А1
+        { german: "drucken", russian: "Печатать" },
+        { german: "erklären", russian: "Объяснять" }, // Уже есть в А1
+        { german: "informieren", russian: "Информировать, сообщать" },
+        { german: "installieren", russian: "Устанавливать, монтировать" },
+        { german: "korrigieren", russian: "Исправлять, корректировать" },
+        { german: "liefern", russian: "Доставлять, поставлять" },
+        { german: "verkaufen", russian: "Продавать" }, // Уже есть в А1
+      ]
+    },
+    {
+      id: "a2_travel_leisure",
+      name: "Путешествия и отдых",
+      fallbackVocabulary: [
+        { german: "Ausflug", russian: "Экскурсия, поездка" },
+        { german: "Fahrkarte", russian: "Билет (на транспорт)" },
+        { german: "Ferien", russian: "Каникулы, отпуск" },
+        { german: "Flugzeug", russian: "Самолёт" },
+        { german: "Gepäck", russian: "Багаж" }, // Уже есть в А1
+        { german: "Hotel", russian: "Отель, гостиница" },
+        { german: "Koffer", russian: "Чемодан" },
+        { german: "Land", russian: "Страна; сельская местность" },
+        { german: "Meer", russian: "Море" }, // Уже есть в А1
+        { german: "Reise", russian: "Путешествие, поездка" },
+        { german: "Restaurant", russian: "Ресторан" },
+        { german: "Roller", russian: "Самокат; скутер" },
+        { german: "Rucksack", russian: "Рюкзак" },
+        { german: "Strand", russian: "Пляж" }, // Уже есть в А1
+        { german: "Urlaub", russian: "Отпуск" },
+        { german: "Wald", russian: "Лес" },
+        { german: "Wanderung", russian: "Поход, прогулка" }, // Уже есть в А1
+        { german: "Weg", russian: "Путь, дорога" },
+        { german: "Wetter", russian: "Погода" },
+        { german: "buchen", russian: "Бронировать, заказывать" },
+        { german: "fahren", russian: "Ехать, ездить" }, // Уже есть в А1
+        { german: "fliegen", russian: "Летать" }, // Уже есть в А1
+        { german: "reisen", russian: "Путешествовать" }, // Уже есть в А1
+        { german: "reservieren", russian: "Резервировать" }, // Уже есть в А1
+        { german: "übernachten", russian: "Ночевать" }, // Уже есть в А1
+        { german: "wandern", russian: "Ходить в поход" }, // Уже есть в А1
+        { german: "besichtigen", russian: "Осматривать (достопримечательности)" },
+        { german: "fotografieren", russian: "Фотографировать" },
+      ]
+    },
+    {
+      id: "a2_shopping_stores",
+      name: "Покупки и магазины",
+      fallbackVocabulary: [
+        { german: "Angebot", russian: "Предложение (товара, услуги)" }, // Уже есть в А1
+        { german: "Apotheke", russian: "Аптека" },
+        { german: "Geschäft", russian: "Магазин" },
+        { german: "Kasse", russian: "Касса" }, // Уже есть в А0, А1
+        { german: "Kreditkarte", russian: "Кредитная карта" },
+        { german: "Kunde", russian: "Клиент, покупатель" },
+        { german: "Laden", russian: "Магазин, лавка" }, // Добавил сюда
+        { german: "Markt", russian: "Рынок" },
+        { german: "Preis", russian: "Цена" },
+        { german: "Rechnung", russian: "Счёт" }, // Уже есть в А1
+        { german: "Supermarkt", russian: "Супермаркет" }, // Уже есть в А0, А1
+        { german: "bestellen", russian: "Заказывать" }, // Уже есть в А1
+        { german: "bezahlen", russian: "Платить" }, // Уже есть в А1
+        { german: "kaufen", russian: "Покупать" }, // Уже есть в А1
+        { german: "kosten", russian: "Стоить" }, // Уже есть в А1
+        { german: "umtauschen", russian: "Обменивать (товар)" }, // Добавил сюда
+      ]
+    },
+    {
+      id: "a2_health_body",
+      name: "Здоровье и части тела",
+      fallbackVocabulary: [
+        { german: "Arzt", russian: "Врач" },
+        { german: "Auge", russian: "Глаз" }, // Уже есть в А1
+        { german: "Bauch", russian: "Живот" }, // Уже есть в А1
+        { german: "Bein", russian: "Нога (от бедра до стопы)" }, // Уже есть в А1
+        { german: "Brust", russian: "Грудь" }, // Уже есть в А1
+        { german: "Fieber", russian: "Температура, жар" }, // Добавил сюда
+        { german: "Fuß", russian: "Стопа" }, // Уже есть в А1
+        { german: "Gesicht", russian: "Лицо" }, // Уже есть в А1
+        { german: "Haar", russian: "Волос(ы)" }, // Уже есть в А1
+        { german: "Hals", russian: "Шея, горло" }, // Уже есть в А1
+        { german: "Hand", russian: "Кисть руки" }, // Уже есть в А1
+        { german: "Haut", russian: "Кожа" }, // Добавил сюда
+        { german: "Herz", russian: "Сердце" }, // Добавил сюда
+        { german: "Knie", russian: "Колено" }, // Добавил сюда
+        { german: "Kopf", russian: "Голова" }, // Уже есть в А1
+        { german: "Körper", russian: "Тело" },
+        { german: "Krankenhaus", russian: "Больница" },
+        { german: "Krankheit", russian: "Болезнь" }, // Уже есть в А1
+        { german: "Medikament", russian: "Лекарство" }, // Уже есть в А1
+        { german: "Mund", russian: "Рот" },
+        { german: "Nase", russian: "Нос" }, // Уже есть в А1
+        { german: "Ohr", russian: "Ухо" }, // Уже есть в А1
+        { german: "Rücken", russian: "Спина" }, // Уже есть в А1
+        { german: "Schmerz", russian: "Боль" },
+        { german: "Schulter", russian: "Плечо" },
+        { german: "Verletzung", russian: "Травма, повреждение" },
+        { german: "Zahn", russian: "Зуб" }, // Уже есть в А1
+        { german: "fühlen", russian: "Чувствовать (sich fühlen - чувствовать себя)" }, // уже есть
+        { german: "gesund", russian: "Здоровый" }, // уже есть в А1
+        { german: "krank", russian: "Больной" }, // уже есть в А1
+        { german: "operieren", russian: "Оперировать" }, // Добавил сюда
+        { german: "untersuchen", russian: "Обследовать, осматривать (пациента)" }, // Добавил сюда
+        { german: "weh tun", russian: "Болеть, причинять боль" }, // Добавил сюда
+        { german: "behandeln", russian: "Лечить; обращаться (с кем-л.)" },
+      ]
+    },
+    {
+      id: "a2_character_emotions",
+      name: "Характер и эмоции",
+      fallbackVocabulary: [
+        { german: "Angst", russian: "Страх" },
+        { german: "Freude", russian: "Радость" }, // Добавил сюда
+        { german: "Glück", russian: "Счастье, удача" },
+        { german: "Lachen", russian: "Смех" },
+        { german: "Liebe", russian: "Любовь" },
+        { german: "Trauer", russian: "Печаль, скорбь" }, // Добавил сюда
+        { german: "Wut", russian: "Гнев, ярость" }, // Добавил сюда
+        { german: "freundlich", russian: "Дружелюбный" }, // уже есть в А1
+        { german: "glücklich", russian: "Счастливый" }, // уже есть в А1
+        { german: "lustig", russian: "Весёлый" }, // уже есть в А1
+        { german: "nervös", russian: "Нервный" }, // Добавил сюда
+        { german: "nett", russian: "Милый, приятный" }, // уже есть в А1
+        { german: "stolz", russian: "Гордый" }, // уже есть в А1
+        { german: "traurig", russian: "Грустный" }, // уже есть в А1
+        { german: "zufrieden", russian: "Довольный" }, // уже есть в А1
+        { german: "ärgern", russian: "Злить, сердить (sich ärgern - злиться)" },
+        { german: "freuen", russian: "Радовать (sich freuen - радоваться)" },
+        { german: "lachen", russian: "Смеяться" }, // уже есть
+        { german: "lieben", russian: "Любить" }, // уже есть в А0,А1
+        { german: "weinen", russian: "Плакать" },
+      ]
+    },
+    {
+      id: "a2_nature_environment",
+      name: "Природа и окружающая среда",
+      fallbackVocabulary: [
+        { german: "Berg", russian: "Гора" },
+        { german: "Blatt", russian: "Лист (дерева, бумаги)" },
+        { german: "Blume", russian: "Цветок" }, // Уже есть в А1
+        { german: "Feld", russian: "Поле" },
+        { german: "Himmel", russian: "Небо" }, // Уже есть в А1
+        { german: "Katze", russian: "Кошка" },
+        { german: "Luft", russian: "Воздух" }, // Уже есть в А1
+        { german: "Müll", russian: "Мусор" }, // Добавил сюда
+        { german: "Natur", russian: "Природа" },
+        { german: "Pferd", russian: "Лошадь" },
+        { german: "Pflanze", russian: "Растение" },
+        { german: "Schaf", russian: "Овца" },
+        { german: "See", russian: "Озеро (der); море (die)" },
+        { german: "Tier", russian: "Животное" },
+        { german: "Umwelt", russian: "Окружающая среда" }, // Уже есть в А1
+        { german: "Vogel", russian: "Птица" },
+        { german: "Wolke", russian: "Облако" }, // Уже есть в А1
+        { german: "schützen", russian: "Защищать, охранять" }, // Добавил сюда
+      ]
+    },
+    {
+      id: "a2_general_nouns", // Общие существительные, которые не вошли в другие категории A2
+      name: "Общие существительные (A2)",
+      fallbackVocabulary: [
+        { german: "Adresse", russian: "Адрес" },
+        { german: "Anfang", russian: "Начало" },
+        { german: "Antwort", russian: "Ответ" },
+        { german: "Apotheke", russian: "Аптека" },
+        { german: "Aufzug", russian: "Лифт" },
+        { german: "Ausgang", russian: "Выход" },
+        { german: "Ausländer", russian: "Иностранец" },
+        { german: "Bahn", russian: "Железная дорога, путь" },
+        { german: "Baustelle", russian: "Стройка" },
+        { german: "Bedingung", russian: "Условие" },
+        { german: "Beispiel", russian: "Пример" },
+        { german: "Besuch", russian: "Посещение, визит" },
+        { german: "Bild", russian: "Картина, изображение" },
+        { german: "Blick", russian: "Взгляд, вид" },
+        { german: "Boot", russian: "Лодка, судно" },
+        { german: "Buchstabe", russian: "Буква" },
+        { german: "Dame", russian: "Дама, госпожа" },
+        { german: "Dank", russian: "Благодарность" },
+        { german: "Datum", russian: "Дата" },
+        { german: "Decke", russian: "Потолок; одеяло" },
+        { german: "Dienst", russian: "Служба, услуга" },
+        { german: "Diskussion", russian: "Дискуссия, обсуждение" },
+        { german: "Durchschnitt", russian: "Среднее значение, в среднем" },
+        { german: "Ebene", russian: "Уровень, плоскость" },
+        { german: "Ehre", russian: "Честь, почёт" },
+        { german: "Eingang", russian: "Вход" },
+        { german: "Einstellung", russian: "Настройка; отношение; приём на работу" },
+        { german: "Einwohner", russian: "Житель" },
+        { german: "Ende", russian: "Конец" },
+        { german: "Entscheidung", russian: "Решение" },
+        { german: "Erfolg", russian: "Успех" },
+        { german: "Erlebnis", russian: "Переживание, событие" },
+        { german: "Erlaubnis", russian: "Разрешение" },
+        { german: "Erfahrung", russian: "Опыт" },
+        { german: "Familienmitglied", russian: "Член семьи" },
+        { german: "Fehler", russian: "Ошибка" },
+        { german: "Feier", russian: "Праздник, торжество" },
+        { german: "Fernsehen", russian: "Телевидение" },
+        { german: "Fest", russian: "Праздник" },
+        { german: "Flasche", russian: "Бутылка" },
+        { german: "Frage", russian: "Вопрос" },
+        { german: "Führung", russian: "Экскурсия; руководство" },
+        { german: "Geld", russian: "Деньги" },
+        { german: "Gefahr", russian: "Опасность" },
+        { german: "Geheimnis", russian: "Секрет, тайна" },
+        { german: "Gebäude", russian: "Здание" },
+        { german: "Gegenstand", russian: "Предмет, вещь" },
+        { german: "Geldautomat", russian: "Банкомат" },
+        { german: "Gemüse", russian: "Овощи" },
+        { german: "Gericht", russian: "Блюдо; суд" },
+        { german: "Geschwindigkeit", russian: "Скорость" },
+        { german: "Gespräch", russian: "Разговор" },
+        { german: "Gold", russian: "Золото" },
+        { german: "Gruppe", russian: "Группа" },
+        { german: "Grund", russian: "Причина, основание; земля" },
+        { german: "Handy", russian: "Мобильный телефон" },
+        { german: "Hauptstadt", russian: "Столица" },
+        { german: "Hilfe", russian: "Помощь" },
+        { german: "Hochzeit", russian: "Свадьба" },
+        { german: "Hof", russian: "Двор" },
+        { german: "Idee", russian: "Идея" },
+        { german: "Information", russian: "Информация" },
+        { german: "Jugendliche", russian: "Подросток, молодёжь" },
+        { german: "Kampf", russian: "Борьба, бой" },
+        { german: "Karte", russian: "Карта; билет" },
+        { german: "Keller", russian: "Подвал" },
+        { german: "Kinderzimmer", russian: "Детская комната" },
+        { german: "Kino", russian: "Кино, кинотеатр" },
+        { german: "Kirche", russian: "Церковь" },
+        { german: "Kissen", russian: "Подушка" },
+        { german: "Klasse", russian: "Класс" },
+        { german: "Kleidung", russian: "Одежда" },
+        { german: "Knopf", russian: "Пуговица; кнопка" },
+        { german: "Koch", russian: "Повар" },
+        { german: "Kommune", russian: "Коммуна, община" },
+        { german: "Kosten", russian: "Расходы, стоимость" },
+        { german: "Krieg", russian: "Война" },
+        { german: "Kunst", russian: "Искусство" },
+        { german: "Lachen", russian: "Смех" }, // Уже есть
+        { german: "Lampe", russian: "Лампа" },
+        { german: "Leistung", russian: "Достижение, результат; мощность" },
+        { german: "Licht", russian: "Свет" },
+        { german: "Lied", russian: "Песня" },
+        { german: "Lösung", russian: "Решение" },
+        { german: "Mädchen", russian: "Девочка" },
+        { german: "Maler", russian: "Художник, маляр" },
+        { german: "Maschine", russian: "Машина, механизм" },
+        { german: "Messer", russian: "Нож" },
+        { german: "Meter", russian: "Метр" },
+        { german: "Miete", russian: "Арендная плата" },
+        { german: "Mitglied", russian: "Член (организации)" },
+        { german: "Moment", russian: "Момент, мгновение" },
+        { german: "Nachbar", russian: "Сосед" },
+        { german: "Nachricht", russian: "Новость, сообщение" },
+        { german: "Nebel", russian: "Туман" },
+        { german: "Niveau", russian: "Уровень" },
+        { german: "Obst", russian: "Фрукты" },
+        { german: "Ort", russian: "Место; населённый пункт" },
+        { german: "Paar", russian: "Пара; несколько" },
+        { german: "Park", russian: "Парк" },
+        { german: "Polizei", russian: "Полиция" },
+        { german: "Post", russian: "Почта" },
+        { german: "Problem", russian: "Проблема" },
+        { german: "Programm", russian: "Программа" },
+        { german: "Prüfung", russian: "Экзамен, проверка" },
+        { german: "Qualität", russian: "Качество" },
+        { german: "Radio", russian: "Радио" },
+        { german: "Rhythmus", russian: "Ритм" },
+        { german: "Richtung", russian: "Направление" },
+        { german: "Rock", russian: "Юбка" },
+        { german: "Sache", russian: "Вещь, дело" },
+        { german: "Saison", russian: "Сезон" },
+        { german: "Schlüssel", russian: "Ключ" },
+        { german: "Schrank", russian: "Шкаф" },
+        { german: "Seite", russian: "Страница; сторона" },
+        { german: "Sekunde", russian: "Секунда" },
+        { german: "Sonne", russian: "Солнце" },
+        { german: "Spiel", russian: "Игра" },
+        { german: "Sport", russian: "Спорт" },
+        { german: "Stadt", russian: "Город" },
+        { german: "Stelle", russian: "Место; должность" },
+        { german: "Stock", russian: "Этаж; палка" },
+        { german: "Stuhl", russian: "Стул" },
+        { german: "Tasche", russian: "Сумка; карман" },
+        { german: "Telefon", russian: "Телефон" },
+        { german: "Theater", russian: "Театр" },
+        { german: "Tor", russian: "Ворота; гол" },
+        { german: "Traum", russian: "Сон; мечта" },
+        { german: "Treppe", russian: "Лестница" },
+        { german: "Trinken", russian: "Напиток, питьё" },
+        { german: "Tür", russian: "Дверь" },
+        { german: "Umgebung", russian: "Окрестности, окружение" },
+        { german: "Unfall", russian: "Несчастный случай, авария" },
+        { german: "Verlag", russian: "Издательство" },
+        { german: "Versicherung", russian: "Страховка, страхование" },
+        { german: "Wand", russian: "Стена" },
+        { german: "Werkzeug", russian: "Инструмент" },
+        { german: "Wohnung", russian: "Квартира" },
+        { german: "Wort", russian: "Слово" },
+        { german: "Zahl", russian: "Число, цифра" },
+        { german: "Zeit", russian: "Время" },
+        { german: "Zimmer", russian: "Комната" },
+        { german: "Zug", russian: "Поезд" },
+        { german: "Zucker", russian: "Сахар" },
+        { german: "Backofen", russian: "Духовка" },
+        { german: "Badezimmer", russian: "Ванная комната" },
+        { german: "Bahnsteig", russian: "Платформа (на вокзале)" },
+        { german: "Balkon", russian: "Балкон" },
+        { german: "Bank", russian: "Банк; скамейка" },
+        { german: "Bäcker", russian: "Пекарь" },
+        { german: "Bauernhof", russian: "Ферма, крестьянский двор" },
+        { german: "Bedienung", russian: "Обслуживание; официант(ка)" },
+        { german: "Bedienungsanleitung", russian: "Инструкция по эксплуатации" },
+        { german: "Beginn", russian: "Начало" },
+        { german: "Behörde", russian: "Учреждение, ведомство, орган власти" },
+        { german: "Bier", russian: "Пиво" },
+        { german: "Brücke", russian: "Мост" },
+        { german: "Buch", russian: "Книга" },
+        { german: "Buchhandlung", russian: "Книжный магазин" },
+        { german: "Bus", russian: "Автобус" },
+        { german: "Butter", russian: "Сливочное масло" },
+        { german: "Deo", russian: "Дезодорант" },
+        { german: "Deutschkurs", russian: "Курс немецкого языка" },
+        { german: "Dienstag", russian: "Вторник" },
+        { german: "Dirigent", russian: "Дирижёр" },
+        { german: "Dorf", russian: "Деревня, село" },
+        { german: "Ecke", russian: "Угол" },
+        { german: "Einkaufswagen", russian: "Тележка для покупок" },
+        { german: "Eis", russian: "Мороженое; лёд" },
+        { german: "Email-Adresse", russian: "Адрес электронной почты" },
+        { german: "Engel", russian: "Ангел" },
+        { german: "Empfang", russian: "Приём; ресепшн" },
+        { german: "Ergebnis", russian: "Результат" },
+        { german: "Erklärung", russian: "Объяснение; заявление" },
+        { german: "Esszimmer", russian: "Столовая (комната)" },
+        { german: "Farbe", russian: "Цвет; краска" },
+        { german: "Fastnacht", russian: "Масленица, карнавал" },
+        { german: "Fenster", russian: "Окно" },
+        { german: "Ferienwohnung", russian: "Квартира для отпуска (сдаваемая)" },
+        { german: "Festnetz", russian: "Стационарный телефон" },
+        { german: "Flug", russian: "Полёт, рейс" },
+        { german: "Flughafen", russian: "Аэропорт" },
+        { german: "Flur", russian: "Коридор, прихожая" },
+        { german: "Freitag", russian: "Пятница" },
+        { german: "Garten", russian: "Сад" },
+        { german: "Geburtstag", russian: "День рождения" },
+        { german: "Glas", russian: "Стакан; стекло" },
+        { german: "Grundschule", russian: "Начальная школа" },
+        { german: "Guten Tag", russian: "Добрый день" },
+        { german: "Gymnasium", russian: "Гимназия (школа)" },
+        { german: "Hafen", russian: "Порт, гавань" },
+        { german: "Hammer", russian: "Молоток" },
+        { german: "Haustier", russian: "Домашнее животное" },
+        { german: "Heizung", russian: "Отопление" },
+        { german: "Heimat", russian: "Родина" },
+        { german: "Herbst", russian: "Осень" },
+        { german: "Herd", russian: "Плита (кухонная)" },
+        { german: "Hose", russian: "Брюки" },
+        { german: "Hunger", russian: "Голод" },
+        { german: "Jacke", russian: "Куртка" },
+        { german: "Junge", russian: "Мальчик" },
+        { german: "Kaffee", russian: "Кофе" },
+        { german: "Käse", russian: "Сыр" },
+        { german: "Kollegen", russian: "Коллеги" },
+        { german: "König", russian: "Король" },
+        { german: "Krankenwagen", russian: "Машина скорой помощи" }, // Добавил сюда
+        { german: "Kreuzung", russian: "Перекрёсток" },
+        { german: "Kuchen", russian: "Пирог, кекс" },
+        { german: "Kultur", russian: "Культура" },
+        { german: "Landschaft", russian: "Ландшафт, пейзаж" },
+        { german: "Lärm", russian: "Шум" },
+        { german: "Lehrer", russian: "Учитель" },
+        { german: "Leitung", russian: "Руководство; провод" },
+        { german: "Lieblingsfarbe", russian: "Любимый цвет" },
+        { german: "Linie", russian: "Линия (автобуса, метро)" },
+        { german: "Löffel", russian: "Ложка" },
+        { german: "Mai", russian: "Май" },
+        { german: "Mannschaft", russian: "Команда (спортивная)" },
+        { german: "Material", russian: "Материал" },
+        { german: "Meinung", russian: "Мнение" },
+        { german: "Mittagessen", russian: "Обед" },
+        { german: "Möbel", russian: "Мебель" },
+        { german: "Monat", russian: "Месяц" },
+        { german: "Morgen", russian: "Утро; завтра" },
+        { german: "Musik", russian: "Музыка" },
+        { german: "Nacht", russian: "Ночь" },
+        { german: "Nadel", russian: "Игла; стрелка (часов)" },
+        { german: "Oktober", russian: "Октябрь" },
+        { german: "Ofen", russian: "Печь, духовка" },
+        { german: "Pausenbrot", russian: "Бутерброд (на перекус)" },
+        { german: "Postkarte", russian: "Почтовая открытка" },
+        { german: "Regenschirm", russian: "Зонт" }, // Добавил сюда
+        { german: "Samstag", russian: "Суббота" },
+        { german: "Schauspieler", russian: "Актёр" },
+        { german: "Schokolade", russian: "Шоколад" },
+        { german: "Schulweg", russian: "Дорога в школу" },
+        { german: "Schwimmbad", russian: "Бассейн" },
+        { german: "Schwester", russian: "Сестра" },
+        { german: "Seife", russian: "Мыло" },
+        { german: "Sommer", russian: "Лето" },
+        { german: "Sofa", russian: "Диван" },
+        { german: "Stift", russian: "Карандаш, ручка" },
+        { german: "Strom", russian: "Электричество; поток" },
+        { german: "Student", russian: "Студент" },
+        { german: "Suppe", russian: "Суп" },
+        { german: "Tasse", russian: "Чашка" },
+        { german: "Taxi", russian: "Такси" },
+        { german: "Teppich", russian: "Ковёр" },
+        { german: "Tisch", russian: "Стол" },
+        { german: "Toilette", russian: "Туалет" },
+        { german: "Tomate", russian: "Помидор" },
+        { german: "Torte", russian: "Торт (кремовый)" },
+        { german: "T-Shirt", russian: "Футболка" },
+        { german: "U-Bahn", russian: "Метро" },
+        { german: "Universität", russian: "Университет" },
+        { german: "Verkäufer", russian: "Продавец" },
+        { german: "Vergangenheit", russian: "Прошлое" },
+        { german: "Verspätung", russian: "Опоздание" },
+        { german: "Zeitung", russian: "Газета" },
+        { german: "Zoo", russian: "Зоопарк" },
+      ]
+    },
+    {
+        id: "a2_verbs_actions_general",
+        name: "Глаголы и действия (A2)",
+        fallbackVocabulary: [
+            { german: "arbeiten", russian: "Работать" },
+            { german: "ärgern", russian: "Злить, сердить (sich ärgern - злиться)" },
+            { german: "aufräumen", russian: "Убирать, прибираться" },
+            { german: "ausruhen", russian: "Отдыхать (sich ausruhen - отдыхать)" },
+            { german: "aussteigen", russian: "Выходить (из транспорта)" },
+            { german: "backen", russian: "Печь" },
+            { german: "bauen", russian: "Строить" },
+            { german: "beachten", russian: "Обращать внимание, соблюдать" },
+            { german: "bedecken", russian: "Покрывать, накрывать" },
+            { german: "bedienen", russian: "Обслуживать" },
+            { german: "beeilen", russian: "Торопиться, спешить (sich beeilen - торопиться)" },
+            { german: "begegnen", russian: "Встречать (случайно), попадаться навстречу (+ Dativ)" },
+            { german: "begrüßen", russian: "Приветствовать, здороваться" },
+            { german: "behandeln", russian: "Лечить; обращаться (с кем-л.), рассматривать (вопрос)" },
+            { german: "behaupten", russian: "Утверждать" },
+            { german: "beißen", russian: "Кусать" },
+            { german: "berichten", russian: "Сообщать, докладывать (über + A)" },
+            { german: "besichtigen", russian: "Осматривать (достопримечательности)" },
+            { german: "besitzen", russian: "Владеть, обладать" },
+            { german: "betreten", russian: "Входить, вступать (куда-л.)" },
+            { german: "bewundern", russian: "Восхищаться (чем-л.)" },
+            { german: "binden", russian: "Связывать, завязывать" },
+            { german: "buchen", russian: "Бронировать, заказывать (билет, номер)" },
+            { german: "danken", russian: "Благодарить (+ Dativ, für + A)" },
+            { german: "darstellen", russian: "Изображать, представлять собой" },
+            { german: "diskutieren", russian: "Обсуждать, дискутировать (über + A)" },
+            { german: "drucken", russian: "Печатать" },
+            { german: "drehen", russian: "Крутить, поворачивать; снимать (фильм)" },
+            { german: "duschen", russian: "Принимать душ (sich duschen - мыться под душем)" },
+            { german: "einladen", russian: "Приглашать (zu + D)" },
+            { german: "einziehen", russian: "Въезжать (в квартиру)" },
+            { german: "entfernen", russian: "Удалять, устранять" },
+            { german: "entwickeln", russian: "Развивать(ся)" },
+            { german: "entscheiden", russian: "Решать, принимать решение (sich entscheiden für/gegen + A)" },
+            { german: "erklären", russian: "Объяснять" },
+            { german: "erlauben", russian: "Разрешать" },
+            { german: "erleben", russian: "Переживать, испытывать (на собственном опыте)" },
+            { german: "ermutigen", russian: "Ободрять, поощрять" },
+            { german: "erinnern", russian: "Помнить, напоминать (sich erinnern an + A - вспоминать о)" },
+            { german: "erkennen", russian: "Узнавать, распознавать" },
+            { german: "ersetzen", russian: "Заменять, возмещать" },
+            { german: "erwarten", russian: "Ожидать" },
+            { german: "erzählen", russian: "Рассказывать (von + D / über + A)" },
+            { german: "erfahren", russian: "Узнавать (новое); испытывать" },
+            { german: "erhalten", russian: "Получать (формально)" },
+            { german: "festhalten", russian: "Держать(ся) крепко; задерживать; записывать" },
+            { german: "festlegen", russian: "Устанавливать, определять (правила, сроки)" },
+            { german: "finden", russian: "Находить; считать (каким-л.)" },
+            { german: "folgen", russian: "Следовать (+ Dativ)" },
+            { german: "fotografieren", russian: "Фотографировать" },
+            { german: "fragen", russian: "Спрашивать (nach + D)" },
+            { german: "freuen", russian: "Радовать (sich freuen auf + A - радоваться предстоящему; sich freuen über + A - радоваться свершившемуся)" },
+            { german: "führen", russian: "Вести, руководить; проводить (экскурсию)" },
+            { german: "fühlen", russian: "Чувствовать (sich fühlen - чувствовать себя)" },
+            { german: "funktionieren", russian: "Функционировать, работать (о механизме)" },
+            { german: "geben", russian: "Давать" },
+            { german: "gefallen", russian: "Нравиться (+ Dativ)" },
+            { german: "gewinnen", russian: "Выигрывать, побеждать" },
+            { german: "glauben", russian: "Верить, полагать (an + A)" },
+            { german: "graben", russian: "Копать" },
+            { german: "halten", russian: "Держать; останавливаться; считать (каким-л.)" },
+            { german: "handeln", russian: "Действовать; торговать (mit + D); речь идет (es handelt sich um + A)" },
+            { german: "hängen", russian: "Висеть (Perfekt: hat gehangen); вешать (Perfekt: hat gehängt)" },
+            { german: "heiraten", russian: "Жениться, выходить замуж" },
+            { german: "helfen", russian: "Помогать (+ Dativ, bei + D)" },
+            { german: "hören", russian: "Слышать, слушать (auf + A)" },
+            { german: "informieren", russian: "Информировать, сообщать (sich informieren über + A - узнавать о)" },
+            { german: "installieren", russian: "Устанавливать, монтировать" },
+            { german: "interessiert sein", russian: "Быть заинтересованным (an + D)" },
+            { german: "investieren", russian: "Инвестировать, вкладывать (in + A)" },
+            { german: "joggen", russian: "Бегать трусцой" },
+            { german: "kaufen", russian: "Покупать" },
+            { german: "kennen", russian: "Знать (быть знакомым с кем-л., чем-л.)" },
+            { german: "korrigieren", russian: "Исправлять, корректировать" },
+            { german: "küssen", russian: "Целовать (sich küssen - целоваться)" },
+            { german: "lachen", russian: "Смеяться (über + A)" },
+            { german: "laufen", russian: "Бегать; ходить (быстро)" },
+            { german: "lernen", russian: "Учить, учиться" },
+            { german: "liefern", russian: "Доставлять, поставлять" },
+            { german: "loben", russian: "Хвалить" },
+            { german: "mieten", russian: "Арендовать, снимать (жилье)" },
+            { german: "nehmen", russian: "Брать" },
+            { german: "nennen", russian: "Называть" },
+            { german: "öffnen", russian: "Открывать" },
+            { german: "ordnen", russian: "Приводить в порядок, упорядочивать, сортировать" },
+            { german: "organisieren", russian: "Организовывать" },
+            { german: "packen", russian: "Паковать, упаковывать" },
+            { german: "planen", russian: "Планировать" },
+            { german: "probieren", russian: "Пробовать (еду, одежду)" },
+            { german: "putzen", russian: "Чистить, убирать" },
+            { german: "reden", russian: "Говорить, беседовать (mit + D, über + A)" },
+            { german: "regnen", russian: "Идти (о дожде) (es regnet)" },
+            { german: "reisen", russian: "Путешествовать" },
+            { german: "reparieren", russian: "Ремонтировать, чинить" },
+            { german: "reservieren", russian: "Резервировать, бронировать" },
+            { german: "rufen", russian: "Звать, кричать" },
+            { german: "sammeln", russian: "Собирать, коллекционировать" },
+            { german: "sagen", russian: "Говорить, сказать" },
+            { german: "schlafen", russian: "Спать" },
+            { german: "schließen", russian: "Закрывать" },
+            { german: "schmecken", russian: "Быть на вкус; нравиться (о еде) (+ Dativ)" },
+            { german: "schreiben", russian: "Писать (an + A, über + A)" },
+            { german: "schwimmen", russian: "Плавать" },
+            { german: "sehen", russian: "Видеть, смотреть" },
+            { german: "senden", russian: "Отправлять, посылать; передавать (по радио, ТВ)" },
+            { german: "setzen", russian: "Сажать, ставить (sich setzen - садиться)" },
+            { german: "singen", russian: "Петь" },
+            { german: "sitzen", russian: "Сидеть" },
+            { german: "sollen", russian: "Быть должным (совет, моральное обязательство)" },
+            { german: "spielen", russian: "Играть" },
+            { german: "sprechen", russian: "Говорить, разговаривать (mit + D, über + A)" },
+            { german: "springen", russian: "Прыгать" },
+            { german: "starten", russian: "Начинать, стартовать; запускать" },
+            { german: "sterben", russian: "Умирать (an + D)" },
+            { german: "stimmen", russian: "Соответствовать действительности, быть верным; голосовать; настраивать (инструмент)" },
+            { german: "studieren", russian: "Учиться (в вузе), изучать (предмет)" },
+            { german: "suchen", russian: "Искать (nach + D)" },
+            { german: "tanzen", russian: "Танцевать" },
+            { german: "teilen", russian: "Делить, разделять (mit + D)" },
+            { german: "teilnehmen", russian: "Участвовать (an + D)" },
+            { german: "telefonieren", russian: "Говорить по телефону (mit + D)" },
+            { german: "tragen", russian: "Носить (одежду); нести" },
+            { german: "treffen", russian: "Встречать(ся) (sich treffen mit + D)" },
+            { german: "trinken", russian: "Пить" },
+            { german: "tun", russian: "Делать, поступать" },
+            { german: "übernachten", russian: "Ночевать, переночевать" },
+            { german: "überraschen", russian: "Удивлять, делать сюрприз" },
+            { german: "überzeugen", russian: "Убеждать (von + D)" },
+            { german: "verbringen", russian: "Проводить (время)" },
+            { german: "verdienen", russian: "Зарабатывать; заслуживать" },
+            { german: "verbessern", russian: "Улучшать" },
+            { german: "verbieten", russian: "Запрещать" },
+            { german: "vergessen", russian: "Забывать" },
+            { german: "vergleichen", russian: "Сравнивать (mit + D)" },
+            { german: "verkaufen", russian: "Продавать" },
+            { german: "verlangen", russian: "Требовать, просить (von + D)" },
+            { german: "verlieren", russian: "Терять, проигрывать" },
+            { german: "verstehen", russian: "Понимать" },
+            { german: "vorbereiten", russian: "Готовить(ся) (sich vorbereiten auf + A)" },
+            { german: "vorstellen", russian: "Представлять (кого-л., что-л.); представлять себе (sich vorstellen + A)" },
+            { german: "wachsen", russian: "Расти" },
+            { german: "warten", russian: "Ждать (auf + A)" },
+            { german: "waschen", russian: "Мыть, стирать (sich waschen - умываться)" },
+            { german: "weinen", russian: "Плакать" },
+            { german: "weitergehen", russian: "Идти дальше, продолжаться" },
+            { german: "wechseln", russian: "Менять, обменивать" },
+            { german: "werfen", russian: "Бросать, кидать" },
+            { german: "wohnen", russian: "Жить, проживать" },
+            { german: "wünschen", russian: "Желать (sich wünschen - желать себе)" },
+            { german: "zahlen", russian: "Платить (für + A)" },
+            { german: "zeigen", russian: "Показывать" },
+            { german: "ziehen", russian: "Тянуть; переезжать (umziehen - переезжать)" },
+            { german: "zuhören", russian: "Слушать (внимательно) (+ Dativ)" },
+            { german: "zurückkommen", russian: "Возвращаться" },
+            { german: "zusammenarbeiten", russian: "Сотрудничать, работать вместе (mit + D)" },
+            { german: "zusammenfassen", russian: "Обобщать, подводить итог" },
+            { german: "zustimmen", russian: "Соглашаться (+ Dativ)" },
+        ]
+    },
+  ],
+  B1: [
+    {
+      id: "b1_education_studies_systems",
+      name: "Образование и учёба",
+      fallbackVocabulary: []
+    },
+    {
+      id: "b1_professions_career_planning_application",
       name: "Профессии и карьера",
       fallbackVocabulary: []
     },
-    { 
-      id: "b1_society_interpersonal_relations_issues", 
+    {
+      id: "b1_society_interpersonal_relations_issues",
       name: "Общество и межличностные отношения",
       fallbackVocabulary: []
     },
-    { 
-      id: "b1_media_technology_internet_impact", 
+    {
+      id: "b1_media_technology_internet_impact",
       name: "Медиа и технологии",
       fallbackVocabulary: []
     },
-    { 
-      id: "b1_ecology_health_lifestyle_choices", 
+    {
+      id: "b1_ecology_health_lifestyle_choices",
       name: "Экология и здоровье",
       fallbackVocabulary: []
     },
-    { 
-      id: "b1_travel_intercultural_communication_experiences", 
+    {
+      id: "b1_travel_intercultural_communication_experiences",
       name: "Путешествия и межкультурная коммуникация",
       fallbackVocabulary: []
     },
-    { 
-      id: "b1_events_incidents_reporting", 
+    {
+      id: "b1_events_incidents_reporting",
       name: "События и происшествия",
       fallbackVocabulary: []
     }
   ],
   B2: [
-    { 
-      id: "b2_politics_economics_global_systems", 
+    {
+      id: "b2_politics_economics_global_systems",
       name: "Политика и экономика",
       fallbackVocabulary: []
     },
-    { 
-      id: "b2_science_technology_innovations_discussion", 
+    {
+      id: "b2_science_technology_innovations_discussion",
       name: "Наука и техника",
       fallbackVocabulary: []
     },
-    { 
-      id: "b2_culture_art_literature_analysis", 
+    {
+      id: "b2_culture_art_literature_analysis",
       name: "Культура и искусство",
       fallbackVocabulary: []
     },
-    { 
-      id: "b2_work_career_advanced_strategies", 
-      name: "Работа и карьера (B2)", // Уточнил, чтобы не путать с B1
+    {
+      id: "b2_work_career_advanced_strategies",
+      name: "Работа и карьера (B2)",
       fallbackVocabulary: []
     },
-    { 
-      id: "b2_social_issues_discussion_solutions", 
+    {
+      id: "b2_social_issues_discussion_solutions",
       name: "Социальные проблемы",
       fallbackVocabulary: []
     }
   ],
   C1: [
-    { 
-      id: "c1_philosophy_psychology_ethics_concepts", 
+    {
+      id: "c1_philosophy_psychology_ethics_concepts",
       name: "Философия и психология",
       fallbackVocabulary: []
     },
-    { 
-      id: "c1_political_debates_globalization_analysis", 
-      name: "Политические дебаты и глобализация", // Уточнил
+    {
+      id: "c1_political_debates_globalization_analysis",
+      name: "Политические дебаты и глобализация",
       fallbackVocabulary: []
     },
-    { 
-      id: "c1_science_global_challenges_ai_implications", 
-      name: "Наука, глобальные вызовы и ИИ", // Уточнил
+    {
+      id: "c1_science_global_challenges_ai_implications",
+      name: "Наука, глобальные вызовы и ИИ",
       fallbackVocabulary: []
     },
-    { 
-      id: "c1_academic_professional_lexis_discourse", 
+    {
+      id: "c1_academic_professional_lexis_discourse",
       name: "Академическая и профессиональная лексика",
       fallbackVocabulary: []
     }
   ],
   C2: [
-    { 
-      id: "c2_literary_publicistic_language_nuances", 
+    {
+      id: "c2_literary_publicistic_language_nuances",
       name: "Литературный и публицистический язык",
       fallbackVocabulary: []
     },
-    { 
-      id: "c2_legal_scientific_style_application", 
+    {
+      id: "c2_legal_scientific_style_application",
       name: "Юридический и научный стиль",
       fallbackVocabulary: []
     },
-    { 
-      id: "c2_formal_informal_registers_diplomacy_discourse", 
-      name: "Формальный и неформальный регистры, дипломатия", // Уточнил
+    {
+      id: "c2_formal_informal_registers_diplomacy_discourse",
+      name: "Формальный и неформальный регистры, дипломатия",
       fallbackVocabulary: []
     },
-    { 
-      id: "c2_translation_interpretation_cultural_nuances_practice", 
-      name: "Перевод, интерпретация и культурные нюансы", // Уточнил
+    {
+      id: "c2_translation_interpretation_cultural_nuances_practice",
+      name: "Перевод, интерпретация и культурные нюансы",
       fallbackVocabulary: []
     }
   ],
@@ -1964,7 +2637,5 @@ export const MANDATORY_GRAMMAR_TOPICS: Record<LanguageLevel, string[]> = {
       "Сложные случаи предложного управления и рекций глаголов"
     ],
 };
-
-    
 
     
