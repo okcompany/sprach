@@ -272,180 +272,198 @@ export interface DefaultTopicDefinition {
 // Default Topics (Considered "Mandatory Lexical Topics")
 export const DEFAULT_TOPICS: Record<LanguageLevel, DefaultTopicDefinition[]> = {
   A0: [
-    {
-      id: "a0_greetings_farewells", name: "Основные приветствия и прощания",
+    { id: "a0_alphabet_pronunciation", name: "Алфавит, произношение, буквы", fallbackVocabulary: [] },
+    { 
+      id: "a0_greetings_farewells", 
+      name: "Приветствие и прощание", 
       fallbackVocabulary: [
-        { german: "Hallo", russian: "Привет", exampleSentence: "Hallo, wie geht's?" },
-        { german: "Guten Morgen", russian: "Доброе утро", exampleSentence: "Guten Morgen, Herr Schmidt." },
-        { german: "Guten Tag", russian: "Добрый день", exampleSentence: "Guten Tag, Frau Meier." },
-        { german: "Guten Abend", russian: "Добрый вечер", exampleSentence: "Guten Abend zusammen." },
-        { german: "Tschüss", russian: "Пока", exampleSentence: "Tschüss, bis bald!" },
-        { german: "Auf Wiedersehen", russian: "До свидания", exampleSentence: "Auf Wiedersehen, meine Damen und Herren." },
-        { german: "Bitte", russian: "Пожалуйста / Прошу", exampleSentence: "Kann ich bitte Wasser haben?" },
-        { german: "Danke", russian: "Спасибо", exampleSentence: "Danke für Ihre Hilfe." },
-        { german: "Ja", russian: "Да", exampleSentence: "Ja, das stimmt." },
-        { german: "Nein", russian: "Нет", exampleSentence: "Nein, das ist nicht richtig." },
-      ]
+        { german: "Hallo", russian: "привет" },
+        { german: "Tschüss", russian: "пока" },
+        { german: "Guten Morgen", russian: "доброе утро" },
+        { german: "Guten Tag", russian: "добрый день" },
+        { german: "Guten Abend", russian: "добрый вечер" },
+        { german: "Gute Nacht", russian: "спокойной ночи" },
+        { german: "Wie geht's?", russian: "как дела?" },
+        { german: "Danke", russian: "спасибо" },
+        { german: "Bitte", russian: "пожалуйста" }
+      ] 
     },
-    {
-      id: "a0_numbers_dates", name: "Числа и даты",
+    { id: "a0_simple_politeness_phrases", name: "Простые фразы вежливости (bitte, danke, Entschuldigung)", fallbackVocabulary: [] },
+    { 
+      id: "a0_personal_data", 
+      name: "Личные данные", 
       fallbackVocabulary: [
-        { german: "eins", russian: "один", exampleSentence: "Ich habe eins." },
-        { german: "zwei", russian: "два", exampleSentence: "Zwei Äpfel, bitte." },
-        { german: "drei", russian: "три", exampleSentence: "Drei Kinder spielen." },
-        { german: "vier", russian: "четыре" },
-        { german: "fünf", russian: "пять" },
-        { german: "Montag", russian: "понедельник", exampleSentence: "Heute ist Montag." },
+        { german: "Ich", russian: "я" },
+        { german: "Du", russian: "ты" },
+        { german: "Er", russian: "он" },
+        { german: "Sie", russian: "она" },
+        { german: "Es", russian: "оно" },
+        { german: "Wir", russian: "мы" },
+        { german: "Ihr", russian: "вы (множественное число)" },
+        { german: "Sie", russian: "они / Вы (вежливая форма)" },
+        { german: "Name", russian: "имя" },
+        { german: "Alter", russian: "возраст" },
+        { german: "Adresse", russian: "адрес" },
+        { german: "Telefonnummer", russian: "номер телефона" }
+      ] 
+    },
+    { 
+      id: "a0_family", 
+      name: "Семья", 
+      fallbackVocabulary: [
+        { german: "Mutter", russian: "мать" },
+        { german: "Vater", russian: "отец" },
+        { german: "Eltern", russian: "родители" },
+        { german: "Bruder", russian: "брат" },
+        { german: "Schwester", russian: "сестра" },
+        { german: "Kind", russian: "ребёнок" },
+        { german: "Familie", russian: "семья" }
+      ] 
+    },
+    { 
+      id: "a0_home_living", 
+      name: "Дом и жильё", 
+      fallbackVocabulary: [
+        { german: "Haus", russian: "дом" },
+        { german: "Wohnung", russian: "квартира" },
+        { german: "Zimmer", russian: "комната" },
+        { german: "Küche", russian: "кухня" },
+        { german: "Bad", russian: "ванная" },
+        { german: "Bett", russian: "кровать" },
+        { german: "Tisch", russian: "стол" },
+        { german: "Stuhl", russian: "стул" }
+      ] 
+    },
+    { 
+      id: "a0_shopping_stores", 
+      name: "Покупки и магазины", 
+      fallbackVocabulary: [
+        { german: "Supermarkt", russian: "супермаркет" },
+        { german: "Bäckerei", russian: "пекарня" },
+        { german: "Preis", russian: "цена" },
+        { german: "Euro", russian: "евро" },
+        { german: "Cent", russian: "цент" },
+        { german: "Kasse", russian: "касса" },
+        { german: "Einkaufen", russian: "делать покупки" }
+      ] 
+    },
+    { 
+      id: "a0_food_drinks", 
+      name: "Еда и напитки", 
+      fallbackVocabulary: [
+        { german: "Wasser", russian: "вода" },
+        { german: "Brot", russian: "хлеб" },
+        { german: "Milch", russian: "молоко" },
+        { german: "Käse", russian: "сыр" },
+        { german: "Apfel", russian: "яблоко" },
+        { german: "Banane", russian: "банан" },
+        { german: "Fleisch", russian: "мясо" },
+        { german: "Fisch", russian: "рыба" }
+      ] 
+    },
+    { 
+      id: "a0_time_calendar", 
+      name: "Время и календарь", 
+      fallbackVocabulary: [
+        { german: "Uhr", russian: "часы" },
+        { german: "Minute", russian: "минута" },
+        { german: "Stunde", russian: "час" },
+        { german: "Tag", russian: "день" },
+        { german: "Woche", russian: "неделя" },
+        { german: "Monat", russian: "месяц" },
+        { german: "Jahr", russian: "год" },
+        { german: "Montag", russian: "понедельник" },
         { german: "Dienstag", russian: "вторник" },
-        { german: "Januar", russian: "январь", exampleSentence: "Im Januar ist es kalt." },
-        { german: "Februar", russian: "февраль" },
-      ]
+        { german: "Mittwoch", russian: "среда" },
+        { german: "Donnerstag", russian: "четверг" },
+        { german: "Freitag", russian: "пятница" },
+        { german: "Samstag", russian: "суббота" },
+        { german: "Sonntag", russian: "воскресенье" }
+      ] 
     },
-    {
-      id: "a0_family_friends", name: "Семья и друзья",
+    { id: "a0_numbers_0_100", name: "Числа (0–100)", fallbackVocabulary: [] },
+    { 
+      id: "a0_colors", 
+      name: "Цвета", 
       fallbackVocabulary: [
-        { german: "die Familie", russian: "семья", exampleSentence: "Das ist meine Familie." },
-        { german: "die Mutter", russian: "мама", exampleSentence: "Meine Mutter kocht." },
-        { german: "der Vater", russian: "папа", exampleSentence: "Mein Vater liest." },
-        { german: "der Bruder", russian: "брат", exampleSentence: "Ich habe einen Bruder." },
-        { german: "die Schwester", russian: "сестра", exampleSentence: "Meine Schwester singt." },
-        { german: "der Freund", russian: "друг (м.р.)", exampleSentence: "Das ist mein Freund." },
-        { german: "die Freundin", russian: "подруга", exampleSentence: "Sie ist meine Freundin." },
-      ]
+        { german: "Rot", russian: "красный" },
+        { german: "Blau", russian: "синий" },
+        { german: "Grün", russian: "зелёный" },
+        { german: "Gelb", russian: "жёлтый" },
+        { german: "Schwarz", russian: "чёрный" },
+        { german: "Weiß", russian: "белый" },
+        { german: "Braun", russian: "коричневый" },
+        { german: "Grau", russian: "серый" }
+      ] 
     },
-    {
-      id: "a0_colors", name: "Цвета",
+    { 
+      id: "a0_actions_verbs", 
+      name: "Действия (глаголы)", 
       fallbackVocabulary: [
-        { german: "rot", russian: "красный", exampleSentence: "Der Apfel ist rot." },
-        { german: "blau", russian: "синий", exampleSentence: "Der Himmel ist blau." },
-        { german: "grün", russian: "зеленый", exampleSentence: "Das Gras ist grün." },
-        { german: "gelb", russian: "желтый", exampleSentence: "Die Sonne ist gelb." },
-        { german: "schwarz", russian: "черный", exampleSentence: "Die Katze ist schwarz." },
-        { german: "weiß", russian: "белый", exampleSentence: "Der Schnee ist weiß." },
-        { german: "die Farbe", russian: "цвет", exampleSentence: "Was ist deine Lieblingsfarbe?" },
-      ]
+        { german: "Sein", russian: "быть" },
+        { german: "Haben", russian: "иметь" },
+        { german: "Gehen", russian: "идти" },
+        { german: "Kommen", russian: "приходить" },
+        { german: "Machen", russian: "делать" },
+        { german: "Sprechen", russian: "говорить" },
+        { german: "Lesen", russian: "читать" },
+        { german: "Schreiben", russian: "писать" }
+      ] 
     },
-    {
-      id: "a0_body_parts", name: "Части тела",
-      fallbackVocabulary: [
-        { german: "der Kopf", russian: "голова", exampleSentence: "Das ist mein Kopf." },
-        { german: "der Arm", russian: "рука (от плеча до кисти)", exampleSentence: "Mein Arm tut weh." },
-        { german: "das Bein", russian: "нога (от бедра до стопы)", exampleSentence: "Ich habe zwei Beine." },
-        { german: "die Hand", russian: "рука (кисть)", exampleSentence: "Gib mir deine Hand." },
-        { german: "der Fuß", russian: "стопа", exampleSentence: "Mein Fuß ist groß." },
-        { german: "das Auge", russian: "глаз", exampleSentence: "Blaue Augen." },
-        { german: "die Nase", russian: "нос", exampleSentence: "Eine kleine Nase." },
-      ]
-    },
-    {
-      id: "a0_home_objects", name: "Дом и предметы в доме",
-      fallbackVocabulary: [
-        { german: "das Haus", russian: "дом", exampleSentence: "Wir wohnen in einem Haus." },
-        { german: "der Tisch", russian: "стол", exampleSentence: "Das Buch liegt auf dem Tisch." },
-        { german: "der Stuhl", russian: "стул", exampleSentence: "Setz dich auf den Stuhl." },
-        { german: "das Bett", russian: "кровать", exampleSentence: "Ich gehe ins Bett." },
-        { german: "die Tür", russian: "дверь", exampleSentence: "Die Tür ist zu." },
-        { german: "das Fenster", russian: "окно", exampleSentence: "Mach das Fenster auf." },
-        { german: "die Lampe", russian: "лампа", exampleSentence: "Die Lampe ist an." },
-      ]
-    },
-    {
-      id: "a0_food_drinks", name: "Продукты питания и напитки",
-      fallbackVocabulary: [
-        { german: "das Brot", russian: "хлеб", exampleSentence: "Ich esse Brot mit Käse." },
-        { german: "die Milch", russian: "молоко", exampleSentence: "Ich trinke Milch." },
-        { german: "das Wasser", russian: "вода", exampleSentence: "Ein Glas Wasser, bitte." },
-        { german: "der Apfel", russian: "яблоко", exampleSentence: "Der Apfel ist süß." },
-        { german: "die Banane", russian: "банан", exampleSentence: "Affen mögen Bananen." },
-        { german: "der Käse", russian: "сыр", exampleSentence: "Käse schmeckt gut." },
-        { german: "das Ei", russian: "яйцо", exampleSentence: "Ich koche ein Ei." },
-      ]
-    },
-    {
-      id: "a0_clothing", name: "Одежда",
-      fallbackVocabulary: [
-        { german: "das Hemd", russian: "рубашка", exampleSentence: "Er trägt ein blaues Hemd." },
-        { german: "die Hose", russian: "брюки, штаны", exampleSentence: "Meine Hose ist neu." },
-        { german: "der Schuh", russian: "ботинок, туфля", exampleSentence: "Ich brauche neue Schuhe." },
-        { german: "die Jacke", russian: "куртка", exampleSentence: "Zieh deine Jacke an." },
-        { german: "der Rock", russian: "юбка", exampleSentence: "Sie trägt einen roten Rock." },
-        { german: "das T-Shirt", russian: "футболка", exampleSentence: "Ein weißes T-Shirt." },
-        { german: "der Hut", russian: "шляпа", exampleSentence: "Ein großer Hut." },
-      ]
-    },
-    {
-      id: "a0_simple_motion_verbs", name: "Простые глаголы движения",
-      fallbackVocabulary: [
-        { german: "gehen", russian: "идти", exampleSentence: "Ich gehe nach Hause." },
-        { german: "kommen", russian: "приходить", exampleSentence: "Wann kommst du?" },
-        { german: "laufen", russian: "бежать", exampleSentence: "Die Kinder laufen schnell." },
-        { german: "stehen", russian: "стоять", exampleSentence: "Er steht an der Tür." },
-        { german: "sitzen", russian: "сидеть", exampleSentence: "Wir sitzen auf dem Sofa." },
-        { german: "fahren", russian: "ехать", exampleSentence: "Ich fahre mit dem Auto." },
-        { german: "fliegen", russian: "летать", exampleSentence: "Vögel können fliegen." },
-      ]
-    },
-    {
-      id: "a0_simple_nouns_city_school", name: "Простые существительные (город, школа)",
-      fallbackVocabulary: [
-        { german: "die Stadt", russian: "город", exampleSentence: "Berlin ist eine große Stadt." },
-        { german: "die Schule", russian: "школа", exampleSentence: "Die Kinder gehen in die Schule." },
-        { german: "das Buch", russian: "книга", exampleSentence: "Ich lese ein Buch." },
-        { german: "der Stift", russian: "ручка, карандаш", exampleSentence: "Hast du einen Stift?" },
-        { german: "der Lehrer", russian: "учитель", exampleSentence: "Der Lehrer erklärt die Aufgabe." },
-        { german: "die Lehrerin", russian: "учительница", exampleSentence: "Die Lehrerin ist nett." },
-        { german: "das Auto", russian: "машина", exampleSentence: "Mein Auto ist rot." },
-      ]
-    }
+    { id: "a0_interrogative_words", name: "Вопросительные слова (wer, was, wo…)", fallbackVocabulary: [] }
   ],
   A1: [
-    { id: "a1_work_professions", name: "Работа и профессии" },
-    { id: "a1_travel_transport", name: "Путешествия и транспорт" },
-    { id: "a1_time_schedule", name: "Время и расписание" },
-    { id: "a1_hobbies_interests", name: "Хобби и увлечения" },
-    { id: "a1_shops_shopping", name: "Магазины и покупки" },
-    { id: "a1_emotions_states", name: "Простые эмоции и состояния" },
-    { id: "a1_simple_adjectives", name: "Простые прилагательные" }
+    { id: "a1_personal_data", name: "Личные данные", fallbackVocabulary: [] },
+    { id: "a1_family_friends", name: "Семья и друзья", fallbackVocabulary: [] },
+    { id: "a1_home_living", name: "Дом и жильё", fallbackVocabulary: [] },
+    { id: "a1_food_drinks", name: "Еда и напитки", fallbackVocabulary: [] },
+    { id: "a1_clothing_shopping", name: "Одежда и покупки", fallbackVocabulary: [] },
+    { id: "a1_city_transport", name: "Город и транспорт", fallbackVocabulary: [] },
+    { id: "a1_time_calendar_daily_routine", name: "Время и календарь", fallbackVocabulary: [] },
+    { id: "a1_weather_seasons", name: "Погода", fallbackVocabulary: [] }
   ],
   A2: [
-    { id: "a2_health_medical_care", name: "Здоровье и медицинская помощь" },
-    { id: "a2_weather_nature", name: "Погода и природа" },
-    { id: "a2_education_studies", name: "Образование и учеба" },
-    { id: "a2_relationships_family", name: "Отношения и семья (углубл.)" },
-    { id: "a2_city_surroundings", name: "Город и окрестности" },
-    { id: "a2_simple_phrasal_verbs", name: "Простые фразовые глаголы" }
+    { id: "a2_daily_life_routine", name: "Повседневная жизнь", fallbackVocabulary: [] },
+    { id: "a2_work_professions_detailed", name: "Работа и профессии", fallbackVocabulary: [] },
+    { id: "a2_travel_holidays", name: "Путешествия и отдых", fallbackVocabulary: [] },
+    { id: "a2_shopping_services", name: "Покупки и магазины", fallbackVocabulary: [] },
+    { id: "a2_health_body", name: "Здоровье", fallbackVocabulary: [] },
+    { id: "a2_character_emotions_expanded", name: "Характер и эмоции", fallbackVocabulary: [] },
+    { id: "a2_nature_environment_basic", name: "Природа и окружающая среда", fallbackVocabulary: [] }
   ],
   B1: [
-    { id: "b1_work_career", name: "Работа и карьера" },
-    { id: "b1_travel_culture", name: "Путешествия и культура" },
-    { id: "b1_politics_society", name: "Политика и общество" },
-    { id: "b1_technology", name: "Технологии" },
-    { id: "b1_ecology_environment", name: "Экология и окружающая среда" },
-    { id: "b1_holidays_traditions", name: "Праздники и традиции" }
+    { id: "b1_education_studies", name: "Образование и учёба", fallbackVocabulary: [] },
+    { id: "b1_professions_career_planning", name: "Профессии и карьера", fallbackVocabulary: [] },
+    { id: "b1_society_interpersonal_relations", name: "Общество и межличностные отношения", fallbackVocabulary: [] },
+    { id: "b1_media_technology_internet", name: "Медиа и технологии", fallbackVocabulary: [] },
+    { id: "b1_ecology_health_lifestyle", name: "Экология и здоровье", fallbackVocabulary: [] },
+    { id: "b1_travel_intercultural_communication", name: "Путешествия и межкультурная коммуникация", fallbackVocabulary: [] },
+    { id: "b1_events_incidents", name: "События и происшествия", fallbackVocabulary: [] }
   ],
   B2: [
-    { id: "b2_science_technology", name: "Наука и техника" },
-    { id: "b2_art_culture", name: "Искусство и культура" },
-    { id: "b2_education_science", name: "Образование и наука" },
-    { id: "b2_politics_economics", name: "Политика и экономика" },
-    { id: "b2_social_issues", name: "Социальные проблемы" }
+    { id: "b2_politics_economics_global", name: "Политика и экономика", fallbackVocabulary: [] },
+    { id: "b2_science_technology_innovations", name: "Наука и техника", fallbackVocabulary: [] },
+    { id: "b2_culture_art_literature", name: "Культура и искусство", fallbackVocabulary: [] },
+    { id: "b2_work_career_advanced", name: "Работа и карьера", fallbackVocabulary: [] },
+    { id: "b2_social_issues_discussion", name: "Социальные проблемы", fallbackVocabulary: [] }
   ],
   C1: [
-    { id: "c1_abstract_topics", name: "Абстрактные темы" },
-    { id: "c1_professional_vocabulary", name: "Профессиональная лексика" },
-    { id: "c1_discussion_topics", name: "Дискуссионные темы" },
-    { id: "c1_philosophy_psychology", name: "Философия и психология" }
+    { id: "c1_philosophy_psychology_ethics", name: "Философия и психология", fallbackVocabulary: [] },
+    { id: "c1_political_debates_globalization", name: "Политические дебаты", fallbackVocabulary: [] },
+    { id: "c1_science_global_challenges_ai", name: "Наука и глобальные вызовы", fallbackVocabulary: [] },
+    { id: "c1_academic_professional_lexis", name: "Академическая и профессиональная лексика", fallbackVocabulary: [] }
   ],
   C2: [
-    { id: "c2_expert_terminology", name: "Экспертная терминология" },
-    { id: "c2_rare_stylized_expressions", name: "Редкие и высоко стилизованные выражения" },
-    { id: "c2_cultural_historical_references", name: "Культурные и исторические ссылки" }
+    { id: "c2_literary_publicistic_language", name: "Литературный и публицистический язык", fallbackVocabulary: [] },
+    { id: "c2_legal_scientific_style", name: "Юридический и научный стиль", fallbackVocabulary: [] },
+    { id: "c2_formal_informal_registers_diplomacy", name: "Формальный и неформальный регистры", fallbackVocabulary: [] },
+    { id: "c2_translation_interpretation_cultural_nuances", name: "Перевод и интерпретация", fallbackVocabulary: [] }
   ],
 };
 
 // Mandatory Grammar Topics per Level
 export const MANDATORY_GRAMMAR_TOPICS: Record<LanguageLevel, string[]> = {
-  A0: [
+    A0: [
     "Алфавит и фонетика (произношение букв, ударения)",
     "Личные местоимения (ich, du, er, sie, es, wir, ihr, sie, Sie)",
     "Глагол sein в настоящем времени (ich bin, du bist…)",
@@ -455,8 +473,8 @@ export const MANDATORY_GRAMMAR_TOPICS: Record<LanguageLevel, string[]> = {
     "Числа (0–100)",
     "Простые артикли (der, die, das – определённые)",
     "Простая лексика: дни недели, цвета, семья, еда, время"
-  ],
-  A1: [
+    ],
+    A1: [
     "Существительные и артикли (определённый / неопределённый)",
     "Множественное число существительных",
     "Притяжательные местоимения (mein, dein, sein…)",
@@ -470,11 +488,11 @@ export const MANDATORY_GRAMMAR_TOPICS: Record<LanguageLevel, string[]> = {
     "Отрицание с nicht и kein",
     "Imperativ (повелительное наклонение) — вежливый и неформальный",
     "Время в часах (Uhrzeit)",
-    "Именительный падеж (Nominativ)",
-    "Винительный падеж (Akkusativ) (Ich sehe den Mann.)",
+    "Именительный (Nominativ)",
+    "Винительный (Akkusativ) (Ich sehe den Mann.)",
     "Простые предлоги с Akkusativ (für, durch, ohne, um…)"
-  ],
-  A2: [
+    ],
+    A2: [
     "Притяжательные местоимения во всех падежах",
     "Вопросительные местоимения в других падежах (Wem? Wen?)",
     "Относительные местоимения (Relativsätze mit der/die/das)",
@@ -488,8 +506,8 @@ export const MANDATORY_GRAMMAR_TOPICS: Record<LanguageLevel, string[]> = {
     "Предлоги с Dativ (mit, nach, seit, bei, von, zu…)",
     "Предлоги с Akkusativ und Dativ (an, auf, in, über…)",
     "Временные конструкции (seit, vor, in, bis)"
-  ],
-  B1: [
+    ],
+    B1: [
     "Относительные предложения с разными падежами",
     "Условные предложения типа I (Wenn-Sätze Typ 1)",
     "Конъюнкции: weil, obwohl, wenn, dass, damit, während",
@@ -503,8 +521,8 @@ export const MANDATORY_GRAMMAR_TOPICS: Record<LanguageLevel, string[]> = {
     "Специальные конструкции: Es gibt / es gab",
     "Indirekte Rede mit Konjunktiv I (начало)",
     "Verben mit Präpositionen (sich freuen auf/über, warten auf)"
-  ],
-  B2: [
+    ],
+    B2: [
     "Konjunktiv I в косвенной речи",
     "Konjunktiv II: нереальные условные предложения (würde + Infinitiv)",
     "Konjunktiv II с Präteritum сильных глаголов (hätte, wäre, könnte, müsste)",
@@ -518,8 +536,8 @@ export const MANDATORY_GRAMMAR_TOPICS: Record<LanguageLevel, string[]> = {
     "Префиксы и суффиксы образования слов",
     "Сложносочинённые и сложноподчинённые предложения с Nebensätzen",
     "Рекурсия придаточных предложений"
-  ],
-  C1: [
+    ],
+    C1: [
     "Продвинутое использование Konjunktiv I и II",
     "Высокая частота Passiv и Umschreibungen",
     "Различия в значении при смене порядка слов",
@@ -529,8 +547,8 @@ export const MANDATORY_GRAMMAR_TOPICS: Record<LanguageLevel, string[]> = {
     "Сложные причастные обороты",
     "Nominalstil vs. Verbalstil (научный стиль)",
     "Разнообразные способы выражения причины, цели, следствия"
-  ],
-  C2: [
+    ],
+    C2: [
     "Метафорические и идиоматические обороты",
     "Структуры высокого уровня сложности:",
     "Инверсия ради акцента: Kaum hatte er das Haus verlassen, da…",
@@ -551,7 +569,9 @@ export const MANDATORY_GRAMMAR_TOPICS: Record<LanguageLevel, string[]> = {
     "Различия между письменной и устной речью на высоком уровне",
     "Тонкости словообразования (суффиксы, префиксы, сложные слова)",
     "Сложные случаи предложного управления и рекций глаголов"
-  ],
+    ],
 };
+
+    
 
     
