@@ -101,7 +101,7 @@ If the module type is 'grammar' or 'writing', and the user's response is incorre
     If the answer is incorrect (for modules other than 'writing'), provide detailed feedback in the 'errorExplanationDetails' object. This feedback MUST be in RUSSIAN and concise. Do not be overly verbose. Focus on the main error and its explanation.
     - 'generalExplanation': Clearly explain in RUSSIAN why the user's answer is incorrect. Be specific to the error type (e.g., wrong vocabulary choice, specific grammatical mistake like case or tense, misunderstanding of the question). Keep it brief (1-2 sentences).
     - 'specificExample': If applicable and the error is localized, quote the specific incorrect part of the user's answer.
-    - 'correctionExample': If you provided a 'specificExample', show how *that specific part* should be corrected in RUSSIAN. This is for a snippet, not the full answer. The main 'suggestedCorrection' field can be used for the full corrected answer.
+    - 'correctionExample': If you provided a 'specificExample', show how *that specific part* should be corrected in RUSSIAN. This is for a snippet, not the full corrected answer. The main 'suggestedCorrection' field can be used for the full corrected answer.
     - 'theoryReference': If the error relates to a specific grammar rule (e.g., "Предлог 'mit' всегда требует дательного падежа (Dativ)") or a vocabulary nuance (e.g., "Слово 'aktuell' означает 'актуальный, текущий', а не 'фактический'"), briefly mention this rule/nuance in RUSSIAN.
   {{/unless}}
 {{/unless}}
