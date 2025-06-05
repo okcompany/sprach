@@ -172,4 +172,4 @@ export function LevelTopicsPage({ levelId }: LevelTopicsPageProps) {
       </div>
     </div>
   );
-} // <-- Вот сюда добавлена недостающая скобка!
+}
