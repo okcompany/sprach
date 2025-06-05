@@ -34,7 +34,7 @@ const EvaluateUserResponseInputSchema = z.object({
 export type EvaluateUserResponseInput = z.infer<typeof EvaluateUserResponseInputSchema>;
 
 const WritingEvaluationDetailsSchema = z.object({
-  taskAchievement: z.string().optional().describe("Feedback on how well the user addressed the writing prompt. (Оценка выполнения задания. ДОЛЖНО БЫТЬ НА РУССКОМ, ОЧЕНЬ КРАТКО)"),
+  taskAchievement: z.string().optional().describe("Feedback on how well the user addressed the writing prompt. (Оценка выполнения задания. ДОЛЖНО БЫТЬ НА РУССКОМ, ОЧЕНЬ КРАТКО, СТРУКТУРИРОВАНО ПО ПУНКТАМ С НОВОЙ СТРОКИ)"),
   coherenceAndCohesion: z.string().optional().describe("Feedback on the logical structure and flow of the text. (Оценка связности и логичности текста. ДОЛЖНО БЫТЬ НА РУССКОМ, КРАТКО)"),
   lexicalResource: z.string().optional().describe("Feedback on the appropriateness and richness of vocabulary. (Оценка использования лексики. ДОЛЖНО БЫТЬ НА РУССКОМ, КРАТКО)"),
   grammaticalAccuracy: z.string().optional().describe("Feedback on grammatical correctness. (Оценка грамматической правильности. ДОЛЖНО БЫТЬ НА РУССКОМ, КРАТКО)"),
@@ -144,23 +144,23 @@ This is a 'reading' module.
 This is a 'writing' module. For the writing module, ALL feedback in 'writingDetails' (including 'taskAchievement', 'coherenceAndCohesion', 'lexicalResource', 'grammaticalAccuracy', 'overallFeedback', and 'suggestedImprovements') MUST be concise and in RUSSIAN. Avoid lengthy elaborations or general commentary outside of \`overallFeedback\`.
 - When providing feedback in the 'writingDetails' object, ensure each field ('taskAchievement', 'coherenceAndCohesion', etc.) contains specific, DISTINCT, and CONCISE information relevant ONLY to that criterion. ALL TEXT MUST BE IN RUSSIAN.
 - Evaluate the user's written text based on the following criteria, appropriate for their level ({{{userLevel}}}):
-  1.  'taskAchievement' (Оценка выполнения задания): This field MUST be in RUSSIAN and EXTREMELY CONCISE.
+  1.  'taskAchievement' (Оценка выполнения задания): This field MUST be in RUSSIAN.
       **CRITICAL INSTRUCTIONS FOR 'taskAchievement':**
-      a.  Your response for 'taskAchievement' MUST NOT exceed 30 words and should ideally be 1-2 short, factual sentences.
-      b.  **DO NOT re-list or rephrase the requirements that were given in the original writing prompt ({{{questionContext}}}).**
-      c.  Instead, **FACTUALLY STATE** whether the user's text *fulfilled* those specific requirements from {{{questionContext}}}.
-      d.  **Examples based on prompt ({{{questionContext}}}):**
-          *   If prompt ({{{questionContext}}}) was "Напишите 3-5 предложений о ваших выходных, используя слова X, Y, Z":
-              *   A GOOD 'taskAchievement': "Написано 4 предложения. Тема выходных раскрыта. Использованы слова X и Y; слово Z не использовано." (Factual, checks specific requirements)
-              *   A BAD 'taskAchievement' (DO NOT DO THIS): "Пользователь должен был написать 3-5 предложений. Пользователь должен был использовать слова X, Y, Z. Пользователь написал о выходных." (This is re-listing, not assessing)
-          *   If prompt ({{{questionContext}}}) was "Напишите короткое электронное письмо другу о планах на отпуск.":
-              *   A GOOD 'taskAchievement': "Написано электронное письмо другу. Тема планов на отпуск раскрыта. Формат письма соблюден."
-              *   A BAD 'taskAchievement': "Пользователю нужно было написать email. Тема - отпуск. Пользователь написал email."
-      e.  Focus ONLY on whether the user *did what was explicitly asked* in {{{questionContext}}} (e.g., length, specific words if requested, topic, format).
-      f.  DO NOT evaluate language quality (grammar, style) in this field. Use other fields for that.
-      g.  DO NOT add praise, general comments, or motivational phrases here.
-      h.  **Each part of your statement for 'taskAchievement' must convey unique factual information about the fulfillment of a *specific requirement* from the original prompt. Do NOT repeat the same assessment or point multiple times, even with different wording.**
-  2.  'coherenceAndCohesion' (Оценка связности и логичности текста): This field MUST be in RUSSIAN. Evaluate ONLY the text's logical structure, flow, and use of linking words. No praise or generic comments. Keep this section concise (1-2 sentences).
+      a.  Structure your response for 'taskAchievement' using the following labels, EACH ON A NEW LINE (use '\\n' for newlines). After each label, provide a VERY BRIEF, factual assessment (typically 1 short sentence per label is sufficient).
+          - Полнота ответа: [Assess if all parts of the prompt in {{{questionContext}}} were addressed. E.g., "Задание выполнено полностью." or "Не все пункты задания {{{questionContext}}} были освещены."]
+          - Логическая связность: [Briefly comment on the logical flow. E.g., "Мысли изложены логично." or "Логика повествования немного нарушена."] (This is a general, brief assessment for this field; detailed feedback is in 'coherenceAndCohesion' field if needed)
+          - Связность текста: [Briefly comment on text cohesion. E.g., "Текст в целом связан." or "Связь между некоторыми предложениями слабая."] (This is a general, brief assessment for this field; detailed feedback is in 'coherenceAndCohesion' field if needed)
+          - Структурированность: [Briefly comment on overall structure. E.g., "Текст хорошо структурирован." or "Структура текста могла бы быть четче."] (This is a general, brief assessment for this field; detailed feedback is in 'coherenceAndCohesion' field if needed)
+      b.  For "Полнота ответа", focus EXCLUSIVELY on whether the user *did what was explicitly asked* in {{{questionContext}}} (e.g., length, specific words if requested, topic, format).
+      c.  **DO NOT re-list or rephrase the requirements** from the original writing prompt ({{{questionContext}}}) under any label.
+      d.  DO NOT evaluate language quality (grammar, style) in detail here for "Логическая связность", "Связность текста", "Структурированность". Use other fields like 'grammaticalAccuracy', 'lexicalResource', or 'coherenceAndCohesion' for detailed analysis of those aspects. The comments here should be high-level and very brief.
+      e.  DO NOT add praise, general comments, or motivational phrases. Be factual and concise for each point.
+      f.  Ensure the entire 'taskAchievement' string is still reasonably short, even with the newlines and labels. The goal is clear, structured, brief feedback for this specific field.
+      g.  **Example of a GOOD 'taskAchievement' output string:**
+          "Полнота ответа: Задание выполнено полностью, все вопросы из {{{questionContext}}} затронуты.\nЛогическая связность: Мысли изложены в целом логично.\nСвязность текста: Предложения связаны между собой.\nСтруктурированность: Текст имеет вступление и заключение."
+      h.  **Example of a BAD 'taskAchievement' output string (DO NOT DO THIS):**
+          "Полнота ответа: Пользователь должен был написать 3-5 предложений. Пользователь должен был использовать слова X, Y, Z. Пользователь написал о выходных. Это очень важно...\nЛогическая связность: Текст логичен, потому что пользователь следовал теме.\nСвязность текста: Текст связан, так как предложения следуют друг за другом.\nСтруктурированность: Текст имеет структуру." (This is too verbose, re-lists requirements, and doesn't follow the conciseness rule).
+  2.  'coherenceAndCohesion' (Оценка связности и логичности текста): This field MUST be in RUSSIAN. Provide a more DETAILED evaluation of the text's logical structure, flow, and use of linking words IF there are specific issues or good examples to highlight. Otherwise, a brief comment is fine. No praise or generic comments. Keep this section concise (1-2 sentences if no major issues, more if specific feedback is needed).
   3.  'lexicalResource' (Оценка использования лексики): This field MUST be in RUSSIAN. Evaluate ONLY vocabulary choice, range, and appropriateness for the level and topic. No praise or generic comments. Keep this section concise (1-2 sentences).
   4.  'grammaticalAccuracy' (Оценка грамматической правильности): This field MUST be in RUSSIAN. Evaluate ONLY grammatical correctness and range of structures used, appropriate for the level. No praise or generic comments. Keep this section concise (1-2 sentences).
 - Provide detailed feedback in the 'writingDetails' object with these fields. ALL TEXT IN 'writingDetails' MUST BE IN RUSSIAN.
@@ -189,7 +189,7 @@ Output your response in the following JSON format (ensure grammarErrorTags is an
   "suggestedCorrection": "Полный исправленный ответ на русском, если нужно...",
   "grammarErrorTags": [],
   "writingDetails": {
-    "taskAchievement": "Задание выполнено: объем соответствует, тема раскрыта.",
+    "taskAchievement": "Полнота ответа: Задание выполнено полностью.\\nЛогическая связность: Мысли изложены логично.\\nСвязность текста: Текст связан.\\nСтруктурированность: Текст хорошо структурирован.",
     "coherenceAndCohesion": "...",
     "lexicalResource": "...",
     "grammaticalAccuracy": "...",
