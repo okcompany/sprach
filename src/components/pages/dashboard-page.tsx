@@ -256,11 +256,6 @@ export function DashboardPage() {
                 </Button>
             </CardContent>
         )}
-        {aiRecommendationFetched && !isRecommendationLoading && !actionableAIReco && (
-            <CardContent>
-                <p className="text-muted-foreground">Не удалось получить детальную рекомендацию от ИИ в данный момент. Попробуйте позже или выберите следующий урок самостоятельно.</p>
-            </CardContent>
-        )}
       </Card>
       
       {!actionableAIReco && nextStepDetails && ( // Show this only if no AI reco is displayed
