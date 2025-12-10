@@ -79,9 +79,9 @@ export function DashboardPage() {
   const handleFetchRecommendation = useCallback(async () => {
     if (userData) {
       setIsRecommendationLoading(true);
-      setAiRecommendationFetched(true); // Mark that a fetch has been attempted
       const lesson = await getAIRecommendedLesson();
       setRecommendedLesson(lesson);
+      setAiRecommendationFetched(!!lesson);
       setIsRecommendationLoading(false);
     }
   }, [userData, getAIRecommendedLesson]);
