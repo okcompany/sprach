@@ -4,7 +4,7 @@
 import type { ReactNode } from 'react';
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import type { UserData, LanguageLevel, TopicProgress, ModuleType, VocabularyWord, ModuleProgress as ModuleProgressType, AILessonContent, AILessonVocabularyItem, AILessonListeningExercise, AIEvaluationResult as AIEvaluationResultType, GrammarWeaknessDetail, GrammarWeaknessContext } from '@/types/german-learning';
-import { ALL_LEVELS, ALL_MODULE_TYPES, DEFAULT_TOPICS, MODULE_NAMES_RU } from '@/types/german-learning';
+import { ALL_LEVELS, ALL_MODULE_TYPES, DEFAULT_TOPICS, MODULE_NAMES_RU, SRS_STAGES } from '@/types/german-learning';
 import { generateLessonContent as generateLessonContentAI } from '@/ai/flows/generate-lesson-content';
 import { evaluateUserResponse as evaluateUserResponseAI, type EvaluateUserResponseOutput } from '@/ai/flows/evaluate-user-response';
 import { recommendAiLesson as recommendAiLessonAI, type RecommendAiLessonOutput } from '@/ai/flows/recommend-ai-lesson';
@@ -45,7 +45,7 @@ interface UserDataContextType {
   getTopicLessonContent: (level: LanguageLevel, topicName: string, topicId: string) => Promise<AILessonContent | null>;
   evaluateUserResponse: (levelId: LanguageLevel, topicId: string, moduleId: ModuleType, userResponse: string, questionContext: string, expectedAnswer?: string, grammarRules?:string) => Promise<AIEvaluationResultType | null>;
   getAIRecommendedLesson: () => Promise<RecommendAiLessonOutput | null>;
-  addWordToBank: (word: Omit<VocabularyWord, 'id' | 'consecutiveCorrectAnswers' | 'errorCount'>) => void;
+  addWordToBank: (word: Omit<VocabularyWord, 'id' | 'srsStage' | 'lastReviewedDate' | 'nextReviewDate'>) => void;
   updateWordInBank: (updatedWord: VocabularyWord) => void;
   markWordAsMastered: (wordId: string) => void;
   getWordsForTopic: (topicId: string) => VocabularyWord[];
@@ -99,6 +99,16 @@ export const UserDataProvider = ({ children }: { children: ReactNode }) => {
         if (!parsedData.grammarWeaknesses) { 
             parsedData.grammarWeaknesses = {};
         }
+        // Migration for SRS fields
+        if (parsedData.vocabularyBank && parsedData.vocabularyBank.length > 0 && parsedData.vocabularyBank[0].srsStage === undefined) {
+          parsedData.vocabularyBank = parsedData.vocabularyBank.map((word: any) => ({
+            ...word,
+            srsStage: word.srsStage ?? 0,
+            lastReviewedDate: word.lastReviewedDate ?? null,
+            nextReviewDate: word.nextReviewDate ?? new Date().toISOString(),
+          }));
+        }
+
         setUserData(parsedData);
       } else {
         const defaultProgress: UserData['progress'] = {};
@@ -689,7 +699,7 @@ export const UserDataProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [userData, isTopicCompleted]); 
 
-  const addWordToBank = useCallback((wordData: Omit<VocabularyWord, 'id' | 'consecutiveCorrectAnswers' | 'errorCount'>) => {
+  const addWordToBank = useCallback((wordData: Omit<VocabularyWord, 'id' | 'srsStage' | 'lastReviewedDate' | 'nextReviewDate'>) => {
     setUserData(prev => {
       if (!prev) return null;
       
@@ -703,8 +713,9 @@ export const UserDataProvider = ({ children }: { children: ReactNode }) => {
       const newWord: VocabularyWord = {
         ...wordData,
         id: `${wordData.german.replace(/\s+/g, '-')}-${wordData.topic}-${Date.now()}`, 
-        consecutiveCorrectAnswers: 0,
-        errorCount: 0,
+        srsStage: 0,
+        lastReviewedDate: null,
+        nextReviewDate: new Date().toISOString(),
       };
       return { ...prev, vocabularyBank: [...prev.vocabularyBank, newWord], settings: { ...prev.settings, lastActivityTimestamp: Date.now() } };
     });
@@ -732,9 +743,9 @@ export const UserDataProvider = ({ children }: { children: ReactNode }) => {
         const newBank = [...prev.vocabularyBank];
         const masteredWord = {
             ...newBank[wordIndex],
-            consecutiveCorrectAnswers: 3, 
-            errorCount: 0, 
-            lastTestedDate: new Date().toISOString(),
+            srsStage: SRS_STAGES.length, // Set to a stage that effectively archives it
+            lastReviewedDate: new Date().toISOString(),
+            nextReviewDate: new Date(new Date().setFullYear(new Date().getFullYear() + 5)).toISOString(), // Far in the future
         };
         newBank[wordIndex] = masteredWord;
         return { ...prev, vocabularyBank: newBank, settings: { ...prev.settings, lastActivityTimestamp: Date.now() } };
@@ -747,11 +758,18 @@ export const UserDataProvider = ({ children }: { children: ReactNode }) => {
 
   const getWordsForReview = useCallback((): VocabularyWord[] => {
     if (!userData) return [];
+    const now = new Date().getTime();
     return userData.vocabularyBank.filter(word => {
-        const needsReviewByErrors = (word.errorCount || 0) > 0; 
-        const needsReviewByRepetition = (word.consecutiveCorrectAnswers || 0) < 3; 
-        return needsReviewByErrors || needsReviewByRepetition;
-    }).sort((a, b) => (a.lastTestedDate && b.lastTestedDate) ? new Date(a.lastTestedDate).getTime() - new Date(b.lastTestedDate).getTime() : (a.lastTestedDate ? -1 : 1) ); 
+        if (!word.nextReviewDate || word.srsStage >= SRS_STAGES.length) {
+            return false;
+        }
+        const nextReviewTime = new Date(word.nextReviewDate).getTime();
+        return now >= nextReviewTime;
+    }).sort((a, b) => {
+        const nextA = new Date(a.nextReviewDate!).getTime();
+        const nextB = new Date(b.nextReviewDate!).getTime();
+        return nextA - nextB;
+    });
   }, [userData]);
 
 

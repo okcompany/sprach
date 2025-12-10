@@ -8,8 +8,8 @@ import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useUserData } from '@/context/user-data-context';
 import type { VocabularyWord, LanguageLevel } from '@/types/german-learning';
-import { DEFAULT_TOPICS } from '@/types/german-learning';
-import { Speaker, CheckCircle, AlertCircle, RotateCcw, Lightbulb, Send, ArrowRight, BookCopy, Sparkles, Repeat as RepeatIcon, CheckCheck } from 'lucide-react';
+import { DEFAULT_TOPICS, SRS_STAGES } from '@/types/german-learning';
+import { Speaker, CheckCircle, AlertCircle, RotateCcw, Lightbulb, Send, ArrowRight, BookCopy, Sparkles, Repeat as RepeatIcon, CheckCheck, BookHeart, Brain, GraduationCap } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from '@/components/ui/badge';
 
@@ -32,6 +32,7 @@ export function VocabularyPage() {
   // Review Session State
   const [isReviewSessionActive, setIsReviewSessionActive] = useState(false);
   const [reviewWordsQueue, setReviewWordsQueue] = useState<VocabularyWord[]>([]);
+  const [failedReviewWords, setFailedReviewWords] = useState<VocabularyWord[]>([]);
   const [currentReviewWordIndex, setCurrentReviewWordIndex] = useState(0);
   const [userReviewInput, setUserReviewInput] = useState('');
   const [reviewFeedback, setReviewFeedback] = useState<string | null>(null);
@@ -53,7 +54,7 @@ export function VocabularyPage() {
   }, [allWords, userData?.currentTopicId]);
 
   const errorWords = useMemo(() => {
-    return allWords.filter(word => (word.errorCount || 0) > 0 && (word.consecutiveCorrectAnswers || 0) < 3);
+    return allWords.filter(word => (word.srsStage >= 0 && word.srsStage < 2) && word.lastReviewedDate);
   }, [allWords]);
 
   const filteredWords = (words: VocabularyWord[]) => {
@@ -64,41 +65,54 @@ export function VocabularyPage() {
     );
   };
 
-  const startReviewSession = () => {
-    if (wordsForReview.length === 0) {
+  const startReviewSession = (wordsToReview?: VocabularyWord[]) => {
+    const wordList = wordsToReview || wordsForReview;
+    if (wordList.length === 0) {
       toast({ title: "Словарь для повторения пуст", description: "Нет слов для повторения.", variant: "default" });
       return;
     }
-    const shuffledWords = [...wordsForReview].sort(() => Math.random() - 0.5);
+    const shuffledWords = [...wordList].sort(() => Math.random() - 0.5);
     setReviewWordsQueue(shuffledWords);
     setCurrentReviewWordIndex(0);
     setUserReviewInput('');
     setReviewFeedback(null);
     setShowCorrectAnswer(false);
+    setFailedReviewWords([]);
     setIsReviewSessionActive(true);
     toast({ title: "Сессия повторения начата!", description: `Слов для повторения: ${shuffledWords.length}` });
   };
-
+  
   const handleReviewSubmit = () => {
     if (!currentReviewWord) return;
 
     const isCorrect = userReviewInput.trim().toLowerCase() === currentReviewWord.russian.trim().toLowerCase();
     let feedbackMsg = '';
-    let updatedWord = { ...currentReviewWord };
+    const now = new Date();
 
+    const currentStage = currentReviewWord.srsStage || 0;
+    let nextSrsStage = currentStage;
+    
     if (isCorrect) {
       feedbackMsg = "Правильно!";
-      updatedWord.consecutiveCorrectAnswers = (updatedWord.consecutiveCorrectAnswers || 0) + 1;
-      updatedWord.errorCount = Math.max(0, (updatedWord.errorCount || 0) - (updatedWord.errorCount > 1 ? 1 : 0) ); // Optionally reduce error count on correct
+      nextSrsStage = Math.min(currentStage + 1, SRS_STAGES.length -1);
       toast({ title: "Отлично!", description: "Верный ответ.", variant: "default" });
     } else {
       feedbackMsg = `Неправильно. Правильный ответ: ${currentReviewWord.russian}`;
-      updatedWord.consecutiveCorrectAnswers = 0;
-      updatedWord.errorCount = (updatedWord.errorCount || 0) + 1;
+      nextSrsStage = Math.max(0, currentStage - 1); 
+      setFailedReviewWords(prev => [...prev, currentReviewWord]);
       toast({ title: "Ошибка", description: `Правильный ответ: ${currentReviewWord.russian}`, variant: "destructive" });
     }
+
+    const nextReviewIntervalDays = SRS_STAGES[nextSrsStage];
+    const nextReviewDate = new Date(now.getTime() + nextReviewIntervalDays * 24 * 60 * 60 * 1000);
     
-    updatedWord.lastTestedDate = new Date().toISOString();
+    const updatedWord: VocabularyWord = { 
+      ...currentReviewWord, 
+      srsStage: nextSrsStage,
+      lastReviewedDate: now.toISOString(),
+      nextReviewDate: nextReviewDate.toISOString()
+    };
+
     updateWordInBank(updatedWord);
     setReviewFeedback(feedbackMsg);
     setShowCorrectAnswer(true);
@@ -106,16 +120,22 @@ export function VocabularyPage() {
 
   const handleShowAnswer = () => {
     if (!currentReviewWord) return;
-    let updatedWord = { 
+    const now = new Date();
+    const nextSrsStage = Math.max(0, (currentReviewWord.srsStage || 0) - 2); // Penalize more heavily
+    const nextReviewIntervalDays = SRS_STAGES[nextSrsStage];
+    const nextReviewDate = new Date(now.getTime() + nextReviewIntervalDays * 24 * 60 * 60 * 1000);
+    
+    let updatedWord: VocabularyWord = { 
       ...currentReviewWord, 
-      consecutiveCorrectAnswers: 0, 
-      errorCount: (currentReviewWord.errorCount || 0) + 1,
-      lastTestedDate: new Date().toISOString() 
+      srsStage: nextSrsStage,
+      lastReviewedDate: now.toISOString(),
+      nextReviewDate: nextReviewDate.toISOString()
     };
     updateWordInBank(updatedWord);
+    setFailedReviewWords(prev => [...prev, currentReviewWord]);
     setReviewFeedback(`Правильный ответ: ${currentReviewWord.russian}`);
     setShowCorrectAnswer(true);
-    toast({ title: "Показан ответ", description: `Слово "${currentReviewWord.german}" отмечено как требующее внимания.`, variant: "default" });
+    toast({ title: "Показан ответ", description: `Слово "${currentReviewWord.german}" будет повторено раньше.`, variant: "default" });
   };
 
   const handleNextWord = () => {
@@ -152,10 +172,15 @@ export function VocabularyPage() {
     
     return topicId; 
   };
+  
+  const formatDate = (dateString: string | null | undefined) => {
+    if (!dateString) return 'никогда';
+    return new Date(dateString).toLocaleDateString('ru-RU');
+  };
 
   const WordCardDisplay = ({ word }: { word: VocabularyWord }) => {
     const displayTopicName = getDisplayTopicName(word.level, word.topic);
-    const isMastered = (word.consecutiveCorrectAnswers || 0) >= 3;
+    const isMastered = word.srsStage >= SRS_STAGES.length - 1;
 
     return (
       <Card className="mb-4 shadow-sm">
@@ -177,21 +202,18 @@ export function VocabularyPage() {
               </p>
             </div>
           </div>
-          <div className="mt-2 flex items-center justify-between text-xs">
-              <div className="flex items-center gap-2">
-                  <CheckCircle className={`h-4 w-4 ${ (word.consecutiveCorrectAnswers || 0) > 0 ? 'text-green-500' : 'text-muted'}`} />
-                  <span>Верно подряд: {word.consecutiveCorrectAnswers || 0}</span>
+          <div className="mt-2 flex items-center justify-between text-xs text-muted-foreground">
+             <div className="flex items-center gap-2" title="Spaced Repetition Stage">
+                  <Brain className="h-4 w-4" />
+                  <span>Этап: {word.srsStage || 0}</span>
               </div>
-               <div className="flex items-center gap-2">
-                  <AlertCircle className={`h-4 w-4 ${(word.errorCount || 0) > 0 ? 'text-red-500' : 'text-muted'}`} />
-                   <span>Ошибок: {word.errorCount || 0}</span>
-              </div>
+              <span>Посл. повтор: {formatDate(word.lastReviewedDate)}</span>
           </div>
           {isMastered && (
             <div className="mt-3">
               <Badge variant="outline" className="border-green-500/50 text-green-700 dark:text-green-400 dark:border-green-500/30 px-2.5 py-1 text-xs">
-                <CheckCircle className="h-3.5 w-3.5 mr-1.5" />
-                Освоено
+                <GraduationCap className="h-3.5 w-3.5 mr-1.5" />
+                Выучено
               </Badge>
             </div>
           )}
@@ -216,11 +238,38 @@ export function VocabularyPage() {
   }
 
   const totalWordsCount = allWords.length;
-  const masteredWordsCount = allWords.filter(w => (w.consecutiveCorrectAnswers || 0) >= 3).length;
+  const masteredWordsCount = allWords.filter(w => w.srsStage >= SRS_STAGES.length - 1).length;
   const wordsNeedingReviewCount = wordsForReview.length;
 
 
-  if (isReviewSessionActive && currentReviewWord) {
+  if (isReviewSessionActive) {
+    if (!currentReviewWord) {
+        return (
+             <div className="container mx-auto py-8 flex flex-col items-center">
+                 <Card className="w-full max-w-lg shadow-xl text-center">
+                     <CardHeader>
+                         <CardTitle className="font-headline text-2xl">Сессия повторения завершена!</CardTitle>
+                     </CardHeader>
+                     <CardContent>
+                         <p className="mb-4">Вы повторили все слова в этой сессии.</p>
+                         {failedReviewWords.length > 0 && (
+                            <p className="mb-4">Слов с ошибками: {failedReviewWords.length}. Хотите повторить их немедленно?</p>
+                         )}
+                     </CardContent>
+                     <CardFooter className="flex-col gap-3">
+                         {failedReviewWords.length > 0 && (
+                             <Button onClick={() => startReviewSession(failedReviewWords)} className="w-full">
+                                <RepeatIcon className="mr-2 h-4 w-4"/> Повторить слова с ошибками
+                             </Button>
+                         )}
+                         <Button variant="outline" onClick={() => setIsReviewSessionActive(false)} className="w-full">
+                             Вернуться в словарь
+                         </Button>
+                     </CardFooter>
+                 </Card>
+            </div>
+        )
+    }
     return (
       <div className="container mx-auto py-8 flex flex-col items-center">
         <Card className="w-full max-w-lg shadow-xl">
@@ -249,6 +298,7 @@ export function VocabularyPage() {
                 onChange={(e) => setUserReviewInput(e.target.value)}
                 className="text-lg text-center h-12 mb-4"
                 onKeyPress={(e) => e.key === 'Enter' && handleReviewSubmit()}
+                autoFocus
               />
             ) : (
               <div className={`p-3 rounded-md text-lg mb-4 ${reviewFeedback?.toLowerCase().includes("правильно") ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300' : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300'}`}>
@@ -295,12 +345,12 @@ export function VocabularyPage() {
             <p className="text-sm text-muted-foreground">Всего слов</p>
           </div>
           <div className="flex flex-col items-center p-3 rounded-lg bg-muted/50">
-            <Sparkles className="h-8 w-8 mb-2 text-accent" />
+            <GraduationCap className="h-8 w-8 mb-2 text-green-500" />
             <p className="text-2xl font-bold">{masteredWordsCount}</p>
-            <p className="text-sm text-muted-foreground">Освоено</p>
+            <p className="text-sm text-muted-foreground">Выучено</p>
           </div>
           <div className="flex flex-col items-center p-3 rounded-lg bg-muted/50">
-            <RepeatIcon className="h-8 w-8 mb-2 text-destructive" />
+            <BookHeart className="h-8 w-8 mb-2 text-destructive" />
             <p className="text-2xl font-bold">{wordsNeedingReviewCount}</p>
             <p className="text-sm text-muted-foreground">На повторении</p>
           </div>
@@ -313,14 +363,24 @@ export function VocabularyPage() {
         onChange={(e) => setSearchTerm(e.target.value)}
         className="mb-6 max-w-md mx-auto"
       />
-      <Tabs defaultValue="currentTopic" className="w-full">
+      <Tabs defaultValue="review" className="w-full">
         <TabsList className="grid w-full grid-cols-2 md:grid-cols-4 mb-6">
-          <TabsTrigger value="currentTopic">Текущая тема</TabsTrigger>
-          <TabsTrigger value="errors">Ошибки</TabsTrigger>
           <TabsTrigger value="review">На повторение</TabsTrigger>
+          <TabsTrigger value="currentTopic">Текущая тема</TabsTrigger>
+          <TabsTrigger value="errors">Недавние ошибки</TabsTrigger>
           <TabsTrigger value="all">Все слова</TabsTrigger>
         </TabsList>
         
+        <TabsContent value="review">
+          <Card>
+            <CardHeader><CardTitle>Слова на повторение</CardTitle><CardDescription>Слова, которые система подобрала для вас для закрепления.</CardDescription></CardHeader>
+            <CardContent>
+              {filteredWords(wordsForReview).length === 0 && <p className="text-muted-foreground text-center py-4">Нет слов для повторения или по вашему запросу. Все слова усвоены!</p>}
+              {filteredWords(wordsForReview).map(word => <WordCardDisplay key={word.id} word={word} />)}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
         <TabsContent value="currentTopic">
           <Card>
             <CardHeader><CardTitle>Слова текущей темы</CardTitle><CardDescription>Слова, связанные с активной темой ({getDisplayTopicName(userData?.currentLevel || 'A0', userData?.currentTopicId || "")})</CardDescription></CardHeader>
@@ -333,20 +393,10 @@ export function VocabularyPage() {
 
         <TabsContent value="errors">
           <Card>
-            <CardHeader><CardTitle>Слова с ошибками</CardTitle><CardDescription>Слова, в которых вы недавно допускали ошибки и которые еще не освоены.</CardDescription></CardHeader>
+            <CardHeader><CardTitle>Слова с недавними ошибками</CardTitle><CardDescription>Слова, в которых вы недавно допускали ошибки и которые еще не освоены.</CardDescription></CardHeader>
             <CardContent>
               {filteredWords(errorWords).length === 0 && <p className="text-muted-foreground text-center py-4">Нет слов с ошибками или по вашему запросу. Отлично!</p>}
               {filteredWords(errorWords).map(word => <WordCardDisplay key={word.id} word={word} />)}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="review">
-          <Card>
-            <CardHeader><CardTitle>Слова на повторение</CardTitle><CardDescription>Слова, которые требуют вашего внимания для закрепления.</CardDescription></CardHeader>
-            <CardContent>
-              {filteredWords(wordsForReview).length === 0 && <p className="text-muted-foreground text-center py-4">Нет слов для повторения или по вашему запросу. Все слова усвоены!</p>}
-              {filteredWords(wordsForReview).map(word => <WordCardDisplay key={word.id} word={word} />)}
             </CardContent>
           </Card>
         </TabsContent>
@@ -363,7 +413,7 @@ export function VocabularyPage() {
       </Tabs>
        <div className="mt-8 text-center">
             <Button 
-                onClick={startReviewSession} 
+                onClick={() => startReviewSession()} 
                 size="lg" 
                 className="shadow-md"
                 disabled={wordsNeedingReviewCount === 0}
