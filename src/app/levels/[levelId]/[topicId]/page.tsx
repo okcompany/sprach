@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useEffect, use } from 'react'; // Import use
+import { useEffect } from 'react';
 import { MainLayout } from '@/components/main-layout';
 import { TopicModulesPage } from '@/components/pages/topic-modules-page';
 import type { LanguageLevel } from '@/types/german-learning';
@@ -11,22 +11,19 @@ import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 
 interface TopicModulesRouteProps {
-  params: Promise<{ // params prop is a Promise
+  params: {
     levelId: string;
     topicId: string;
-  }>;
+  };
 }
 
-export default function TopicModulesRoute({ params: paramsPromise }: TopicModulesRouteProps) {
-  const params = use(paramsPromise); // Resolve the promise
-
+export default function TopicModulesRoute({ params }: TopicModulesRouteProps) {
   const router = useRouter();
   const { toast } = useToast();
   const { userData, isLoading, isLevelAccessible } = useUserData();
   
-  // Now `params` is the resolved object: { levelId: string, topicId: string }
   const levelIdFromParams = params.levelId.toUpperCase();
-  const { topicId } = params; // topicId from resolved params
+  const { topicId } = params;
 
   useEffect(() => {
     if (isLoading) return;
