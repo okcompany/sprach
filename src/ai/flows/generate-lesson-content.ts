@@ -27,7 +27,7 @@ const GenerateLessonInputSchema = z.object({
 const VocabularyItemSchema = z.object({
   german: z.string().describe('Немецкое слово или фраза, СУЩЕСТВИТЕЛЬНЫЕ ДОЛЖНЫ БЫТЬ С АРТИКЛЕМ (der, die, das).'),
   russian: z.string().describe('Русский перевод.'),
-  exampleSentence: z.string().optional().describe('Необязательное нем. предложение-пример.'),
+  exampleSentence: z.string().describe('Необязательное нем. предложение-пример.'),
 });
 export type AILessonVocabularyItem = z.infer<typeof VocabularyItemSchema>;
 
@@ -211,15 +211,18 @@ const lessonPrompt = ai.definePrompt({
   The lesson MUST include the following core components:
   - "lessonTitle": A suitable title (in Russian).
   - "vocabulary": 
+    Generate an array of 14-20 key vocabulary items for the topic '{{{topic}}}' and level '{{{level}}}'.
+    **CRITICAL**: Every item in this array MUST contain 'german' (with article for nouns), 'russian' (translation), and a unique 'exampleSentence' (in German).
     {{#if topicVocabularyList.length}}
-    For the vocabulary section, you MUST primarily use the words from the 'topicVocabularyList' provided below. Ensure each item has a German word (with article for nouns), a Russian translation, and a good German example sentence (generate one if missing or improve the existing one). The target is 14-20 vocabulary items. If the provided list has fewer than 14 items, you may supplement it with 2-5 highly relevant additional words for the topic '{{{topic}}}' and level '{{{level}}}', ensuring they also have German (with article), Russian, and an example sentence. The items you generate MUST conform to the AILessonVocabularyItem schema.
-    Provided 'topicVocabularyList' (use these first):
+    You can use the following provided list as a strong inspiration and basis for your vocabulary generation. You can include words from this list, but ensure they are relevant and you MUST generate a fitting 'exampleSentence' for each.
+    Provided list for inspiration:
     {{#each topicVocabularyList}}
-    - German: {{this.german}}, Russian: {{this.russian}}{{#if this.exampleSentence}}, Current Example: {{this.exampleSentence}}{{/if}}
+    - German: {{this.german}}, Russian: {{this.russian}}
     {{/each}}
     {{else}}
-    An array of 14-20 key vocabulary items (German word with article for nouns, Russian translation, and strongly prefer an exampleSentence in German). Include common conversational phrases and idioms relevant to the topic and level. These items MUST conform to the AILessonVocabularyItem schema.
+    Since no specific vocabulary list was provided, generate a list of 14-20 key vocabulary items from scratch that are highly relevant to the topic '{{{topic}}}' and level '{{{level}}}'.
     {{/if}}
+    The final vocabulary list must be your own generation, ensuring it is comprehensive and every single item has a German word/phrase, a Russian translation, and a German example sentence.
   - "grammarExplanation": {{{grammarFocusInstruction}}} When explaining the chosen grammar topic, ensure your detailed explanation (which MUST be in RUSSIAN) clearly covers its relevant **morphological aspects** (e.g., word formation, declensions, conjugations, endings, strong/weak patterns, participle formation, comparison degrees for adjectives as relevant to the topic and level) and **syntactic aspects** (e.g., sentence structure, word order in main and subordinate clauses [V2, verb-final], types of sentences [declarative, interrogative, imperative], use of conjunctions and their impact on sentence structure, formation of complex sentences, passive voice construction, infinitive clauses, as relevant to the explained grammar topic and user level). For levels A0-B2, systematically try to include grammar topics related to verbs (tenses, modals, reflexives, common strong/irregular verbs, word order with verbs, etc.), while respecting the mandatory list provided in grammarFocusInstruction.
   - "listeningExercise": An object with "script" and "questions".
     - "script": The script for listening must be a coherent text in the format of a **monologue or a story** from the first or third person, appropriate for the level {{{level}}}. Please **completely avoid dialogues** between characters.
@@ -326,5 +329,7 @@ const generateLessonContentFlow = ai.defineFlow(
   }
 );
 
+
+    
 
     
