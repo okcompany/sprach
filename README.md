@@ -1,4 +1,4 @@
-# Firebase Studio
+https://github.com/okcompany/sprach# Firebase Studio
 
 This is a NextJS starter in Firebase Studio.
 

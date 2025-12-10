@@ -64,7 +64,10 @@ export function MainLayout({ children }: { children: ReactNode }) {
         <div className="flex h-16 items-center border-b px-6 bg-primary text-primary-foreground">
           <Link href="/" className="flex items-center gap-2 font-headline text-lg font-semibold">
             <Image src="https://placehold.co/32x32.png" alt="Учимся с Олегом Logo" width={32} height={32} data-ai-hint="logo language" className="rounded-sm"/>
-            Учимся с Олегом
+            <div className="flex items-baseline gap-2">
+              <span>Учимся с Олегом</span>
+              <span className="text-xs font-normal opacity-80">версия 2.0</span>
+            </div>
           </Link>
         </div>
         <div className="flex-1 overflow-auto py-2">
@@ -86,7 +89,10 @@ export function MainLayout({ children }: { children: ReactNode }) {
         <header className="sticky top-0 z-30 flex h-16 items-center justify-between gap-4 border-b bg-background px-6 md:hidden">
           <Link href="/" className="flex items-center gap-2 font-headline text-lg font-semibold">
              <Image src="https://placehold.co/32x32.png" alt="Учимся с Олегом Logo" width={32} height={32} data-ai-hint="logo language" className="rounded-sm"/>
-            Учимся с Олегом
+             <div className="flex items-baseline gap-2">
+              <span>Учимся с Олегом</span>
+              <span className="text-xs font-normal opacity-80">версия 2.0</span>
+            </div>
           </Link>
           <Sheet>
             <SheetTrigger asChild>
@@ -99,7 +105,10 @@ export function MainLayout({ children }: { children: ReactNode }) {
               <div className="flex h-16 items-center border-b px-6 bg-primary text-primary-foreground">
                 <Link href="/" className="flex items-center gap-2 font-headline text-lg font-semibold">
                    <Image src="https://placehold.co/32x32.png" alt="Учимся с Олегом Logo" width={32} height={32} data-ai-hint="logo language" className="rounded-sm"/>
-                  Учимся с Олегом
+                   <div className="flex items-baseline gap-2">
+                    <span>Учимся с Олегом</span>
+                    <span className="text-xs font-normal opacity-80">версия 2.0</span>
+                  </div>
                 </Link>
               </div>
               {renderNavLinks(true)}
