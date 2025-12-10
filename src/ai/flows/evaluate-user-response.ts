@@ -53,7 +53,7 @@ const ErrorExplanationSchema = z.object({
 const EvaluateUserResponseOutputSchema = z.object({
   evaluation: z.string().describe('Краткий общий вывод на русском языке. Для письма это будет writingDetails.overallFeedback. Для других модулей – основная мысль оценки (например, "Верно!" или "Не совсем точно, есть ошибка в употреблении слова").'),
   isCorrect: z.boolean().describe('Whether the user response is correct or not. For writing, true if the text is generally understandable and addresses the prompt adequately for the level.'),
-  suggestedCorrection: z.string().optional().describe('ПОЛНЫЙ предлагаемый правильный ответ на русском языке, если ответ пользователя был коротким и неверным, или ключевые исправления. Для письма это может быть исправленная версия текста.'),
+  suggestedCorrection: z.string().optional().describe('ПОЛНЫЙ предлагаемый правильный ответ на русском языке, если ответ пользователя был коротким и неверным, или ключевые исправления. Для письма это может быть исправленная версия текста. Если ответ пользователя был частично верным, это поле может содержать полный, дополненный вариант ответа.'),
   grammarErrorTags: z.array(z.string()).optional().describe('Specific grammar points the user made errors on (e.g., "akkusativ_prepositions", "verb_conjugation_modal"). Provide these only if the response is incorrect and the error is related to a specific, identifiable grammar rule or pattern relevant to the user\'s level. Use short, snake_case, English tags.'),
   writingDetails: WritingEvaluationDetailsSchema.optional(),
   errorExplanationDetails: ErrorExplanationSchema.optional()
@@ -83,6 +83,12 @@ const evaluateUserResponsePrompt = ai.definePrompt({
   output: {schema: EvaluateUserResponseOutputSchema},
   prompt: `You are an AI-powered German language tutor. Your task is to evaluate a user's response to a question or task.
 
+**CRITICAL EVALUATION RULES:**
+1.  **Case Insensitive:** Evaluation of correctness must be case-insensitive. "Der Apfel" and "der apfel" are both equally correct.
+2.  **Partial Answers (for vocabulary):** If the user is asked to translate a German word with multiple Russian meanings (e.g., 'der Platz' can be 'площадь' or 'место'), and they provide only ONE of the correct meanings, the answer is **CORRECT (\`isCorrect: true\`)**. Your \`evaluation\` should state that it's correct, and the \`suggestedCorrection\` field should provide the *full* set of common meanings. For example: \`evaluation: "Верно!", suggestedCorrection: "Да, это 'площадь'. Также это слово означает 'место'."\`.
+3.  **Incomplete but Logical Answers (for questions):** If the user's answer is grammatically correct and logically answers the question but is not as complete as the ideal \`expectedAnswer\`, it is still **CORRECT (\`isCorrect: true\`)**. The \`evaluation\` can be "Верно, но можно дополнить", and the \`suggestedCorrection\` can provide a more complete version.
+4.  **Minor Typos:** Be tolerant of minor typos that do not change the meaning of the word. For example, 'Apfe' instead of 'Apfel' can be considered correct, but you should mention the typo in the \`evaluation\` and provide the correct spelling in \`suggestedCorrection\`.
+
 Here is the context of the question or task: {{{questionContext}}}
 Here is the user's response: {{{userResponse}}}
 Here is the user's current proficiency level in German: {{{userLevel}}}
@@ -90,53 +96,51 @@ Here is the user's current proficiency level in German: {{{userLevel}}}
 {{#if expectedAnswer}}Here is the expected answer: {{{expectedAnswer}}}{{/if}}
 {{#if grammarRules}}Here are some grammar rules relevant to the user level: {{{grammarRules}}}{{/if}}
 
-Provide an evaluation of the user's response. Include feedback and suggestions for improvement, adjusted to the user's proficiency level. Indicate whether the response is correct or not.
+Provide an evaluation of the user's response based on the CRITICAL RULES above. Include feedback and suggestions for improvement, adjusted to the user's proficiency level. Indicate whether the response is correct or not (\`isCorrect\`).
 The main 'evaluation' field MUST be a concise summary in RUSSIAN.
-If the response is incorrect, provide a 'suggestedCorrection' (full corrected answer, in RUSSIAN) if appropriate.
 
 If the module type is 'grammar' or 'writing', and the user's response is incorrect due to specific grammatical errors relevant to their level ({{{userLevel}}}), please identify these errors and list them in the 'grammarErrorTags' field. Use short, English, snake_case tags (e.g., "nominative_case_error", "verb_position_subclause", "modal_verb_usage", "adjective_declension_dativ", "perfekt_auxiliary_verb"). Only include tags for clear, identifiable grammatical mistakes, not stylistic issues or minor vocabulary errors.
 
 {{#unless isModuleWriting}}
-  {{#unless isCorrect}}
-    If the answer is incorrect (for modules other than 'writing'), provide detailed feedback in the 'errorExplanationDetails' object. This feedback MUST be in RUSSIAN and concise. Do not be overly verbose. Focus on the main error and its explanation.
+  If the answer is incorrect (for modules other than 'writing'), provide detailed feedback in the 'errorExplanationDetails' object. This feedback MUST be in RUSSIAN and concise. Do not be overly verbose. Focus on the main error and its explanation.
     - 'generalExplanation': Clearly explain in RUSSIAN why the user's answer is incorrect. Be specific to the error type (e.g., wrong vocabulary choice, specific grammatical mistake like case or tense, misunderstanding of the question). Keep it brief (1-2 sentences).
     - 'specificExample': If applicable and the error is localized, quote the specific incorrect part of the user's answer.
     - 'correctionExample': If you provided a 'specificExample', show how *that specific part* should be corrected in RUSSIAN. This is for a snippet, not the full corrected answer. The main 'suggestedCorrection' field can be used for the full corrected answer.
     - 'theoryReference': If the error relates to a specific grammar rule (e.g., "Предлог 'mit' всегда требует дательного падежа (Dativ)") or a vocabulary nuance (e.g., "Слово 'aktuell' означает 'актуальный, текущий', а не 'фактический'"), briefly mention this rule/nuance in RUSSIAN.
-  {{/unless}}
 {{/unless}}
 
 
 {{#if isModuleWordTest}}
-This is a 'wordTest' module. The user is being tested on their knowledge of vocabulary.
-- Be stricter in your evaluation. The main 'evaluation' should clearly state if it's correct or not.
+This is a 'wordTest' module. The user is being tested on their knowledge of vocabulary. Apply the CRITICAL EVALUATION RULES.
+- Be stricter in your evaluation but follow Rule #2 for partial answers. The main 'evaluation' should clearly state if it's correct or not.
 - If the user's response is incorrect, clearly state the correct answer in the 'suggestedCorrection' (in RUSSIAN).
-- The primary goal is to assess if the user knows the word.
-- For 'errorExplanationDetails' (if incorrect):
+- If the user's response is partially correct, set \`isCorrect: true\`, state this in the \`evaluation\` (e.g., "Верно!"), and provide the full range of meanings in \`suggestedCorrection\`.
+- For 'errorExplanationDetails' (if fully incorrect):
     - 'generalExplanation' should explain why the given translation is wrong.
     - 'theoryReference' could point out gender/plural if that was part of the expected knowledge or a common confusion.
 {{/if}}
 {{#if isModuleVocabulary}}
-This is a 'vocabulary' learning module. The user is learning new words.
+This is a 'vocabulary' learning module. The user is learning new words. Apply the CRITICAL EVALUATION RULES.
 - Be encouraging in the 'evaluation' field.
 - If the user's response is incorrect, provide the 'suggestedCorrection' (in RUSSIAN) and explain briefly in 'errorExplanationDetails.generalExplanation'.
+- If partially correct, mark as \`isCorrect: true\` and supplement the answer in \`suggestedCorrection\`.
 - 'errorExplanationDetails.theoryReference' can mention gender/plural or usage notes.
 {{/if}}
 {{#if isModuleGrammar}}
 This is a 'grammar' module.
-- Focus on grammatical correctness according to the user's level and the provided grammar rules.
+- Focus on grammatical correctness according to the user's level and the provided grammar rules. Apply CRITICAL EVALUATION RULES #1 and #4.
 - If incorrect, provide 'grammarErrorTags' if applicable.
 - 'errorExplanationDetails' should focus on the specific grammar mistake, referencing the rule in 'theoryReference'.
 {{/if}}
 {{#if isModuleListening}}
 This is a 'listening' module.
-- Evaluate comprehension of the provided audio script based on the user's answer to the question. The main 'evaluation' should reflect this.
+- Evaluate comprehension of the provided audio script based on the user's answer to the question. The main 'evaluation' should reflect this. Apply CRITICAL EVALUATION RULES #1, #3, and #4.
 - If the user's answer is incorrect, 'errorExplanationDetails' should clarify the misunderstanding of the audio content.
 - Provide 'grammarErrorTags' only if the user's answer *itself* contains significant grammatical errors that hinder understanding, and these errors are relevant to their learning level.
 {{/if}}
 {{#if isModuleReading}}
 This is a 'reading' module.
-- Evaluate comprehension of the provided text based on the user's answer to the question. The main 'evaluation' should reflect this.
+- Evaluate comprehension of the provided text based on the user's answer to the question. The main 'evaluation' should reflect this. Apply CRITICAL EVALUATION RULES #1, #3, and #4.
 - If the user's answer is incorrect, 'errorExplanationDetails' should clarify the misunderstanding of the text.
 - Provide 'grammarErrorTags' only if the user's answer *itself* contains significant grammatical errors that hinder understanding, and these errors are relevant to their learning level.
 {{/if}}
@@ -262,3 +266,4 @@ const evaluateUserResponseFlow = ai.defineFlow(
   }
 );
 
+    

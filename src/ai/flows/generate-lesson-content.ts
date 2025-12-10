@@ -25,7 +25,7 @@ const GenerateLessonInputSchema = z.object({
 
 // --- Zod Schemas for Vocabulary ---
 const VocabularyItemSchema = z.object({
-  german: z.string().describe('Немецкое слово.'),
+  german: z.string().describe('Немецкое слово или фраза, СУЩЕСТВИТЕЛЬНЫЕ ДОЛЖНЫ БЫТЬ С АРТИКЛЕМ (der, die, das).'),
   russian: z.string().describe('Русский перевод.'),
   exampleSentence: z.string().optional().describe('Необязательное нем. предложение-пример.'),
 });
@@ -42,7 +42,7 @@ export type GenerateLessonInput = z.infer<typeof GenerateLessonInputSchema>;
 
 // --- Zod Schemas for Interactive Vocabulary Exercises ---
 const AIMatchingPairSchema = z.object({
-  german: z.string().describe("Немецкое слово."),
+  german: z.string().describe("Немецкое слово. СУЩЕСТВИТЕЛЬНЫЕ ДОЛЖНЫ БЫТЬ С АРТИКЛЕМ."),
   russian: z.string().describe("Соответствующее русское слово."),
 });
 
@@ -50,12 +50,12 @@ const AIMatchingExerciseSchema = z.object({
   type: z.enum(["matching"]).describe("Тип: сопоставление."),
   instructions: z.string().describe("Инструкции для упражнения, например, 'Сопоставьте слова.'"),
   pairs: z.array(AIMatchingPairSchema).describe("Пары слов (10-16)."),
-  germanDistractors: z.array(z.string()).optional().describe("Необязательные немецкие отвлекающие слова (1-3)."),
+  germanDistractors: z.array(z.string()).optional().describe("Необязательные немецкие отвлекающие слова (1-3). СУЩЕСТВИТЕЛЬНЫЕ ДОЛЖНЫ БЫТЬ С АРТИКЛЕМ."),
   russianDistractors: z.array(z.string()).optional().describe("Необязательные русские отвлекающие слова (1-3)."),
 });
 
 const AIAudioQuizItemSchema = z.object({
-  germanPhraseToSpeak: z.string().describe("Короткая немецкая фраза для аудио."),
+  germanPhraseToSpeak: z.string().describe("Короткая немецкая фраза для аудио. СУЩЕСТВИТЕЛЬНЫЕ ДОЛЖНЫ БЫТЬ С АРТИКЛЕМ."),
   options: z.array(z.string()).describe("3-4 варианта на русском."),
   correctAnswer: z.string().describe("Правильный вариант на русском."),
   explanation: z.string().optional().describe("Краткое необязательное объяснение."),
@@ -147,7 +147,7 @@ const AISequencingExerciseSchema = z.object({
 // --- Define Zod schema for the MAIN output ---
 const GenerateLessonOutputSchema = z.object({
   lessonTitle: z.string().describe('Сгенерированный заголовок урока на русском или немецком.'),
-  vocabulary: z.array(VocabularyItemSchema).describe('Ключевые словарные единицы (14-20). Фразы/идиомы для уровня/темы. Каждый элемент должен содержать немецкое слово, русский перевод и пример предложения на немецком.'),
+  vocabulary: z.array(VocabularyItemSchema).describe('Ключевые словарные единицы (14-20). Фразы/идиомы для уровня/темы. Каждый элемент должен содержать немецкое слово (СУЩЕСТВИТЕЛЬНЫЕ С АРТИКЛЕМ), русский перевод и пример предложения на немецком.'),
   grammarExplanation: z.string().describe('Подробное объяснение грамматики на русском. Фокус на глаголах для A0-B2.'),
 
   grammarFillInTheBlanks: FillInTheBlanksExerciseSchema.optional().describe('Необязательное ОДНО упражнение "Заполните пропуски" по грамматике (4-8 вопроса).'),
@@ -202,6 +202,8 @@ const lessonPrompt = ai.definePrompt({
   The student is at level: {{{level}}}
   The topic is: {{{topic}}} (ID: {{{topicId}}})
 
+  **CRITICAL RULE: ALL GERMAN NOUNS (Substantive) in the entire output MUST be preceded by their definite article (der, die, das). This applies to "vocabulary", all exercise types ("german" fields in pairs, distractors, phrases to speak, etc.), and within any German text you generate. For example, instead of "Haus", write "das Haus". Instead of "Katze", write "die Katze".**
+
   The ENTIRE lesson, including all instructions, explanations, prompts, and question texts, MUST be in RUSSIAN, unless it's a German word, phrase, sentence for learning, or a German text/script for reading/listening.
   Example: "lessonTitle" should be in Russian. "grammarExplanation" in Russian. "writingPrompt" in Russian. Instructions for exercises in Russian.
   For all questions and tasks, clearly indicate the language in which the user is expected to respond (e.g., 'Ответьте на немецком', 'Ответьте на русском'), unless it's absolutely obvious from the task itself (like translating a single word).
@@ -210,13 +212,13 @@ const lessonPrompt = ai.definePrompt({
   - "lessonTitle": A suitable title (in Russian).
   - "vocabulary": 
     {{#if topicVocabularyList.length}}
-    For the vocabulary section, you MUST primarily use the words from the 'topicVocabularyList' provided below. Ensure each item has a German word, a Russian translation, and a good German example sentence (generate one if missing or improve the existing one if it is too simple or not relevant). The target is 14-20 vocabulary items. If the provided list has fewer than 14 items, you may supplement it with 2-5 highly relevant additional words for the topic '{{{topic}}}' and level '{{{level}}}' to reach the target count, ensuring they also have German, Russian, and an example sentence. The items you generate MUST conform to the AILessonVocabularyItem schema (german: string, russian: string, exampleSentence?: string).
+    For the vocabulary section, you MUST primarily use the words from the 'topicVocabularyList' provided below. Ensure each item has a German word (with article for nouns), a Russian translation, and a good German example sentence (generate one if missing or improve the existing one). The target is 14-20 vocabulary items. If the provided list has fewer than 14 items, you may supplement it with 2-5 highly relevant additional words for the topic '{{{topic}}}' and level '{{{level}}}', ensuring they also have German (with article), Russian, and an example sentence. The items you generate MUST conform to the AILessonVocabularyItem schema.
     Provided 'topicVocabularyList' (use these first):
     {{#each topicVocabularyList}}
     - German: {{this.german}}, Russian: {{this.russian}}{{#if this.exampleSentence}}, Current Example: {{this.exampleSentence}}{{/if}}
     {{/each}}
     {{else}}
-    An array of 14-20 key vocabulary items (German word, Russian translation, and strongly prefer an exampleSentence in German). Include common conversational phrases and idioms relevant to the topic and level. These items MUST conform to the AILessonVocabularyItem schema (german: string, russian: string, exampleSentence?: string).
+    An array of 14-20 key vocabulary items (German word with article for nouns, Russian translation, and strongly prefer an exampleSentence in German). Include common conversational phrases and idioms relevant to the topic and level. These items MUST conform to the AILessonVocabularyItem schema.
     {{/if}}
   - "grammarExplanation": {{{grammarFocusInstruction}}} When explaining the chosen grammar topic, ensure your detailed explanation (which MUST be in RUSSIAN) clearly covers its relevant **morphological aspects** (e.g., word formation, declensions, conjugations, endings, strong/weak patterns, participle formation, comparison degrees for adjectives as relevant to the topic and level) and **syntactic aspects** (e.g., sentence structure, word order in main and subordinate clauses [V2, verb-final], types of sentences [declarative, interrogative, imperative], use of conjunctions and their impact on sentence structure, formation of complex sentences, passive voice construction, infinitive clauses, as relevant to the explained grammar topic and user level). For levels A0-B2, systematically try to include grammar topics related to verbs (tenses, modals, reflexives, common strong/irregular verbs, word order with verbs, etc.), while respecting the mandatory list provided in grammarFocusInstruction.
   - "listeningExercise": An object with "script" and "questions".
@@ -326,4 +328,3 @@ const generateLessonContentFlow = ai.defineFlow(
 
 
     
-
