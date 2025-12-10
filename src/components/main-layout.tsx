@@ -66,7 +66,7 @@ export function MainLayout({ children }: { children: ReactNode }) {
             <Image src="https://placehold.co/32x32.png" alt="Учимся с Олегом Logo" width={32} height={32} data-ai-hint="logo language" className="rounded-sm"/>
             <div className="flex items-baseline gap-2">
               <span>Учимся с Олегом</span>
-              <span className="text-xs font-normal opacity-80">версия 2.0</span>
+              <span className="text-xs font-normal opacity-80">версия 2.1</span>
             </div>
           </Link>
         </div>
@@ -91,7 +91,7 @@ export function MainLayout({ children }: { children: ReactNode }) {
              <Image src="https://placehold.co/32x32.png" alt="Учимся с Олегом Logo" width={32} height={32} data-ai-hint="logo language" className="rounded-sm"/>
              <div className="flex items-baseline gap-2">
               <span>Учимся с Олегом</span>
-              <span className="text-xs font-normal opacity-80">версия 2.0</span>
+              <span className="text-xs font-normal opacity-80">версия 2.1</span>
             </div>
           </Link>
           <Sheet>
@@ -107,7 +107,7 @@ export function MainLayout({ children }: { children: ReactNode }) {
                    <Image src="https://placehold.co/32x32.png" alt="Учимся с Олегом Logo" width={32} height={32} data-ai-hint="logo language" className="rounded-sm"/>
                    <div className="flex items-baseline gap-2">
                     <span>Учимся с Олегом</span>
-                    <span className="text-xs font-normal opacity-80">версия 2.0</span>
+                    <span className="text-xs font-normal opacity-80">версия 2.1</span>
                   </div>
                 </Link>
               </div>
